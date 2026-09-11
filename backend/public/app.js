@@ -169,7 +169,15 @@ function openApp() {
         ? "معلم"
         : "ولي أمر";
   }
+const directorPanel =
+  $("directorUserPanel");
 
+if (directorPanel) {
+  directorPanel.classList.toggle(
+    "hidden",
+    me.role !== "DIRECTOR"
+  );
+      }
   loadClasses();
   loadInvites();
 }
@@ -699,7 +707,89 @@ async function acceptInvite(
     );
   }
 }
+async function createUser() {
+  if (me?.role !== "DIRECTOR") {
+    toast("هذه العملية للمدير فقط");
+    return;
+  }
 
+  const fullName =
+    $("newUserFullName")?.value.trim();
+
+  const login =
+    $("newUserLogin")?.value.trim();
+
+  const email =
+    $("newUserEmail")?.value.trim();
+
+  const password =
+    $("newUserPassword")?.value || "";
+
+  const role =
+    $("newUserRole")?.value;
+
+  if (
+    !fullName ||
+    !login ||
+    !password
+  ) {
+    toast(
+      "أكمل الاسم واسم المستخدم وكلمة المرور"
+    );
+    return;
+  }
+
+  if (password.length < 12) {
+    toast(
+      "كلمة المرور يجب أن تكون 12 حرفاً على الأقل"
+    );
+    return;
+  }
+
+  try {
+    const data =
+      await api(
+        "/api/director/users",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            fullName,
+            login,
+            email:
+              email || null,
+            password,
+            role
+          })
+        }
+      );
+
+    $("newUserFullName").value = "";
+    $("newUserLogin").value = "";
+    $("newUserEmail").value = "";
+    $("newUserPassword").value = "";
+
+    if ($("createUserResult")) {
+      $("createUserResult").textContent =
+        `تم إنشاء الحساب: ${data.user.login}`;
+    }
+
+    toast("تم إنشاء الحساب بنجاح");
+
+  } catch (error) {
+
+    if (
+      error.data?.error ===
+      "LOGIN_OR_EMAIL_EXISTS"
+    ) {
+      toast(
+        "اسم المستخدم أو البريد مستخدم مسبقاً"
+      );
+      return;
+    }
+
+    toast("تعذر إنشاء الحساب");
+  }
+          }
 $("loginBtn") &&
   (
     $("loginBtn").onclick =
@@ -738,5 +828,9 @@ $("password") &&
         }
       }
     );
-
+$("createUserBtn") &&
+  (
+    $("createUserBtn").onclick =
+      createUser
+  );
 boot();
