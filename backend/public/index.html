@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#07583f"
+  >
+
+  <meta
+    name="color-scheme"
+    content="light"
+  >
+
+  <meta
+    name="referrer"
+    content="strict-origin-when-cross-origin"
+  >
+
+  <title>
+    مدرستي | Ma Madrassa
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/app.css"
+  >
+</head>
+
+<body>
+
+  <div
+    id="toast"
+    class="toast"
+    aria-live="polite"
+  ></div>
+
+  <main
+    id="loginView"
+    class="login-shell"
+  >
+
+    <section
+      class="brand-panel"
+      aria-label="مدرستي"
+    >
+
+      <div class="brand-top">
+
+        <div class="brand-mark">
+          م
+        </div>
+
+        <div>
+
+          <div class="brand-small">
+            MA MADRASSA
+          </div>
+
+          <h1>
+            مدرستي
+          </h1>
+
+        </div>
+
+      </div>
+
+      <div class="brand-message">
+
+        <span class="secure-label">
+          ● نظام مدرسي آمن
+        </span>
+
+        <h2>
+          إدارة النتائج
+          <br>
+          بطريقة أكثر أماناً
+        </h2>
+
+        <p>
+          الأقسام، التلاميذ، المواد
+          والنتائج في نظام مركزي
+          بصلاحيات منفصلة لكل مستخدم.
+        </p>
+
+      </div>
+
+    </section>
+
+    <section
+      class="login-card"
+      aria-labelledby="loginTitle"
+    >
+
+      <span class="eyebrow">
+        تسجيل الدخول
+      </span>
+
+      <h2 id="loginTitle">
+        مرحباً بعودتك
+      </h2>
+
+      <p class="muted">
+        استخدم حسابك الخاص بالمدرسة.
+      </p>
+
+      <label for="login">
+        اسم المستخدم
+      </label>
+
+      <input
+        id="login"
+        name="username"
+        type="text"
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck="false"
+        maxlength="120"
+        placeholder="اسم المستخدم"
+      >
+
+      <label for="password">
+        كلمة المرور
+      </label>
+
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        maxlength="128"
+        placeholder="كلمة المرور"
+      >
+
+      <button
+        id="loginBtn"
+        class="primary full"
+        type="button"
+      >
+        دخول آمن
+      </button>
+
+      <div class="security-note">
+
+        <span class="lock-icon">
+          🔒
+        </span>
+
+        <div>
+
+          <strong>
+            اتصال محمي
+          </strong>
+
+          <small>
+            بيانات الجلسة لا تُحفظ
+            ككلمة مرور داخل الهاتف.
+          </small>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <main
+    id="appView"
+    class="app-shell hidden"
+  >
+
+    <header class="topbar">
+
+      <div>
+
+        <span class="eyebrow">
+          مدرستي · Secure Cloud
+        </span>
+
+        <h1 id="hello">
+          لوحة المدرسة
+        </h1>
+
+      </div>
+
+      <div class="top-actions">
+
+        <span
+          id="roleBadge"
+          class="badge"
+        ></span>
+
+        <button
+          id="logoutBtn"
+          class="ghost"
+          type="button"
+        >
+          خروج
+        </button>
+
+      </div>
+
+    </header>
+
+    <section class="hero">
+
+      <div class="hero-status">
+
+        <span class="secure-dot">
+          ●
+        </span>
+
+        <span>
+          جلسة خادمية آمنة
+        </span>
+
+      </div>
+
+      <h2>
+        الفريق الأكاديمي
+        للقسم
+      </h2>
+
+      <p>
+        يستطيع أكثر من معلم العمل
+        على نفس القسم ونفس التلاميذ،
+        مع بقاء تعديل كل مادة محصوراً
+        في المعلم المكلّف بها.
+      </p>
+
+    </section>
+
+    <section class="grid">
+
+      <article class="panel">
+
+        <div class="panel-head">
+
+          <div>
+
+            <span class="eyebrow">
+              القسم الحالي
+            </span>
+
+            <h3>
+              اختر القسم
+            </h3>
+
+          </div>
+
+        </div>
+
+        <label
+          class="sr-only"
+          for="classSelect"
+        >
+          القسم
+        </label>
+
+        <select
+          id="classSelect"
+          aria-label="اختيار القسم"
+        >
+          <option value="">
+            جاري التحميل...
+          </option>
+        </select>
+
+        <div
+          id="classInfo"
+          class="hint"
+        >
+          اختر قسماً لعرض بياناته.
+        </div>
+
+      </article>
+
+      <article class="panel">
+
+        <div class="panel-head">
+
+          <div>
+
+            <span class="eyebrow">
+              التعاون
+            </span>
+
+            <h3>
+              استدعاء معلم
+            </h3>
+
+          </div>
+
+          <span class="icon-chip">
+            👥
+          </span>
+
+        </div>
+
+        <p class="hint">
+          يمكنك استدعاء معلم أو أكثر
+          لنفس القسم.
+          هذا لا يمنحه حق تعديل مادة
+          غير مسندة إليه.
+        </p>
+
+        <label for="inviteLogins">
+          حسابات المعلمين
+        </label>
+
+        <textarea
+          id="inviteLogins"
+          rows="3"
+          maxlength="1000"
+          placeholder="teacher1, teacher2"
+        ></textarea>
+
+        <button
+          id="inviteBtn"
+          class="primary"
+          type="button"
+        >
+          إرسال الدعوات
+        </button>
+
+        <div
+          id="invitesBox"
+          class="list"
+        ></div>
+
+      </article>
+
+      <article class="panel wide">
+
+        <div class="panel-head">
+
+          <div>
+
+            <span class="eyebrow">
+              القسم المشترك
+            </span>
+
+            <h3>
+              التلاميذ
+            </h3>
+
+          </div>
+
+          <span
+            id="studentCount"
+            class="badge"
+          >
+            0
+          </span>
+
+        </div>
+
+        <div
+          id="students"
+          class="students"
+        >
+
+          <div class="empty-state">
+
+            <span>
+              👨‍🎓
+            </span>
+
+            <p>
+              اختر قسماً لعرض التلاميذ.
+            </p>
+
+          </div>
+
+        </div>
+
+      </article>
+
+      <article class="panel wide">
+
+        <div class="panel-head">
+
+          <div>
+
+            <span class="eyebrow">
+              الصلاحيات الأكاديمية
+            </span>
+
+            <h3>
+              المواد
+            </h3>
+
+          </div>
+
+          <span class="icon-chip">
+            📚
+          </span>
+
+        </div>
+
+        <p class="hint">
+          المادة المسندة إليك تظهر
+          بصلاحية تعديل.
+          بقية المواد تكون للقراءة فقط،
+          إلا إذا منح المدير صلاحية إضافية.
+        </p>
+
+        <div
+          id="subjects"
+          class="subjects"
+        ></div>
+
+      </article>
+
+    </section>
+
+    <footer class="footer">
+
+      <span>
+        مدرستي
+      </span>
+
+      <span>
+        Secure V2
+      </span>
+
+    </footer>
+
+  </main>
+
+  <script
+    src="/app.js"
+    defer
+  ></script>
+
+</body>
+  </html>
