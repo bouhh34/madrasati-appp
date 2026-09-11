@@ -1135,4 +1135,98 @@ app.post(
         };
       }
     );
- 
+ app.get(
+  "/api/invites",
+  {
+    preHandler: requireSession
+  },
+  async request => {
+    return withTenant(
+      request.auth,
+      async client => {
+        const { rows } =
+          await client.query(
+            `
+            SELECT
+              i.id,
+              i.class_id,
+              c.name AS class_name,
+              i.status,
+              i.created_at,
+              i.expires_at,
+              u.full_name AS inviter_name
+
+            FROM class_invites i
+
+            JOIN classes c
+              ON c.id = i.class_id
+
+            JOIN users u
+              ON u.id = i.inviter_id
+
+            WHERE
+              i.school_id = $1
+              AND i.invitee_id = $2
+              AND i.status = 'PENDING'
+              AND i.expires_at > now()
+
+            ORDER BY
+              i.created_at DESC
+            `,
+            [
+              request.auth.school_id,
+              request.auth.user_id
+            ]
+          );
+
+        return {
+          invites: rows
+        };
+      }
+    );
+  }
+);
+
+
+app.setErrorHandler(
+  (error, request, reply) => {
+    request.log.error(error);
+
+    const statusCode =
+      error.statusCode &&
+      error.statusCode >= 400 &&
+      error.statusCode < 600
+        ? error.statusCode
+        : 500;
+
+    reply
+      .code(statusCode)
+      .send({
+        error:
+          statusCode === 500
+            ? "INTERNAL_SERVER_ERROR"
+            : error.message
+      });
+  }
+);
+
+
+const port =
+  Number(
+    process.env.PORT || 10000
+  );
+
+try {
+  await app.listen({
+    port,
+    host: "0.0.0.0"
+  });
+
+  console.log(
+    `Ma Madrassa server running on port ${port}`
+  );
+
+} catch (error) {
+  app.log.error(error);
+  process.exit(1);
+    }
