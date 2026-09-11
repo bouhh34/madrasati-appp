@@ -640,7 +640,177 @@ app.get(
 /* =========================
    CLASSES
 ========================= */
+/* =========================
+   DIRECTOR - CREATE USERS
+========================= */
 
+app.post(
+  "/api/director/users",
+  async (request, reply) => {
+
+    if (
+      !(await requireMutationSecurity(
+        request,
+        reply
+      ))
+    ) {
+      return;
+    }
+
+    if (!isDirector(request.auth)) {
+      return reply.code(403).send({
+        error: "DIRECTOR_ONLY"
+      });
+    }
+
+    const body =
+      request.body || {};
+
+    const fullName =
+      String(
+        body.fullName || ""
+      ).trim();
+
+    const login =
+      normalizeLogin(
+        body.login
+      );
+
+    const email =
+      body.email
+        ? normalizeLogin(
+            body.email
+          )
+        : null;
+
+    const password =
+      String(
+        body.password || ""
+      );
+
+    const role =
+      String(
+        body.role || ""
+      ).toUpperCase();
+
+    if (
+      !fullName ||
+      !login ||
+      !strongPassword(password) ||
+      ![
+        "DIRECTOR",
+        "TEACHER"
+      ].includes(role)
+    ) {
+      return reply.code(400).send({
+        error: "INVALID_USER_DATA"
+      });
+    }
+
+    const passwordHash =
+      await hashPassword(
+        password
+      );
+
+    try {
+
+      return await withTenant(
+        request.auth,
+        async client => {
+
+          const user =
+            await client.query(
+              `
+              INSERT INTO users
+              (
+                login,
+                email,
+                full_name,
+                password_hash
+              )
+              VALUES
+              ($1,$2,$3,$4)
+              RETURNING
+                id,
+                login,
+                email,
+                full_name
+              `,
+              [
+                login,
+                email,
+                fullName,
+                passwordHash
+              ]
+            );
+
+          const userId =
+            user.rows[0].id;
+
+          await client.query(
+            `
+            INSERT INTO memberships
+            (
+              school_id,
+              user_id,
+              role,
+              active
+            )
+            VALUES
+            ($1,$2,$3,true)
+            `,
+            [
+              request.auth.school_id,
+              userId,
+              role
+            ]
+          );
+
+          await audit(
+            client,
+            request.auth,
+            "USER_CREATED",
+            "user",
+            userId,
+            {
+              login,
+              role
+            }
+          );
+
+          return reply
+            .code(201)
+            .send({
+              ok: true,
+
+              user: {
+                id: userId,
+                fullName,
+                login,
+                email,
+                role
+              }
+            });
+        }
+      );
+
+    } catch (error) {
+
+      if (
+        error?.code === "23505"
+      ) {
+        return reply
+          .code(409)
+          .send({
+            error:
+              "LOGIN_OR_EMAIL_EXISTS"
+          });
+      }
+
+      throw error;
+    }
+  }
+);
 app.get(
   "/api/classes",
   async (request, reply) => {
