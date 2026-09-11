@@ -1135,7 +1135,9 @@ app.post(
         };
       }
     );
- app.get(
+  }
+);
+app.get(
   "/api/invites",
   {
     preHandler: requireSession
