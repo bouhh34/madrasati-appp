@@ -238,7 +238,105 @@
     </section>
 
     <section class="grid">
+<article
+  id="directorUserPanel"
+  class="panel wide hidden"
+>
+  <div class="panel-head">
+    <div>
+      <span class="eyebrow">
+        إدارة الحسابات
+      </span>
 
+      <h3>
+        إنشاء حساب جديد
+      </h3>
+    </div>
+
+    <span class="icon-chip">
+      👤
+    </span>
+  </div>
+
+  <p class="hint">
+    هذه الصفحة متاحة للمدير فقط.
+    يمكنك إنشاء حساب مدير آخر أو حساب معلم.
+  </p>
+
+  <label for="newUserFullName">
+    الاسم الكامل
+  </label>
+
+  <input
+    id="newUserFullName"
+    type="text"
+    maxlength="150"
+    placeholder="الاسم الكامل"
+  >
+
+  <label for="newUserLogin">
+    اسم المستخدم
+  </label>
+
+  <input
+    id="newUserLogin"
+    type="text"
+    maxlength="120"
+    autocapitalize="none"
+    spellcheck="false"
+    placeholder="مثال: teacher01"
+  >
+
+  <label for="newUserEmail">
+    البريد الإلكتروني
+  </label>
+
+  <input
+    id="newUserEmail"
+    type="email"
+    maxlength="180"
+    placeholder="اختياري"
+  >
+
+  <label for="newUserPassword">
+    كلمة المرور
+  </label>
+
+  <input
+    id="newUserPassword"
+    type="password"
+    maxlength="128"
+    autocomplete="new-password"
+    placeholder="12 حرفاً على الأقل"
+  >
+
+  <label for="newUserRole">
+    نوع الحساب
+  </label>
+
+  <select id="newUserRole">
+    <option value="TEACHER">
+      معلم
+    </option>
+
+    <option value="DIRECTOR">
+      مدير
+    </option>
+  </select>
+
+  <button
+    id="createUserBtn"
+    class="primary full"
+    type="button"
+  >
+    إنشاء الحساب
+  </button>
+
+  <div
+    id="createUserResult"
+    class="hint"
+  ></div>
+</article>
       <article class="panel">
 
         <div class="panel-head">
