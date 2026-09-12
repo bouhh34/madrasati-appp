@@ -121,10 +121,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          rsync -a --delete \
+                    rsync -a --delete \
             --exclude='.git/' \
+            --exclude='.github/' \
             /tmp/mamadrassa_v4/MaMadrassa_Production_V4/ ./
-
       - name: Use Node 24
         uses: actions/setup-node@v4
         with:
