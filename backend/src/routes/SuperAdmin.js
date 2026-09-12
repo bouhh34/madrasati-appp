@@ -81,4 +81,30 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
       client.release();
     }
   });
+  // التحقق من صلاحية SUPER ADMIN للحساب الحالي
+  app.get("/api/platform/me", async (request, reply) => {
+    if (!request.auth?.userId) {
+      return reply.code(401).send({ error: "UNAUTHORIZED" });
+    }
+
+    const result = await pool.query(`
+      SELECT role, active
+      FROM platform_admins
+      WHERE user_id = $1
+      LIMIT 1
+    `, [request.auth.userId]);
+
+    if (!result.rows[0] || !result.rows[0].active) {
+      return {
+        ok: true,
+        isSuperAdmin: false
+      };
+    }
+
+    return {
+      ok: true,
+      isSuperAdmin: true,
+      role: result.rows[0].role
+    };
+  });
 }
