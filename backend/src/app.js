@@ -17,6 +17,7 @@ import { registerDirectorRoutes } from "./routes/director.js";
 import { registerAcademicRoutes } from "./routes/academic.js";
 import { registerBrandingRoutes } from "./routes/branding.js";
 import { registerProductRoutes } from "./routes/product.js";
+import { registerReportVerifyRoutes } from "./routes/reportVerify.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ORIGIN_EXEMPT=new Set(["/api/auth/login","/api/auth/register","/api/auth/password/forgot","/api/auth/password/reset","/api/setup/bootstrap"]);
 
@@ -60,6 +61,7 @@ export async function buildApp(){
   await registerAuthRoutes(app,{requireSession,requireMutation});
   await registerDirectorRoutes(app,{requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
+await registerReportVerifyRoutes(app,{requireMutation});
   await registerBrandingRoutes(app,{requireSession,requireDirector});
 await registerProductRoutes(app,{requireSession,requireMutation});
   app.setNotFoundHandler((request,reply)=>{if(request.url.startsWith("/api/"))return reply.code(404).send({error:"NOT_FOUND"});return reply.sendFile("index.html");});
