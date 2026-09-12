@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import QRCode from "qrcode";
 import zlib from "zlib";
 import { withContext } from "../db.js";
 import { config } from "../config.js";
@@ -257,7 +258,11 @@ export async function registerReportVerifyRoutes(
 
           const url=
             `${config.appOrigin}/verify/report/${token}`;
-
+const qrDataUrl=await QRCode.toDataURL(url,{
+  errorCorrectionLevel:"L",
+  width:220,
+  margin:1
+});
           await audit(
             c,
             request.auth,
@@ -268,9 +273,11 @@ export async function registerReportVerifyRoutes(
           );
 
           return {
-            ok:true,
-            code,
-            url
+  ok:true,
+  code,
+  url,
+  qrDataUrl
+};
           };
         }
       );
