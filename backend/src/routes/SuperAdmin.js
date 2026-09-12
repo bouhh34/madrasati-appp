@@ -354,4 +354,40 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
     "/api/platform/schools/:schoolId/status",
     async (request, reply) => {
 
-      if (!(await requireMutation
+      if (!(await requireMutation(request, reply))) return;
+      if (!(await requireSuperAdmin(request, reply))) return;
+
+      const schoolId = String(
+        request.params.schoolId || ""
+      );
+
+      const active =
+        request.body?.active === true;
+
+      const result = await pool.query(`
+        UPDATE schools
+        SET active = $2,
+            updated_at = now()
+        WHERE id = $1
+        RETURNING
+          id,
+          name,
+          active
+      `, [
+        schoolId,
+        active
+      ]);
+
+      if (!result.rows[0]) {
+        return reply.code(404).send({
+          error: "SCHOOL_NOT_FOUND"
+        });
+      }
+
+      return {
+        ok: true,
+        school: result.rows[0]
+      };
+    }
+  );
+}
