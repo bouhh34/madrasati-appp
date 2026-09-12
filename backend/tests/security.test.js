@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+process.env.DATABASE_URL||="postgresql://x:x@localhost/x";
+process.env.PASSWORD_PEPPER||="test-pepper-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+process.env.AUDIT_HMAC_KEY||="test-audit-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const sec=await import("../src/security-core.js");
+test("tokens are high entropy and unique",()=>{const a=sec.randomToken(32),b=sec.randomToken(32);assert.notEqual(a,b);assert.ok(a.length>=43)});
+test("token hashes are deterministic and one-way representation",()=>{const t="secret";const h=sec.tokenHash(t);assert.equal(h,sec.tokenHash(t));assert.notEqual(h,t);assert.equal(h.length,64)});
+test("password policy accepts passphrases and rejects short passwords",()=>{assert.equal(sec.validPassword("short password"),false);assert.equal(sec.validPassword("هذه عبارة مرور طويلة وآمنة جدا"),true);assert.equal(sec.validPassword("this is a long passphrase"),true)});
+test("login normalization is stable",()=>assert.equal(sec.normalizeLogin("  TeSt  "),"test"));
+test("redaction removes common secrets",()=>{const x=sec.redactObject({password:"x",nested:{token:"y"},ok:"z"});assert.equal(x.password,"[REDACTED]");assert.equal(x.nested.token,"[REDACTED]");assert.equal(x.ok,"z")});

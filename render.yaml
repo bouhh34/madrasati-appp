@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: ma-madrassa-v4
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --no-fund && npm run migrate && npm test
+    startCommand: npm start
+    healthCheckPath: /api/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: AUDIT_HMAC_KEY
+        sync: false
+      - key: BOOTSTRAP_SECRET
+        sync: false
+      - key: SESSION_TTL_HOURS
+        value: "12"
+      - key: SESSION_IDLE_MINUTES
+        value: "45"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: MAX_BRANDING_BYTES
+        value: "5242880"

@@ -1,6 +1,6 @@
 {
-  "name": "ma-madrassa-secure-v2",
-  "version": "2.0.0",
+  "name": "ma-madrassa-production-v4",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,15 +9,20 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "migrate": "node src/migrate.js"
+    "migrate": "node src/migrate.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/routes/auth.js && node --check src/routes/director.js && node --check src/routes/academic.js && node --check src/routes/branding.js",
+    "verify": "npm run check && npm test"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/helmet": "^13.0.2",
+    "@fastify/multipart": "^9.2.1",
     "@fastify/rate-limit": "^10.3.0",
-    "@fastify/static": "^8.3.0",
+    "@fastify/static": "10.1.3",
     "argon2": "^0.44.0",
     "fastify": "^5.7.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "sharp": "0.35.4"
   }
 }

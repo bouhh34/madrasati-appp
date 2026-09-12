@@ -1,0 +1,13 @@
+{
+  "name":"مدرستي | Ma Madrassa",
+  "short_name":"مدرستي",
+  "description":"منصة موريتانية لإدارة المدارس والنتائج",
+  "lang":"ar-MR",
+  "dir":"rtl",
+  "start_url":"/",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#f4f8f7",
+  "theme_color":"#0b6f63",
+  "icons":[{"src":"/assets/official-logo.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/assets/official-logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+}

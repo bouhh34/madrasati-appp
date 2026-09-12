@@ -1,0 +1,14 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+const root=path.resolve(new URL("..",import.meta.url).pathname);
+const read=p=>fs.readFileSync(path.join(root,p),"utf8");
+test("service worker never caches API",()=>assert.match(read("public/sw.js"),/pathname\.startsWith\("\/api\/"\)/));
+test("RLS is enabled and forced on core academic tables",()=>{const sql=read("migrations/002_rls.sql");for(const t of ["classes","subjects","students","grades","guardian_student_links","school_branding","audit_log"])assert.ok(sql.includes(`'${t}'`));assert.match(sql,/ENABLE ROW LEVEL SECURITY/);assert.match(sql,/FORCE ROW LEVEL SECURITY/)});
+test("cross tenant grade integrity uses composite foreign keys",()=>{const sql=read("migrations/001_core.sql");assert.match(sql,/FOREIGN KEY \(student_id,school_id,class_id\)/);assert.match(sql,/FOREIGN KEY \(subject_id,school_id\)/);assert.match(sql,/FOREIGN KEY \(class_id,school_id\)/)});
+test("CSP does not allow inline scripts",()=>{const app=read("src/app.js");assert.doesNotMatch(app,/scriptSrc:\[[^\]]*unsafe-inline/);assert.doesNotMatch(read("public/index.html"),/onclick=/)});
+test("frontend never uses localStorage or sessionStorage for school data",()=>{const js=read("public/app.js");assert.doesNotMatch(js,/localStorage|sessionStorage|indexedDB/)});
+test("public account registration remains permissionless until invite",()=>{const auth=read("src/routes/auth.js");assert.match(auth,/account_state\) VALUES\(\$1,\$2,\$3,\$4,'PENDING'\)/);assert.match(auth,/\/api\/invites\/redeem/)});
+test("branding documents are quarantined instead of rendered",()=>{const b=read("src/routes/branding.js");assert.match(b,/QUARANTINED/);assert.match(b,/SECURE_CONVERSION_REQUIRED/);assert.match(b,/sharp\(/)});
+test("grade updates use optimistic concurrency",()=>{const a=read("src/routes/academic.js");assert.match(a,/WHERE id=\$3 AND version=\$4/);assert.match(a,/VERSION_CONFLICT/)});
