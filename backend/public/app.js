@@ -972,3 +972,169 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
   },250);
 
 })();
+(function(){
+  let activeViewRole=null;
+
+  const roleNames={
+    DIRECTOR:"مدير",
+    ADMIN:"إداري",
+    TEACHER:"معلم",
+    GUARDIAN:"ولي التلميذ"
+  };
+
+  function getActiveRole(){
+    const roles=me?.roles||[];
+
+    if(!roles.length) return null;
+
+    const saved=sessionStorage.getItem(
+      `mm-role-${me?.schoolId||"none"}`
+    );
+
+    if(saved&&roles.includes(saved)){
+      activeViewRole=saved;
+      return saved;
+    }
+
+    if(activeViewRole&&roles.includes(activeViewRole)){
+      return activeViewRole;
+    }
+
+    activeViewRole=
+      roles.includes("DIRECTOR")?"DIRECTOR":
+      roles.includes("ADMIN")?"ADMIN":
+      roles.includes("TEACHER")?"TEACHER":
+      roles[0];
+
+    return activeViewRole;
+  }
+
+  function createRoleSwitcher(){
+    if($("roleSwitcher")) return;
+
+    const top=document.querySelector(".top-actions");
+    if(!top) return;
+
+    const select=document.createElement("select");
+    select.id="roleSwitcher";
+    select.className="ghost compact";
+    select.style.maxWidth="150px";
+
+    top.insertBefore(select,top.firstChild);
+
+    select.onchange=()=>{
+      activeViewRole=select.value;
+
+      sessionStorage.setItem(
+        `mm-role-${me?.schoolId||"none"}`,
+        activeViewRole
+      );
+
+      applyRoleVisibility();
+      renderProfile();
+      navigate("home");
+
+      toast(
+        `تم التبديل إلى: ${roleNames[activeViewRole]||activeViewRole}`
+      );
+    };
+  }
+
+  function refreshRoleSwitcher(){
+    createRoleSwitcher();
+
+    const select=$("roleSwitcher");
+    if(!select||!me) return;
+
+    const roles=me.roles||[];
+    const active=getActiveRole();
+
+    select.innerHTML=roles.map(role=>
+      `<option value="${role}">
+        ${roleNames[role]||role}
+      </option>`
+    ).join("");
+
+    select.value=active||"";
+
+    select.classList.toggle(
+      "hidden",
+      roles.length<=1
+    );
+  }
+
+  const oldApplyRoleVisibility=applyRoleVisibility;
+
+  applyRoleVisibility=function(){
+    if(!me) return;
+
+    const role=getActiveRole();
+
+    qsa(".director-only").forEach(el=>{
+      el.classList.toggle(
+        "hidden",
+        role!=="DIRECTOR"
+      );
+    });
+
+    qsa(".guardian-only").forEach(el=>{
+      el.classList.toggle(
+        "hidden",
+        role!=="GUARDIAN"
+      );
+    });
+
+    qsa('[data-page="academic"]').forEach(el=>{
+      el.classList.toggle(
+        "hidden",
+        role==="GUARDIAN"
+      );
+    });
+
+    qsa("[data-attendance-nav]").forEach(el=>{
+      el.classList.toggle(
+        "hidden",
+        !["DIRECTOR","ADMIN","TEACHER"].includes(role)
+      );
+    });
+
+    qsa("[data-exams-nav]").forEach(el=>{
+      el.classList.toggle(
+        "hidden",
+        !["DIRECTOR","ADMIN","TEACHER"].includes(role)
+      );
+    });
+
+    refreshRoleSwitcher();
+  };
+
+  const oldRenderProfile=renderProfile;
+
+  renderProfile=function(){
+    oldRenderProfile();
+
+    if(!me) return;
+
+    const role=getActiveRole();
+    const label=roleNames[role]||role||"—";
+
+    if($("roleText")){
+      $("roleText").textContent=label;
+    }
+
+    if($("profileRoles")){
+      $("profileRoles").textContent=label;
+    }
+
+    refreshRoleSwitcher();
+  };
+
+  const roleWatcher=setInterval(()=>{
+    if(me){
+      refreshRoleSwitcher();
+      applyRoleVisibility();
+      renderProfile();
+      clearInterval(roleWatcher);
+    }
+  },250);
+})();
