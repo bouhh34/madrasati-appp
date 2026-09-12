@@ -16,7 +16,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerDirectorRoutes } from "./routes/director.js";
 import { registerAcademicRoutes } from "./routes/academic.js";
 import { registerBrandingRoutes } from "./routes/branding.js";
-
+import { registerProductRoutes } from "./routes/product.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ORIGIN_EXEMPT=new Set(["/api/auth/login","/api/auth/register","/api/auth/password/forgot","/api/auth/password/reset","/api/setup/bootstrap"]);
 
@@ -61,7 +61,7 @@ export async function buildApp(){
   await registerDirectorRoutes(app,{requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
   await registerBrandingRoutes(app,{requireSession,requireDirector});
-
+await registerProductRoutes(app,{requireSession,requireMutation});
   app.setNotFoundHandler((request,reply)=>{if(request.url.startsWith("/api/"))return reply.code(404).send({error:"NOT_FOUND"});return reply.sendFile("index.html");});
   app.setErrorHandler((error,request,reply)=>{request.log.error({err:error},"request failed");if(reply.sent)return;const pgDenied=error?.code==="42501";const status=pgDenied?403:(error.statusCode>=400&&error.statusCode<600?error.statusCode:500);reply.code(status).send({error:pgDenied?"ACCESS_DENIED":status===500?"INTERNAL_SERVER_ERROR":error.message});});
   return app;
