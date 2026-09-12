@@ -16,6 +16,21 @@ async function selectSchool(id){try{const d=await api("/api/auth/select-school",
 async function login(){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر تسجيل الدخول")}}
 async function register(){try{const d=await api("/api/auth/register",{method:"POST",body:JSON.stringify({fullName:$("fullName").value.trim(),login:$("newLogin").value.trim(),email:$("email").value.trim()||null,password:$("newPassword").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe();toast("تم إنشاء الحساب. اطلب رمز الانضمام من المدير")}catch(e){toast(e.data?.error==="ACCOUNT_ALREADY_EXISTS"?"اسم المستخدم أو البريد مستخدم مسبقًا":"تحقق من البيانات وكلمة المرور")}}
 async function redeem(){try{const d=await api("/api/invites/redeem",{method:"POST",body:JSON.stringify({code:$("inviteCode").value.trim()})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe();toast("تم تفعيل الصلاحيات") }catch{toast("الرمز غير صالح أو ليس مخصصًا لهذا الحساب")}}
+async function bootstrapSuperAdmin(){
+  const secret=prompt("أدخل مفتاح تهيئة مالك المنصة");
+  if(!secret)return;
+
+  try{
+    const d=await api("/api/platform/bootstrap-super-admin",{
+      method:"POST",
+      headers:{"x-bootstrap-secret":secret}
+    });
+    alert("تم تفعيل SUPER ADMIN بنجاح");
+    location.reload();
+  }catch(e){
+    alert(e.message||"فشل التفعيل");
+  }
+}
 async function logout(){try{await api("/api/auth/logout",{method:"POST"})}catch{}csrf="";me=null;showAuth()}
 function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const pureGuardian=roles.includes("GUARDIAN")&&!roles.includes("DIRECTOR")&&!roles.includes("TEACHER");qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
 function renderProfile(){const school=me.school||{};$("hello").textContent=me.fullName||me.login;$("avatar").textContent=(me.fullName||"م").trim().charAt(0);$("roleText").textContent=(me.roles||[]).map(r=>({DIRECTOR:"مدير",ADMIN:"إداري",TEACHER:"معلم",GUARDIAN:"ولي تلميذ"}[r]||r)).join(" • ");$("schoolNameSide").textContent=school.name||"—";$("schoolTypeBadge").textContent=school.school_type==="PRIVATE"?"مدرسة خصوصية":"مدرسة عمومية";$("profileName").textContent=me.fullName||"—";$("profileRoles").textContent=$("roleText").textContent;$("profileSchool").textContent=school.name||"—"}
