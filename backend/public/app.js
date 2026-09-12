@@ -92,3 +92,263 @@ $("loginTab").onclick=()=>setTab(false);$("registerTab").onclick=()=>setTab(true
 captureText();renderPermissionChecks();boot().then(()=>{if((me?.roles||[]).includes("DIRECTOR"))loadInviteSubjects()});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
+(function(){
+  const attendanceLabels={
+    PRESENT:"حاضر",
+    ABSENT:"غائب",
+    LATE:"متأخر",
+    EXCUSED:"غياب مبرر"
+  };
+
+  function attendanceToday(){
+    const d=new Date();
+    const offset=d.getTimezoneOffset();
+    return new Date(d.getTime()-offset*60000).toISOString().slice(0,10);
+  }
+
+  function createAttendancePage(){
+    if($("page-attendance")) return;
+
+    const page=document.createElement("section");
+    page.id="page-attendance";
+    page.className="page";
+    page.innerHTML=`
+      <div class="panel filters attendance-filters">
+        <select id="attendanceClass">
+          <option value="">اختر قسمًا</option>
+        </select>
+        <input id="attendanceDate" type="date" value="${attendanceToday()}">
+        <button id="attendanceReload" class="ghost compact" type="button">تحديث</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <span class="kicker">الحضور اليومي</span>
+            <h3>الحضور والغياب</h3>
+          </div>
+          <span id="attendanceSummary" class="status muted">اختر قسمًا</span>
+        </div>
+
+        <div id="attendanceGrid" class="grade-grid empty">
+          اختر قسمًا لعرض التلاميذ.
+        </div>
+      </div>
+    `;
+
+    document.querySelector(".workspace").appendChild(page);
+
+    const style=document.createElement("style");
+    style.textContent=`
+      .attendance-filters{
+        grid-template-columns:1fr 180px auto!important
+      }
+      .attendance-row{
+        display:grid;
+        grid-template-columns:minmax(150px,1fr) minmax(260px,2fr) minmax(150px,1fr);
+        gap:10px;
+        align-items:center;
+        padding:12px 0;
+        border-bottom:1px solid #e5ecef
+      }
+      .attendance-actions{
+        display:flex;
+        gap:6px;
+        flex-wrap:wrap
+      }
+      .attendance-btn{
+        border:1px solid #d4e0e3;
+        background:#fff;
+        border-radius:10px;
+        padding:8px 10px;
+        cursor:pointer
+      }
+      .attendance-btn.active{
+        background:#0b6f63;
+        color:#fff;
+        border-color:#0b6f63
+      }
+      @media(max-width:700px){
+        .attendance-filters{grid-template-columns:1fr!important}
+        .attendance-row{grid-template-columns:1fr}
+      }
+    `;
+    document.head.appendChild(style);
+
+    const side=document.querySelector("aside nav");
+    const sideBtn=document.createElement("button");
+    sideBtn.className="nav-item";
+    sideBtn.dataset.attendanceNav="side";
+    sideBtn.innerHTML="✓ <span>الحضور والغياب</span>";
+    sideBtn.onclick=openAttendance;
+    side.insertBefore(
+      sideBtn,
+      side.querySelector('[data-page="admin"]') || side.lastElementChild
+    );
+
+    const bottom=document.querySelector(".bottom-nav");
+    const bottomBtn=document.createElement("button");
+    bottomBtn.dataset.attendanceNav="bottom";
+    bottomBtn.innerHTML="✓<span>الحضور</span>";
+    bottomBtn.onclick=openAttendance;
+    bottom.insertBefore(
+      bottomBtn,
+      bottom.querySelector('[data-page="settings"]')
+    );
+
+    $("attendanceClass").onchange=loadAttendance;
+    $("attendanceDate").onchange=loadAttendance;
+    $("attendanceReload").onclick=loadAttendance;
+
+    updateAttendanceVisibility();
+  }
+
+  function updateAttendanceVisibility(){
+    const roles=me?.roles||[];
+    const guardianOnly=
+      roles.includes("GUARDIAN") &&
+      !roles.includes("DIRECTOR") &&
+      !roles.includes("ADMIN") &&
+      !roles.includes("TEACHER");
+
+    qsa("[data-attendance-nav]").forEach(b=>{
+      b.classList.toggle("hidden",guardianOnly);
+    });
+  }
+
+  async function openAttendance(){
+    navigate("attendance");
+    $("pageTitle").textContent="الحضور والغياب";
+
+    qsa("[data-attendance-nav]").forEach(b=>b.classList.add("active"));
+
+    try{
+      const d=await api("/api/classes");
+      const classes=d.classes||[];
+
+      $("attendanceClass").innerHTML=
+        '<option value="">اختر قسمًا</option>'+
+        classes.map(c=>
+          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+        ).join("");
+    }catch{
+      toast("تعذر تحميل الأقسام");
+    }
+  }
+
+  async function loadAttendance(){
+    const classId=$("attendanceClass").value;
+    const date=$("attendanceDate").value;
+
+    if(!classId||!date){
+      $("attendanceGrid").textContent="اختر قسمًا وتاريخًا.";
+      return;
+    }
+
+    $("attendanceGrid").textContent="جارٍ تحميل الحضور…";
+
+    try{
+      const d=await api(
+        `/api/attendance/students?classId=${encodeURIComponent(classId)}&date=${encodeURIComponent(date)}`
+      );
+
+      const students=d.students||[];
+
+      if(!students.length){
+        $("attendanceGrid").textContent="لا يوجد تلاميذ في هذا القسم.";
+        return;
+      }
+
+      $("attendanceGrid").innerHTML=students.map(st=>`
+        <div class="attendance-row" data-attendance-student="${st.student_id}">
+          <div class="student-name">
+            <b>${escapeHtml(st.full_name)}</b>
+            <small>${escapeHtml(st.student_uid||"")}</small>
+          </div>
+
+          <div class="attendance-actions">
+            ${Object.entries(attendanceLabels).map(([status,label])=>`
+              <button
+                type="button"
+                class="attendance-btn ${st.status===status?"active":""}"
+                data-attendance-status="${status}">
+                ${label}
+              </button>
+            `).join("")}
+          </div>
+
+          <input
+            class="attendance-note"
+            maxlength="500"
+            placeholder="ملاحظة اختيارية"
+            value="${escapeHtml(st.note||"")}">
+        </div>
+      `).join("");
+
+      qsa("[data-attendance-status]").forEach(btn=>{
+        btn.onclick=()=>saveAttendance(btn);
+      });
+
+      const counts={PRESENT:0,ABSENT:0,LATE:0,EXCUSED:0};
+
+      students.forEach(st=>{
+        if(counts[st.status]!==undefined) counts[st.status]++;
+      });
+
+      $("attendanceSummary").textContent=
+        `${students.length} تلميذ · حاضر ${counts.PRESENT} · غائب ${counts.ABSENT} · متأخر ${counts.LATE}`;
+
+    }catch(e){
+      $("attendanceGrid").textContent=
+        e.status===403
+          ?"لا تملك صلاحية الحضور لهذا القسم."
+          :"تعذر تحميل الحضور.";
+    }
+  }
+
+  async function saveAttendance(button){
+    const row=button.closest("[data-attendance-student]");
+
+    const studentId=row.dataset.attendanceStudent;
+    const classId=$("attendanceClass").value;
+    const date=$("attendanceDate").value;
+    const status=button.dataset.attendanceStatus;
+    const note=row.querySelector(".attendance-note").value.trim()||null;
+
+    try{
+      await api(
+        `/api/attendance/${encodeURIComponent(studentId)}`,
+        {
+          method:"PUT",
+          body:JSON.stringify({
+            classId,
+            date,
+            status,
+            note
+          })
+        }
+      );
+
+      toast("تم حفظ الحضور");
+      await loadAttendance();
+
+    }catch(e){
+      toast(
+        e.status===403
+          ?"لا تملك صلاحية تعديل الحضور"
+          :"تعذر حفظ الحضور"
+      );
+    }
+  }
+
+  createAttendancePage();
+
+  let attendanceWait=0;
+  const attendanceTimer=setInterval(()=>{
+    updateAttendanceVisibility();
+
+    if(me || attendanceWait++>20){
+      clearInterval(attendanceTimer);
+    }
+  },250);
+})();
