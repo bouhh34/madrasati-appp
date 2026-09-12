@@ -1120,3 +1120,521 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
     }
   },250);
 })();
+(function(){
+
+  function installFinalReportStyles(){
+    if(document.getElementById("final-report-styles")) return;
+
+    const style=document.createElement("style");
+    style.id="final-report-styles";
+
+    style.textContent=`
+      .final-report{
+        direction:rtl;
+        background:#fff;
+        color:#111;
+        width:min(900px,100%);
+        margin:auto;
+        padding:22px;
+        border-radius:16px;
+        font-family:Arial,Tahoma,sans-serif
+      }
+
+      .final-report-head{
+        display:grid;
+        grid-template-columns:1fr 150px 1fr;
+        gap:15px;
+        align-items:start;
+        border-bottom:2px solid #0b6f63;
+        padding-bottom:14px
+      }
+
+      .final-report-head .right,
+      .final-report-head .left{
+        font-size:13px;
+        line-height:1.7
+      }
+
+      .final-report-head .left{
+        text-align:left
+      }
+
+      .final-report-logo{
+        text-align:center
+      }
+
+      .final-report-logo .bismillah{
+        font-weight:700;
+        margin-bottom:7px
+      }
+
+      .final-report-logo img{
+        max-width:85px;
+        max-height:85px;
+        object-fit:contain
+      }
+
+      .final-report-title{
+        text-align:center;
+        font-size:22px;
+        font-weight:800;
+        margin:18px 0 12px;
+        color:#0b6f63
+      }
+
+      .final-student-info{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px 20px;
+        background:#f5faf8;
+        border:1px solid #dcebe6;
+        border-radius:12px;
+        padding:12px;
+        margin-bottom:15px
+      }
+
+      .final-student-info div{
+        font-size:14px
+      }
+
+      .final-report-table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:8px
+      }
+
+      .final-report-table th,
+      .final-report-table td{
+        border:1px solid #cfd8dc;
+        padding:8px 6px;
+        text-align:center;
+        font-size:13px
+      }
+
+      .final-report-table th{
+        background:#edf7f4;
+        font-weight:700
+      }
+
+      .final-report-table td:first-child,
+      .final-report-table th:first-child{
+        text-align:right
+      }
+
+      .final-report-averages{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:8px;
+        margin-top:15px
+      }
+
+      .final-average{
+        border:1px solid #d8e4e1;
+        border-radius:10px;
+        padding:10px;
+        text-align:center
+      }
+
+      .final-average small{
+        display:block;
+        opacity:.7;
+        margin-bottom:4px
+      }
+
+      .final-average b{
+        font-size:18px;
+        color:#0b6f63
+      }
+
+      .final-annual{
+        background:#0b6f63;
+        color:#fff;
+        border-color:#0b6f63
+      }
+
+      .final-annual b{
+        color:#fff
+      }
+
+      .final-signatures{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:30px;
+        margin-top:35px;
+        text-align:center
+      }
+
+      .final-signature-box{
+        min-height:90px
+      }
+
+      .final-signature-line{
+        width:130px;
+        border-top:1px solid #777;
+        margin:55px auto 0;
+        padding-top:5px;
+        font-size:12px
+      }
+
+      .final-report-actions{
+        display:flex;
+        justify-content:center;
+        gap:10px;
+        flex-wrap:wrap;
+        margin-top:22px
+      }
+
+      .final-report-note{
+        margin-top:18px;
+        text-align:center;
+        font-size:11px;
+        color:#667
+      }
+
+      @media(max-width:700px){
+        .final-report{
+          padding:12px
+        }
+
+        .final-report-head{
+          grid-template-columns:1fr 90px 1fr;
+          gap:7px
+        }
+
+        .final-report-head .right,
+        .final-report-head .left{
+          font-size:10px
+        }
+
+        .final-report-logo img{
+          max-width:60px;
+          max-height:60px
+        }
+
+        .final-student-info{
+          grid-template-columns:1fr
+        }
+
+        .final-report-averages{
+          grid-template-columns:1fr 1fr
+        }
+
+        .final-report-table th,
+        .final-report-table td{
+          font-size:11px;
+          padding:6px 3px
+        }
+      }
+
+      @media print{
+        body *{
+          visibility:hidden!important
+        }
+
+        #modal,
+        #modal *,
+        #modalBody,
+        #modalBody *{
+          visibility:visible!important
+        }
+
+        #modal{
+          position:absolute!important;
+          inset:0!important;
+          background:#fff!important;
+          display:block!important;
+          overflow:visible!important
+        }
+
+        #modalBody{
+          position:absolute!important;
+          top:0!important;
+          left:0!important;
+          width:100%!important;
+          margin:0!important;
+          padding:0!important
+        }
+
+        .final-report{
+          width:100%!important;
+          max-width:none!important;
+          box-shadow:none!important;
+          border-radius:0!important
+        }
+
+        .no-print,
+        #modalClose{
+          display:none!important
+        }
+
+        @page{
+          size:A4;
+          margin:10mm
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  function reportValue(v){
+    return v===null||v===undefined||v===""
+      ?"—"
+      :escapeHtml(v);
+  }
+
+  function reportDecision(avg){
+    const n=Number(avg);
+
+    if(!Number.isFinite(n)) return "—";
+    if(n>=16) return "ممتاز";
+    if(n>=14) return "جيد جدًا";
+    if(n>=12) return "جيد";
+    if(n>=10) return "مقبول";
+
+    return "يحتاج إلى دعم";
+  }
+
+  async function shareStudentReport(student,report){
+    const text=
+`كشف نتائج التلميذ: ${student.full_name}
+القسم: ${student.class_name||"—"}
+المعدل السنوي: ${report.annualAverage??"—"}/20`;
+
+    try{
+      if(navigator.share){
+        await navigator.share({
+          title:`كشف نتائج ${student.full_name}`,
+          text
+        });
+      }else{
+        await navigator.clipboard.writeText(text);
+        toast("تم نسخ ملخص الكشف");
+      }
+    }catch(e){
+      if(e?.name!=="AbortError"){
+        toast("تعذرت المشاركة");
+      }
+    }
+  }
+
+  openReport=async function(studentId){
+
+    installFinalReportStyles();
+
+    try{
+      const [d,b]=await Promise.all([
+        api(`/api/students/${encodeURIComponent(studentId)}/report`),
+        api("/api/branding")
+      ]);
+
+      const student=d.student;
+      const report=d.report;
+      const school=me.school||{};
+
+      const custom=b.branding?.mode==="CUSTOM";
+
+      const logo=custom
+        ?`/api/branding/header?ts=${Date.now()}`
+        :"/assets/official-logo.png";
+
+      const rows=(report.subjects||[]).map(subject=>`
+        <tr>
+          <td>${escapeHtml(subject.name)}</td>
+          <td>${reportValue(subject.coefficient)}</td>
+          <td>${reportValue(subject.terms?.T1)}</td>
+          <td>${reportValue(subject.terms?.T2)}</td>
+          <td>${reportValue(subject.terms?.T3)}</td>
+          <td>${reportValue(subject.annual)}</td>
+        </tr>
+      `).join("");
+
+      const annual=report.annualAverage;
+
+      showModal(`
+        <div class="final-report">
+
+          <div class="final-report-head">
+
+            <div class="right">
+              <b>الجمهورية الإسلامية الموريتانية</b><br>
+              وزارة التهذيب الوطني وإصلاح النظام التعليمي
+              ${school.wilaya
+                ?`<br>الإدارة الجهوية بولاية ${escapeHtml(school.wilaya)}`
+                :""
+              }
+              ${school.moughataa
+                ?`<br>مفتشية مقاطعة ${escapeHtml(school.moughataa)}`
+                :""
+              }
+              ${school.inspection
+                ?`<br>${escapeHtml(school.inspection)}`
+                :""
+              }
+            </div>
+
+            <div class="final-report-logo">
+              <div class="bismillah">
+                بسم الله الرحمن الرحيم
+              </div>
+
+              <img
+                src="${logo}"
+                alt="الشعار"
+              >
+            </div>
+
+            <div class="left">
+              <b>شرف - إخاء - عدالة</b><br>
+              المدرسة:
+              ${escapeHtml(school.name||"—")}<br>
+              السنة الدراسية:
+              ${escapeHtml(school.academic_year||"—")}
+            </div>
+
+          </div>
+
+          <div class="final-report-title">
+            كشف نتائج التلميذ
+          </div>
+
+          <div class="final-student-info">
+
+            <div>
+              <b>الاسم:</b>
+              ${escapeHtml(student.full_name||"—")}
+            </div>
+
+            <div>
+              <b>رقم التلميذ:</b>
+              ${escapeHtml(student.student_uid||"—")}
+            </div>
+
+            <div>
+              <b>القسم:</b>
+              ${escapeHtml(student.class_name||"—")}
+            </div>
+
+            <div>
+              <b>النتيجة العامة:</b>
+              ${reportDecision(annual)}
+            </div>
+
+          </div>
+
+          <table class="final-report-table">
+
+            <thead>
+              <tr>
+                <th>المادة</th>
+                <th>المعامل</th>
+                <th>الفصل الأول</th>
+                <th>الفصل الثاني</th>
+                <th>الفصل الثالث</th>
+                <th>المعدل السنوي</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${rows||`
+                <tr>
+                  <td colspan="6">
+                    لا توجد نتائج مسجلة
+                  </td>
+                </tr>
+              `}
+            </tbody>
+
+          </table>
+
+          <div class="final-report-averages">
+
+            <div class="final-average">
+              <small>معدل الفصل الأول</small>
+              <b>${reportValue(report.termAverages?.T1)}</b>
+              /20
+            </div>
+
+            <div class="final-average">
+              <small>معدل الفصل الثاني</small>
+              <b>${reportValue(report.termAverages?.T2)}</b>
+              /20
+            </div>
+
+            <div class="final-average">
+              <small>معدل الفصل الثالث</small>
+              <b>${reportValue(report.termAverages?.T3)}</b>
+              /20
+            </div>
+
+            <div class="final-average final-annual">
+              <small>المعدل السنوي</small>
+              <b>${reportValue(annual)}</b>
+              /20
+            </div>
+
+          </div>
+
+          <div class="final-signatures">
+
+            <div class="final-signature-box">
+              <b>توقيع المدير</b>
+
+              <div class="final-signature-line">
+                التوقيع
+              </div>
+            </div>
+
+            <div class="final-signature-box">
+              <b>ختم المؤسسة</b>
+
+              <div class="final-signature-line">
+                الختم
+              </div>
+            </div>
+
+          </div>
+
+          <div class="final-report-note">
+            تم إنشاء هذا الكشف بواسطة منصة مدرستي | Ma Madrassa
+          </div>
+
+          <div class="final-report-actions no-print">
+
+            <button
+              id="finalPrintReport"
+              class="primary"
+              type="button">
+              حفظ PDF / طباعة
+            </button>
+
+            <button
+              id="finalShareReport"
+              class="ghost"
+              type="button">
+              مشاركة
+            </button>
+
+          </div>
+
+        </div>
+      `);
+
+      $("finalPrintReport").onclick=()=>{
+        window.print();
+      };
+
+      $("finalShareReport").onclick=()=>{
+        shareStudentReport(student,report);
+      };
+
+    }catch(e){
+      toast(
+        e.status===403
+          ?"لا تملك صلاحية عرض هذا الكشف"
+          :"تعذر فتح كشف النتائج"
+      );
+    }
+  };
+
+})();
