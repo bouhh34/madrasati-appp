@@ -1423,10 +1423,13 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
     installFinalReportStyles();
 
     try{
-      const [d,b]=await Promise.all([
-        api(`/api/students/${encodeURIComponent(studentId)}/report`),
-        api("/api/branding")
-      ]);
+      const [d,b,v]=await Promise.all([
+  api(`/api/students/${encodeURIComponent(studentId)}/report`),
+  api("/api/branding"),
+  api(`/api/reports/${encodeURIComponent(studentId)}/verification`,{
+    method:"POST"
+  })
+]);
 
       const student=d.student;
       const report=d.report;
@@ -1594,7 +1597,28 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
             </div>
 
           </div>
+<div style="
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  margin-top:22px;
+  padding:12px;
+  border:1px solid #d8e4e1;
+  border-radius:12px;
+">
+  <img
+    src="${v.qrDataUrl}"
+    alt="QR التحقق"
+    style="width:110px;height:110px"
+  >
 
+  <div>
+    <b>التحقق من صحة الكشف</b><br>
+    <small>امسح الرمز لعرض النسخة الموثقة</small><br>
+    <b>${escapeHtml(v.code||"")}</b>
+  </div>
+</div>
           <div class="final-report-note">
             تم إنشاء هذا الكشف بواسطة منصة مدرستي | Ma Madrassa
           </div>
