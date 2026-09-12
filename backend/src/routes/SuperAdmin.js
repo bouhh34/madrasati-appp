@@ -4,18 +4,52 @@ import { safeEqualText } from "../security.js";
 
 export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
+  async function requireSuperAdmin(request, reply) {
+    if (!request.auth?.userId) {
+      reply.code(401).send({ error: "UNAUTHORIZED" });
+      return false;
+    }
+
+    const result = await pool.query(`
+      SELECT role, active
+      FROM platform_admins
+      WHERE user_id = $1
+      LIMIT 1
+    `, [request.auth.userId]);
+
+    if (
+      !result.rows[0] ||
+      !result.rows[0].active ||
+      result.rows[0].role !== "SUPER_ADMIN"
+    ) {
+      reply.code(403).send({ error: "SUPER_ADMIN_ONLY" });
+      return false;
+    }
+
+    return true;
+  }
+
   // تفعيل أول SUPER ADMIN فقط - مرة واحدة
   app.post("/api/platform/bootstrap-super-admin", {
-    config: { rateLimit: { max: 3, timeWindow: "15 minutes" } }
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: "15 minutes"
+      }
+    }
   }, async (request, reply) => {
 
     if (!(await requireMutation(request, reply))) return;
+
     if (
       !config.superAdminBootstrapLogin ||
       request.auth.login !== config.superAdminBootstrapLogin
     ) {
-      return reply.code(403).send({ error: "SUPER_ADMIN_ACCOUNT_DENIED" });
+      return reply.code(403).send({
+        error: "SUPER_ADMIN_ACCOUNT_DENIED"
+      });
     }
+
     const secret = String(
       request.headers["x-bootstrap-secret"] || ""
     );
@@ -25,7 +59,9 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
       !secret ||
       !safeEqualText(secret, config.bootstrapSecret)
     ) {
-      return reply.code(403).send({ error: "BOOTSTRAP_DENIED" });
+      return reply.code(403).send({
+        error: "BOOTSTRAP_DENIED"
+      });
     }
 
     const client = await pool.connect();
@@ -42,13 +78,18 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
       if (!state.rows[0] || state.rows[0].consumed) {
         await client.query("ROLLBACK");
+
         return reply.code(409).send({
           error: "SUPER_ADMIN_ALREADY_INITIALIZED"
         });
       }
 
       await client.query(`
-        INSERT INTO platform_admins (user_id, role, active)
+        INSERT INTO platform_admins (
+          user_id,
+          role,
+          active
+        )
         VALUES ($1, 'SUPER_ADMIN', true)
         ON CONFLICT (user_id)
         DO UPDATE SET
@@ -80,16 +121,25 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
       };
 
     } catch (error) {
-      try { await client.query("ROLLBACK"); } catch {}
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
+
       throw error;
+
     } finally {
       client.release();
     }
   });
-  // التحقق من صلاحية SUPER ADMIN للحساب الحالي
+
+
+  // هل المستخدم الحالي SUPER ADMIN؟
   app.get("/api/platform/me", async (request, reply) => {
+
     if (!request.auth?.userId) {
-      return reply.code(401).send({ error: "UNAUTHORIZED" });
+      return reply.code(401).send({
+        error: "UNAUTHORIZED"
+      });
     }
 
     const result = await pool.query(`
@@ -99,7 +149,9 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
       LIMIT 1
     `, [request.auth.userId]);
 
-    if (!result.rows[0] || !result.rows[0].active) {
+    const row = result.rows[0];
+
+    if (!row || !row.active) {
       return {
         ok: true,
         isSuperAdmin: false
@@ -108,8 +160,198 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
     return {
       ok: true,
-      isSuperAdmin: true,
-      role: result.rows[0].role
+      isSuperAdmin: row.role === "SUPER_ADMIN",
+      role: row.role
     };
   });
-}
+
+
+  // ملخص المنصة
+  app.get("/api/platform/overview", async (request, reply) => {
+
+    if (!(await requireSuperAdmin(request, reply))) return;
+
+    const result = await pool.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM schools) AS schools,
+        (SELECT COUNT(*)::int FROM schools WHERE active = true) AS active_schools,
+        (SELECT COUNT(*)::int FROM users) AS users,
+        (SELECT COUNT(*)::int FROM students) AS students,
+        (SELECT COUNT(*)::int FROM classes) AS classes
+    `);
+
+    return {
+      ok: true,
+      overview: result.rows[0]
+    };
+  });
+
+
+  // جميع المدارس
+  app.get("/api/platform/schools", async (request, reply) => {
+
+    if (!(await requireSuperAdmin(request, reply))) return;
+
+    const result = await pool.query(`
+      SELECT
+        s.id,
+        s.name,
+        s.school_type,
+        s.wilaya,
+        s.moughataa,
+        s.inspection,
+        s.academic_year,
+        s.locale,
+        s.active,
+        s.created_at,
+
+        (
+          SELECT COUNT(*)::int
+          FROM students st
+          WHERE st.school_id = s.id
+        ) AS students_count,
+
+        (
+          SELECT COUNT(*)::int
+          FROM classes c
+          WHERE c.school_id = s.id
+        ) AS classes_count,
+
+        (
+          SELECT COUNT(*)::int
+          FROM school_memberships sm
+          WHERE sm.school_id = s.id
+          AND sm.status = 'ACTIVE'
+        ) AS users_count
+
+      FROM schools s
+      ORDER BY s.created_at DESC
+    `);
+
+    return {
+      ok: true,
+      schools: result.rows
+    };
+  });
+
+
+  // إنشاء مدرسة جديدة
+  app.post("/api/platform/schools", async (request, reply) => {
+
+    if (!(await requireMutation(request, reply))) return;
+    if (!(await requireSuperAdmin(request, reply))) return;
+
+    const body = request.body || {};
+
+    const name = String(body.name || "").trim();
+    const schoolType = String(body.schoolType || "").trim();
+    const wilaya = String(body.wilaya || "").trim() || null;
+    const moughataa = String(body.moughataa || "").trim() || null;
+    const inspection = String(body.inspection || "").trim() || null;
+    const academicYear = String(body.academicYear || "").trim();
+    const locale =
+      body.locale === "fr"
+        ? "fr"
+        : "ar";
+
+    if (!name) {
+      return reply.code(400).send({
+        error: "SCHOOL_NAME_REQUIRED"
+      });
+    }
+
+    if (!["PUBLIC", "PRIVATE"].includes(schoolType)) {
+      return reply.code(400).send({
+        error: "INVALID_SCHOOL_TYPE"
+      });
+    }
+
+    if (!academicYear) {
+      return reply.code(400).send({
+        error: "ACADEMIC_YEAR_REQUIRED"
+      });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const schoolResult = await client.query(`
+        INSERT INTO schools (
+          name,
+          school_type,
+          wilaya,
+          moughataa,
+          inspection,
+          academic_year,
+          locale,
+          active
+        )
+        VALUES (
+          $1,$2,$3,$4,$5,$6,$7,true
+        )
+        RETURNING *
+      `, [
+        name,
+        schoolType,
+        wilaya,
+        moughataa,
+        inspection,
+        academicYear,
+        locale
+      ]);
+
+      const school = schoolResult.rows[0];
+
+      await client.query(`
+        INSERT INTO school_settings (
+          school_id
+        )
+        VALUES ($1)
+        ON CONFLICT (school_id)
+        DO NOTHING
+      `, [school.id]);
+
+      await client.query(`
+        INSERT INTO school_subscriptions (
+          school_id,
+          plan,
+          status
+        )
+        VALUES (
+          $1,
+          'TRIAL',
+          'ACTIVE'
+        )
+        ON CONFLICT (school_id)
+        DO NOTHING
+      `, [school.id]);
+
+      await client.query("COMMIT");
+
+      return reply.code(201).send({
+        ok: true,
+        school
+      });
+
+    } catch (error) {
+
+      try {
+        await client.query("ROLLBACK");
+      } catch {}
+
+      throw error;
+
+    } finally {
+      client.release();
+    }
+  });
+
+
+  // تشغيل أو إيقاف مدرسة
+  app.patch(
+    "/api/platform/schools/:schoolId/status",
+    async (request, reply) => {
+
+      if (!(await requireMutation
