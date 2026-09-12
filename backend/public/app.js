@@ -1675,5 +1675,5 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       );
     }
   };
-
+$("superAdminBootstrapBtn")?.addEventListener("click",bootstrapSuperAdmin);
 })();
