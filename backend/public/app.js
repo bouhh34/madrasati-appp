@@ -91,3 +91,4 @@ $("loginTab").onclick=()=>setTab(false);$("registerTab").onclick=()=>setTab(true
 
 captureText();renderPermissionChecks();boot().then(()=>{if((me?.roles||[]).includes("DIRECTOR"))loadInviteSubjects()});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
