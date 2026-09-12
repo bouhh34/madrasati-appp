@@ -18,6 +18,7 @@ import { registerAcademicRoutes } from "./routes/academic.js";
 import { registerBrandingRoutes } from "./routes/branding.js";
 import { registerProductRoutes } from "./routes/product.js";
 import { registerReportVerifyRoutes } from "./routes/reportVerify.js";
+import { registerSuperAdminRoutes } from "./routes/SuperAdmin.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ORIGIN_EXEMPT=new Set(["/api/auth/login","/api/auth/register","/api/auth/password/forgot","/api/auth/password/reset","/api/setup/bootstrap"]);
 
@@ -59,6 +60,7 @@ export async function buildApp(){
   app.get("/api/ready",async(request,reply)=>{try{await pool.query("SELECT 1");return{ok:true};}catch{return reply.code(503).send({ok:false});}});
 
   await registerAuthRoutes(app,{requireSession,requireMutation});
+ await registerSuperAdminRoutes(app,{requireMutation});
   await registerDirectorRoutes(app,{requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
 await registerReportVerifyRoutes(app,{requireMutation});
