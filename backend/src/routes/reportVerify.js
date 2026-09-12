@@ -280,8 +280,7 @@ const qrDataUrl=await QRCode.toDataURL(url,{
 };
           };
         }
-      );
-    }
+      
   );
 
 
