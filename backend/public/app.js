@@ -352,3 +352,623 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
     }
   },250);
 })();
+(function(){
+  let examCurrent=[];
+
+  function createExamPage(){
+    if($("page-exams")) return;
+
+    const page=document.createElement("section");
+    page.id="page-exams";
+    page.className="page";
+
+    page.innerHTML=`
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <span class="kicker">التنظيم الدراسي</span>
+            <h3>جدول الامتحانات</h3>
+          </div>
+          <span id="examStatus" class="status muted">اختر قسمًا</span>
+        </div>
+
+        <div class="exam-filters">
+          <select id="examClass">
+            <option value="">اختر قسمًا</option>
+          </select>
+
+          <select id="examTerm">
+            <option value="T1">الفصل الأول</option>
+            <option value="T2">الفصل الثاني</option>
+            <option value="T3">الفصل الثالث</option>
+          </select>
+
+          <button id="examReload" class="ghost compact" type="button">
+            تحديث
+          </button>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <article class="panel" id="examCreatePanel">
+          <div class="panel-head">
+            <h3>إضافة امتحان</h3>
+          </div>
+
+          <label>
+            المادة
+            <select id="examSubject">
+              <option value="">اختر مادة</option>
+            </select>
+          </label>
+
+          <label>
+            عنوان الامتحان
+            <input id="examTitle" placeholder="مثال: امتحان الرياضيات">
+          </label>
+
+          <label>
+            التاريخ
+            <input id="examDate" type="date">
+          </label>
+
+          <div class="two">
+            <label>
+              وقت البداية
+              <input id="examStart" type="time">
+            </label>
+
+            <label>
+              وقت النهاية
+              <input id="examEnd" type="time">
+            </label>
+          </div>
+
+          <label>
+            القاعة
+            <input id="examRoom" placeholder="اختياري">
+          </label>
+
+          <label>
+            ملاحظات
+            <input id="examNotes" placeholder="اختياري">
+          </label>
+
+          <label class="check">
+            <input id="examPublished" type="checkbox">
+            نشر الامتحان للتلاميذ والأولياء
+          </label>
+
+          <button id="examCreateBtn" class="primary" type="button">
+            حفظ الامتحان
+          </button>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="kicker">المواعيد</span>
+              <h3>الامتحانات المسجلة</h3>
+            </div>
+          </div>
+
+          <div id="examList" class="cards-list empty">
+            اختر قسمًا لعرض الامتحانات.
+          </div>
+        </article>
+      </div>
+    `;
+
+    document.querySelector(".workspace").appendChild(page);
+
+    const style=document.createElement("style");
+    style.textContent=`
+      .exam-filters{
+        display:grid;
+        grid-template-columns:minmax(160px,1fr) minmax(150px,.7fr) auto;
+        gap:10px;
+        margin-top:12px
+      }
+
+      .exam-card{
+        border:1px solid #e3eaec;
+        border-radius:14px;
+        padding:14px;
+        margin-bottom:10px
+      }
+
+      .exam-card-head{
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        align-items:flex-start
+      }
+
+      .exam-card h4{
+        margin:0 0 4px
+      }
+
+      .exam-card p{
+        margin:4px 0;
+        opacity:.78
+      }
+
+      .exam-actions{
+        display:flex;
+        gap:7px;
+        flex-wrap:wrap;
+        margin-top:10px
+      }
+
+      .exam-published{
+        background:#e7f6f1;
+        color:#0b6f63;
+        border-radius:20px;
+        padding:4px 9px;
+        font-size:12px
+      }
+
+      .exam-draft{
+        background:#f1f3f4;
+        border-radius:20px;
+        padding:4px 9px;
+        font-size:12px
+      }
+
+      @media(max-width:700px){
+        .exam-filters{
+          grid-template-columns:1fr
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    const side=document.querySelector("aside nav");
+
+    if(side&&!document.querySelector('[data-exams-nav="side"]')){
+      const b=document.createElement("button");
+      b.className="nav-item";
+      b.dataset.examsNav="side";
+      b.innerHTML='▣ <span>جدول الامتحانات</span>';
+      b.onclick=openExams;
+
+      side.insertBefore(
+        b,
+        side.querySelector('[data-page="admin"]') || side.lastElementChild
+      );
+    }
+
+    const bottom=document.querySelector(".bottom-nav");
+
+    if(bottom&&!document.querySelector('[data-exams-nav="bottom"]')){
+      const b=document.createElement("button");
+      b.dataset.examsNav="bottom";
+      b.innerHTML='▣<span>الامتحانات</span>';
+      b.onclick=openExams;
+
+      bottom.insertBefore(
+        b,
+        bottom.querySelector('[data-page="settings"]')
+      );
+    }
+
+    $("examClass").onchange=async()=>{
+      await loadExamSubjects();
+      await loadExams();
+    };
+
+    $("examTerm").onchange=loadExams;
+    $("examReload").onclick=loadExams;
+    $("examCreateBtn").onclick=createExam;
+
+    updateExamVisibility();
+
+    qsa("[data-page]").forEach(b=>{
+      b.addEventListener("click",()=>{
+        qsa("[data-exams-nav]").forEach(x=>x.classList.remove("active"));
+        qsa("[data-attendance-nav]").forEach(x=>x.classList.remove("active"));
+      });
+    });
+
+    qsa("[data-attendance-nav]").forEach(b=>{
+      b.addEventListener("click",()=>{
+        qsa("[data-exams-nav]").forEach(x=>x.classList.remove("active"));
+      });
+    });
+  }
+
+  function updateExamVisibility(){
+    const roles=me?.roles||[];
+
+    const guardianOnly=
+      roles.includes("GUARDIAN") &&
+      !roles.includes("DIRECTOR") &&
+      !roles.includes("ADMIN") &&
+      !roles.includes("TEACHER");
+
+    qsa("[data-exams-nav]").forEach(b=>{
+      b.classList.toggle("hidden",guardianOnly);
+    });
+  }
+
+  async function openExams(){
+    navigate("exams");
+
+    $("pageTitle").textContent="جدول الامتحانات";
+
+    qsa("[data-attendance-nav]").forEach(x=>{
+      x.classList.remove("active");
+    });
+
+    qsa("[data-exams-nav]").forEach(x=>{
+      x.classList.add("active");
+    });
+
+    try{
+      const d=await api("/api/classes");
+      const classes=d.classes||[];
+
+      const old=$("examClass").value;
+
+      $("examClass").innerHTML=
+        '<option value="">اختر قسمًا</option>'+
+        classes.map(c=>
+          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+        ).join("");
+
+      if(classes.some(c=>c.id===old)){
+        $("examClass").value=old;
+      }
+
+      if($("examClass").value){
+        await loadExamSubjects();
+        await loadExams();
+      }
+
+    }catch{
+      toast("تعذر تحميل الأقسام");
+    }
+  }
+
+  async function loadExamSubjects(){
+    const classId=$("examClass").value;
+
+    $("examSubject").innerHTML=
+      '<option value="">اختر مادة</option>';
+
+    if(!classId) return;
+
+    try{
+      const d=await api(
+        `/api/classes/${encodeURIComponent(classId)}/subjects`
+      );
+
+      const subjects=d.subjects||[];
+
+      $("examSubject").innerHTML=
+        '<option value="">اختر مادة</option>'+
+        subjects.map(s=>
+          `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+        ).join("");
+
+    }catch{
+      toast("تعذر تحميل المواد");
+    }
+  }
+
+  async function loadExams(){
+    const classId=$("examClass").value;
+    const term=$("examTerm").value;
+
+    if(!classId){
+      $("examList").classList.add("empty");
+      $("examList").textContent="اختر قسمًا لعرض الامتحانات.";
+      $("examStatus").textContent="اختر قسمًا";
+      return;
+    }
+
+    $("examList").classList.add("empty");
+    $("examList").textContent="جارٍ تحميل الامتحانات…";
+
+    try{
+      const d=await api(
+        `/api/exams?classId=${encodeURIComponent(classId)}&term=${encodeURIComponent(term)}`
+      );
+
+      examCurrent=d.exams||[];
+
+      $("examStatus").textContent=
+        `${examCurrent.length} امتحان`;
+
+      if(!examCurrent.length){
+        $("examList").classList.add("empty");
+        $("examList").textContent=
+          "لا توجد امتحانات مسجلة لهذا الفصل.";
+        return;
+      }
+
+      $("examList").classList.remove("empty");
+
+      $("examList").innerHTML=examCurrent.map(e=>`
+        <div class="exam-card">
+          <div class="exam-card-head">
+            <div>
+              <h4>${escapeHtml(e.title)}</h4>
+              <p>
+                ${escapeHtml(e.subject_name||"")}
+                ·
+                ${escapeHtml(e.class_name||"")}
+              </p>
+            </div>
+
+            <span class="${e.published?"exam-published":"exam-draft"}">
+              ${e.published?"منشور":"مسودة"}
+            </span>
+          </div>
+
+          <p>
+            📅 ${escapeHtml(String(e.exam_date||"").slice(0,10))}
+            ${e.starts_at?` · ⏰ ${escapeHtml(String(e.starts_at).slice(0,5))}`:""}
+            ${e.ends_at?` - ${escapeHtml(String(e.ends_at).slice(0,5))}`:""}
+          </p>
+
+          ${e.room?`<p>📍 ${escapeHtml(e.room)}</p>`:""}
+
+          ${e.notes?`<p>${escapeHtml(e.notes)}</p>`:""}
+
+          <div class="exam-actions">
+            <button
+              type="button"
+              class="ghost compact"
+              data-exam-edit="${e.id}">
+              تعديل
+            </button>
+
+            <button
+              type="button"
+              class="ghost compact"
+              data-exam-publish="${e.id}">
+              ${e.published?"إلغاء النشر":"نشر"}
+            </button>
+
+            <button
+              type="button"
+              class="ghost compact"
+              data-exam-delete="${e.id}">
+              حذف
+            </button>
+          </div>
+        </div>
+      `).join("");
+
+      qsa("[data-exam-edit]").forEach(b=>{
+        b.onclick=()=>editExam(b.dataset.examEdit);
+      });
+
+      qsa("[data-exam-publish]").forEach(b=>{
+        b.onclick=()=>toggleExamPublish(b.dataset.examPublish);
+      });
+
+      qsa("[data-exam-delete]").forEach(b=>{
+        b.onclick=()=>deleteExam(b.dataset.examDelete);
+      });
+
+    }catch(e){
+      $("examList").textContent=
+        e.status===403
+          ?"لا تملك صلاحية قراءة جدول الامتحانات."
+          :"تعذر تحميل جدول الامتحانات.";
+    }
+  }
+
+  async function createExam(){
+    const classId=$("examClass").value;
+    const subjectId=$("examSubject").value;
+    const term=$("examTerm").value;
+    const title=$("examTitle").value.trim();
+    const examDate=$("examDate").value;
+    const startsAt=$("examStart").value||null;
+    const endsAt=$("examEnd").value||null;
+    const room=$("examRoom").value.trim()||null;
+    const notes=$("examNotes").value.trim()||null;
+    const published=$("examPublished").checked;
+
+    if(!classId){
+      return toast("اختر القسم");
+    }
+
+    if(!subjectId){
+      return toast("اختر المادة");
+    }
+
+    if(!title){
+      return toast("أدخل عنوان الامتحان");
+    }
+
+    if(!examDate){
+      return toast("اختر تاريخ الامتحان");
+    }
+
+    try{
+      await api("/api/exams",{
+        method:"POST",
+        body:JSON.stringify({
+          classId,
+          subjectId,
+          term,
+          title,
+          examDate,
+          startsAt,
+          endsAt,
+          room,
+          notes,
+          published
+        })
+      });
+
+      $("examTitle").value="";
+      $("examDate").value="";
+      $("examStart").value="";
+      $("examEnd").value="";
+      $("examRoom").value="";
+      $("examNotes").value="";
+      $("examPublished").checked=false;
+
+      toast("تم حفظ الامتحان");
+      await loadExams();
+
+    }catch(e){
+      toast(
+        e.status===403
+          ?"لا تملك صلاحية إضافة الامتحانات"
+          :"تعذر حفظ الامتحان"
+      );
+    }
+  }
+
+  async function toggleExamPublish(id){
+    const exam=examCurrent.find(x=>x.id===id);
+
+    if(!exam) return;
+
+    try{
+      await api(`/api/exams/${encodeURIComponent(id)}`,{
+        method:"PATCH",
+        body:JSON.stringify({
+          version:exam.row_version,
+          title:exam.title,
+          examDate:String(exam.exam_date).slice(0,10),
+          startsAt:exam.starts_at
+            ?String(exam.starts_at).slice(0,5)
+            :null,
+          endsAt:exam.ends_at
+            ?String(exam.ends_at).slice(0,5)
+            :null,
+          room:exam.room||null,
+          notes:exam.notes||null,
+          published:!exam.published
+        })
+      });
+
+      toast(
+        exam.published
+          ?"تم إلغاء نشر الامتحان"
+          :"تم نشر الامتحان"
+      );
+
+      await loadExams();
+
+    }catch(e){
+      if(e.status===409){
+        toast("تم تعديل الامتحان من جهاز آخر. حدّث الصفحة.");
+      }else{
+        toast("تعذر تغيير حالة النشر");
+      }
+    }
+  }
+
+  async function editExam(id){
+    const exam=examCurrent.find(x=>x.id===id);
+
+    if(!exam) return;
+
+    const title=prompt(
+      "عنوان الامتحان",
+      exam.title||""
+    );
+
+    if(title===null) return;
+
+    const examDate=prompt(
+      "التاريخ YYYY-MM-DD",
+      String(exam.exam_date||"").slice(0,10)
+    );
+
+    if(examDate===null) return;
+
+    const startsAt=prompt(
+      "وقت البداية HH:MM",
+      exam.starts_at
+        ?String(exam.starts_at).slice(0,5)
+        :""
+    );
+
+    if(startsAt===null) return;
+
+    const endsAt=prompt(
+      "وقت النهاية HH:MM",
+      exam.ends_at
+        ?String(exam.ends_at).slice(0,5)
+        :""
+    );
+
+    if(endsAt===null) return;
+
+    const room=prompt(
+      "القاعة",
+      exam.room||""
+    );
+
+    if(room===null) return;
+
+    try{
+      await api(`/api/exams/${encodeURIComponent(id)}`,{
+        method:"PATCH",
+        body:JSON.stringify({
+          version:exam.row_version,
+          title:title.trim(),
+          examDate,
+          startsAt:startsAt||null,
+          endsAt:endsAt||null,
+          room:room.trim()||null,
+          notes:exam.notes||null,
+          published:exam.published
+        })
+      });
+
+      toast("تم تعديل الامتحان");
+      await loadExams();
+
+    }catch(e){
+      if(e.status===409){
+        toast("تعارض في التعديل. حدّث الجدول.");
+      }else{
+        toast("تعذر تعديل الامتحان");
+      }
+    }
+  }
+
+  async function deleteExam(id){
+    if(!confirm("هل تريد حذف هذا الامتحان؟")) return;
+
+    try{
+      await api(
+        `/api/exams/${encodeURIComponent(id)}`,
+        {method:"DELETE"}
+      );
+
+      toast("تم حذف الامتحان");
+      await loadExams();
+
+    }catch(e){
+      toast(
+        e.status===403
+          ?"لا تملك صلاحية حذف الامتحانات"
+          :"تعذر حذف الامتحان"
+      );
+    }
+  }
+
+  createExamPage();
+
+  let examWait=0;
+
+  const examTimer=setInterval(()=>{
+    updateExamVisibility();
+
+    if(me||examWait++>20){
+      clearInterval(examTimer);
+    }
+  },250);
+
+})();
