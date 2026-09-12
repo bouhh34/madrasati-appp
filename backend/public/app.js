@@ -33,7 +33,45 @@ async function createClass(){try{await api("/api/director/classes",{method:"POST
 async function createSubject(){try{await api("/api/director/subjects",{method:"POST",body:JSON.stringify({name:$("newSubjectName").value.trim(),coefficient:Number($("newSubjectCoeff").value),maxScore:Number($("newSubjectMax").value)})});$("newSubjectName").value="";toast("تمت إضافة المادة");await loadInviteSubjects();await loadDirectorHome()}catch{toast("تعذر إضافة المادة")}}
 async function createStudent(){try{await api("/api/director/students",{method:"POST",body:JSON.stringify({classId:$("studentClassSelect").value,fullName:$("studentName").value.trim(),studentUid:$("studentUid").value.trim(),gender:$("studentGender").value||null})});$("studentName").value="";$("studentUid").value="";toast("تمت إضافة التلميذ");await loadDirectorHome()}catch{toast("تعذر إضافة التلميذ")}}
 const permissionLabels={CLASS_READ:"قراءة القسم",STUDENT_READ:"قراءة التلاميذ",STUDENT_WRITE:"تعديل التلاميذ",SUBJECT_READ:"قراءة المادة",GRADE_READ:"قراءة الدرجات",GRADE_WRITE:"إدخال الدرجات",REPORT_READ:"قراءة التقارير",ATTENDANCE_READ:"قراءة الحضور",ATTENDANCE_WRITE:"تسجيل الحضور والغياب",EXAM_READ:"قراءة جدول الامتحانات",EXAM_WRITE:"إدارة جدول الامتحانات",DOCUMENT_READ:"قراءة الوثائق",DOCUMENT_WRITE:"إدارة الوثائق"};
-function renderPermissionChecks(){const role=$("inviteRole").value;const defaults=role==="TEACHER"?["CLASS_READ","STUDENT_READ","SUBJECT_READ","GRADE_READ","GRADE_WRITE","REPORT_READ"]:[];$("permissionChecks").innerHTML=role==="TEACHER"?Object.entries(permissionLabels).map(([k,v])=>`<label class="check"><input type="checkbox" value="${k}" ${defaults.includes(k)?"checked":""}>${escapeHtml(v)}</label>`).join(""):"";$("guardianStudentWrap").classList.toggle("hidden",role!=="GUARDIAN")}
+function renderPermissionChecks(){
+  const role=$("inviteRole").value;
+
+  const defaults=role==="TEACHER"
+    ?["CLASS_READ","STUDENT_READ","SUBJECT_READ","GRADE_READ","GRADE_WRITE","REPORT_READ"]
+    :[];
+
+  const showPermissions=role==="TEACHER"||role==="ADMIN";
+
+  $("permissionChecks").innerHTML=showPermissions
+    ?Object.entries(permissionLabels).map(([k,v])=>
+      `<label class="check">
+        <input type="checkbox" value="${k}" ${defaults.includes(k)?"checked":""}>
+        ${escapeHtml(v)}
+      </label>`
+    ).join("")
+    :"";
+
+  $("guardianStudentWrap").classList.toggle("hidden",role!=="GUARDIAN");
+}
+  const role=$("inviteRole").value;
+
+  const defaults=role==="TEACHER"
+    ?["CLASS_READ","STUDENT_READ","SUBJECT_READ","GRADE_READ","GRADE_WRITE","REPORT_READ"]
+    :[];
+
+  const showPermissions=role==="TEACHER"||role==="ADMIN";
+
+  $("permissionChecks").innerHTML=showPermissions
+    ?Object.entries(permissionLabels).map(([k,v])=>
+      `<label class="check">
+        <input type="checkbox" value="${k}" ${defaults.includes(k)?"checked":""}>
+        ${escapeHtml(v)}
+      </label>`
+    ).join("")
+    :"";
+
+  $("guardianStudentWrap").classList.toggle("hidden",role!=="GUARDIAN");
+}
 async function loadInviteSubjects(){if(!(me.roles||[]).includes("DIRECTOR"))return;try{const d=await api("/api/director/subjects");const ss=d.subjects||[];$("metricSubjects").textContent=ss.filter(x=>x.active).length;$("inviteSubject").innerHTML='<option value="">بدون مادة محددة</option>'+ss.filter(x=>x.active).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}catch{}}
 async function loadInviteStudents(){const classId=$("inviteClass").value;if(!classId){$("inviteStudent").innerHTML='<option value="">اختر تلميذًا</option>';return}try{const d=await api(`/api/classes/${classId}/students`);$("inviteStudent").innerHTML='<option value="">اختر تلميذًا</option>'+d.students.map(s=>`<option value="${s.id}">${escapeHtml(s.full_name)}</option>`).join("")}catch{}}
 async function createInvite(){const role=$("inviteRole").value,permissions=qsa("#permissionChecks input:checked").map(x=>x.value),studentIds=role==="GUARDIAN"&&$("inviteStudent").value?[$("inviteStudent").value]:[];const payload={role,targetLogin:$("inviteTarget").value.trim()||null,classId:$("inviteClass").value||null,subjectId:$("inviteSubject").value||null,permissions,studentIds,expiresHours:24};try{let d;try{d=await api("/api/director/invites",{method:"POST",body:JSON.stringify(payload)})}catch(e){if(e.data?.error==="STEP_UP_REQUIRED"){const p=prompt("أعد إدخال كلمة مرور المدير لتأكيد العملية");if(!p)return;await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password:p})});d=await api("/api/director/invites",{method:"POST",body:JSON.stringify(payload)})}else throw e}$("inviteResult").classList.remove("hidden");$("inviteResult").textContent=`رمز لمرة واحدة: ${d.code}`;toast("تم إنشاء رمز الانضمام") }catch{toast("تعذر إنشاء الدعوة. تحقق من النطاق والصلاحيات")}}
