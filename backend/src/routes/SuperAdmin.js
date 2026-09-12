@@ -10,7 +10,12 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
   }, async (request, reply) => {
 
     if (!(await requireMutation(request, reply))) return;
-
+    if (
+      !config.superAdminBootstrapLogin ||
+      request.auth.login !== config.superAdminBootstrapLogin
+    ) {
+      return reply.code(403).send({ error: "SUPER_ADMIN_ACCOUNT_DENIED" });
+    }
     const secret = String(
       request.headers["x-bootstrap-secret"] || ""
     );
