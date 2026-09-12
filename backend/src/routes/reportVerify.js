@@ -272,17 +272,16 @@ const qrDataUrl=await QRCode.toDataURL(url,{
             {code}
           );
 
-          return {
-  ok:true,
-  code,
-  url,
-  qrDataUrl
-};
+                    return {
+            ok:true,
+            code,
+            url,
+            qrDataUrl
           };
         }
-      
+      );
+    }
   );
-
 
   app.get(
     "/verify/report/:token",
