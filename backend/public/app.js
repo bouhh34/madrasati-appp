@@ -1824,12 +1824,19 @@ function renderSuperAdminSchools(schools){
         </small>
       </div>
 
-      <button
-        type="button"
-        data-school-status="${s.id}"
-        data-active="${s.active?"1":"0"}">
-        ${s.active?"تعطيل":"تشغيل"}
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button
+    type="button"
+    data-school-director="${s.id}">
+    تعيين مدير
+  </button>
+
+  <button
+    type="button"
+    data-school-status="${s.id}"
+    data-active="${s.active?"1":"0"}">
+    ${s.active?"تعطيل":"تشغيل"}
+  </button>
     </div>
   `).join("");
 
@@ -1862,6 +1869,49 @@ function renderSuperAdminSchools(schools){
       }
     };
   });
+qsa("[data-school-director]").forEach(btn=>{
+  btn.onclick=async()=>{
+    const schoolId=btn.dataset.schoolDirector;
+
+    const fullName=prompt("اسم المدير الكامل");
+    if(!fullName)return;
+
+    const login=prompt("اسم المستخدم للمدير");
+    if(!login)return;
+
+    const email=prompt("البريد الإلكتروني للمدير (اختياري)") || "";
+
+    const password=prompt("كلمة مرور المدير");
+    if(!password)return;
+
+    try{
+      await api(
+        `/api/platform/schools/${encodeURIComponent(schoolId)}/director`,
+        {
+          method:"POST",
+          body:JSON.stringify({
+            fullName,
+            login,
+            email,
+            password
+          })
+        }
+      );
+
+      toast("تم إنشاء حساب المدير وربطه بالمدرسة");
+      await loadSuperAdminDashboard();
+
+    }catch(e){
+      if(e.data?.error==="DIRECTOR_ACCOUNT_ALREADY_EXISTS"){
+        toast("اسم المستخدم أو البريد مستخدم من قبل");
+      }else if(e.data?.error==="INVALID_DIRECTOR_DATA"){
+        toast("بيانات المدير غير صحيحة");
+      }else{
+        toast("تعذر إنشاء حساب المدير");
+      }
+    }
+  };
+});
 }
 
 
