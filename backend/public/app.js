@@ -1837,6 +1837,17 @@ function renderSuperAdminSchools(schools){
     data-active="${s.active?"1":"0"}">
     ${s.active?"تعطيل":"تشغيل"}
   </button>
+ <button
+  type="button"
+  data-school-edit="${s.id}">
+  تعديل
+</button>
+
+<button
+  type="button"
+  data-school-delete="${s.id}">
+  حذف
+</button>
     </div>
   `).join("");
 
@@ -1900,19 +1911,82 @@ qsa("[data-school-director]").forEach(btn=>{
 
       toast("تم إنشاء حساب المدير وربطه بالمدرسة");
       await loadSuperAdminDashboard();
+qsa("[data-school-edit]").forEach(btn=>{
+  btn.onclick=async()=>{
+    const id=btn.dataset.schoolEdit;
+    const school=schools.find(s=>String(s.id)===String(id));
+    if(!school)return;
+
+    const name=prompt("اسم المدرسة",school.name||"");
+    if(!name)return;
+
+    const schoolType=prompt(
+      "النوع: PUBLIC أو PRIVATE",
+      school.school_type||"PUBLIC"
+    );
+    if(!schoolType)return;
+
+    const wilaya=prompt("الولاية",school.wilaya||"") ?? "";
+    const moughataa=prompt("المقاطعة",school.moughataa||"") ?? "";
+    const inspection=prompt("المفتشية",school.inspection||"") ?? "";
+    const academicYear=prompt(
+      "السنة الدراسية",
+      school.academic_year||"2026/2027"
+    );
+    if(!academicYear)return;
+
+    try{
+      await api(
+        `/api/platform/schools/${encodeURIComponent(id)}`,
+        {
+          method:"PATCH",
+          body:JSON.stringify({
+            name,
+            schoolType,
+            wilaya,
+            moughataa,
+            inspection,
+            academicYear
+          })
+        }
+      );
+
+      toast("تم تعديل المدرسة");
+      await loadSuperAdminDashboard();
 
     }catch(e){
-      if(e.data?.error==="DIRECTOR_ACCOUNT_ALREADY_EXISTS"){
-        toast("اسم المستخدم أو البريد مستخدم من قبل");
-      }else if(e.data?.error==="INVALID_DIRECTOR_DATA"){
-        toast("بيانات المدير غير صحيحة");
-      }else{
-        toast("تعذر إنشاء حساب المدير");
-      }
+      toast("تعذر تعديل المدرسة");
     }
   };
 });
-}
+
+
+qsa("[data-school-delete]").forEach(btn=>{
+  btn.onclick=async()=>{
+    const id=btn.dataset.schoolDelete;
+    const school=schools.find(s=>String(s.id)===String(id));
+
+    if(!confirm(
+      `هل تريد حذف مدرسة ${school?.name||""} نهائياً؟`
+    ))return;
+
+    try{
+      await api(
+        `/api/platform/schools/${encodeURIComponent(id)}`,
+        {
+          method:"DELETE"
+        }
+      );
+
+      toast("تم حذف المدرسة");
+      await loadSuperAdminDashboard();
+
+    }catch(e){
+      toast("تعذر حذف المدرسة");
+    }
+  };
+});
+    
 
 
 async function createSuperAdminSchool(){
