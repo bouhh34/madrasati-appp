@@ -450,57 +450,152 @@ await client.query(
       try {
         await client.query("BEGIN");
 
-        const passwordHash = await hashPassword(password);
+        let user;
 
-        const userResult = await client.query(`
-          INSERT INTO users (
-            login,
-            email,
-            full_name,
-            password_hash,
-            managed_by_school_id,
-            account_state
-          )
-          VALUES ($1,$2,$3,$4,$5,'ACTIVE')
-          RETURNING id,login,email,full_name
-        `, [
-          login,
-          email,
-          fullName,
-          passwordHash,
-          schoolId
-        ]);
+const existingUser =
+  await client.query(
+    `
+    SELECT
+      id,
+      login,
+      email,
+      full_name
+    FROM users
+    WHERE login=$1
+       OR (
+         $2 IS NOT NULL
+         AND email=$2
+       )
+    LIMIT 1
+    `,
+    [
+      login,
+      email
+    ]
+  );
 
-        const user = userResult.rows[0];
+if(
+  existingUser.rowCount
+){
+  user =
+    existingUser.rows[0];
 
-        await client.query(`
-          INSERT INTO school_memberships (
-            school_id,
-            user_id,
-            status,
-            created_by
-          )
-          VALUES ($1,$2,'ACTIVE',$3)
-        `, [
-          schoolId,
-          user.id,
-          request.auth.userId
-        ]);
+  await client.query(
+    `
+    UPDATE users
+    SET
+      account_state='ACTIVE',
+      managed_by_school_id=$1,
+      updated_at=now()
+    WHERE id=$2
+    `,
+    [
+      schoolId,
+      user.id
+    ]
+  );
 
-        await client.query(`
-          INSERT INTO membership_roles (
-            school_id,
-            user_id,
-            role,
-            created_by
-          )
-          VALUES ($1,$2,'DIRECTOR',$3)
-        `, [
-          schoolId,
-          user.id,
-          request.auth.userId
-        ]);
+}else{
 
+  const passwordHash =
+    await hashPassword(
+      password
+    );
+
+  const userResult =
+    await client.query(
+      `
+      INSERT INTO users (
+        login,
+        email,
+        full_name,
+        password_hash,
+        managed_by_school_id,
+        account_state
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        'ACTIVE'
+      )
+      RETURNING
+        id,
+        login,
+        email,
+        full_name
+      `,
+      [
+        login,
+        email,
+        fullName,
+        passwordHash,
+        schoolId
+      ]
+    );
+
+  user =
+    userResult.rows[0];
+    }
+
+    
+
+        await client.query(
+  `
+  INSERT INTO school_memberships (
+    school_id,
+    user_id,
+    status,
+    created_by
+  )
+  VALUES (
+    $1,
+    $2,
+    'ACTIVE',
+    $3
+  )
+  ON CONFLICT (
+    school_id,
+    user_id
+  )
+  DO UPDATE SET
+    status='ACTIVE'
+  `,
+  [
+    schoolId,
+    user.id,
+    request.auth.userId
+  ]
+);
+        await client.query(
+  `
+  INSERT INTO membership_roles (
+    school_id,
+    user_id,
+    role,
+    created_by
+  )
+  VALUES (
+    $1,
+    $2,
+    'DIRECTOR',
+    $3
+  )
+  ON CONFLICT (
+    school_id,
+    user_id,
+    role
+  )
+  DO NOTHING
+  `,
+  [
+    schoolId,
+    user.id,
+    request.auth.userId
+  ]
+);
         await client.query("COMMIT");
 
         return reply.code(201).send({
