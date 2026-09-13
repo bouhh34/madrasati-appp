@@ -283,7 +283,95 @@
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
-<div id="toast" class="toast hidden" role="status"></div>
+<section id="page-super-admin" class="page">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>إدارة منصة مدرستي</h2>
+        <p>لوحة مالك المنصة — SUPER ADMIN</p>
+      </div>
+      <button id="superAdminRefresh" type="button">تحديث</button>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <article class="panel">
+      <h3>المدارس</h3>
+      <strong id="saSchoolsCount">0</strong>
+    </article>
+
+    <article class="panel">
+      <h3>المستخدمون</h3>
+      <strong id="saUsersCount">0</strong>
+    </article>
+
+    <article class="panel">
+      <h3>التلاميذ</h3>
+      <strong id="saStudentsCount">0</strong>
+    </article>
+
+    <article class="panel">
+      <h3>الأقسام</h3>
+      <strong id="saClassesCount">0</strong>
+    </article>
+  </div>
+
+  <article class="panel">
+    <div class="panel-head">
+      <h3>إضافة مدرسة جديدة</h3>
+    </div>
+
+    <div class="content-grid">
+      <label>
+        اسم المدرسة
+        <input id="saSchoolName" type="text">
+      </label>
+
+      <label>
+        النوع
+        <select id="saSchoolType">
+          <option value="PUBLIC">عمومية</option>
+          <option value="PRIVATE">خصوصية</option>
+        </select>
+      </label>
+
+      <label>
+        الولاية
+        <input id="saWilaya" type="text">
+      </label>
+
+      <label>
+        المقاطعة
+        <input id="saMoughataa" type="text">
+      </label>
+
+      <label>
+        المفتشية
+        <input id="saInspection" type="text">
+      </label>
+
+      <label>
+        السنة الدراسية
+        <input id="saAcademicYear" type="text" placeholder="2026/2027">
+      </label>
+    </div>
+
+    <button id="saCreateSchool" type="button">
+      إضافة المدرسة
+    </button>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head">
+      <h3>جميع المدارس</h3>
+    </div>
+
+    <div id="saSchoolsList">
+      جاري تحميل المدارس...
+    </div>
+  </article>
+</section>
+  <div id="toast" class="toast hidden" role="status"></div>
 <script src="/app.js" defer></script>
 </body>
 </html>
