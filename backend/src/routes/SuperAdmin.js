@@ -526,5 +526,88 @@ await client.query(
         client.release();
       }
     }
+    );
+    // تعديل بيانات مدرسة
+  app.patch(
+    "/api/platform/schools/:schoolId",
+    async (request, reply) => {
+      if (!(await requireMutation(request, reply))) return;
+      if (!(await requireSuperAdmin(request, reply))) return;
+
+      const schoolId = String(request.params.schoolId || "");
+      if (!isUuid(schoolId)) {
+        return reply.code(400).send({ error: "INVALID_SCHOOL_ID" });
+      }
+
+      const b = request.body || {};
+
+      const name = String(b.name || "").trim();
+      const schoolType = String(b.schoolType || "").trim();
+      const wilaya = String(b.wilaya || "").trim();
+      const moughataa = String(b.moughataa || "").trim();
+      const inspection = String(b.inspection || "").trim();
+      const academicYear = String(b.academicYear || "").trim();
+
+      if (!name || !academicYear) {
+        return reply.code(400).send({ error: "INVALID_SCHOOL_DATA" });
+      }
+
+      const result = await pool.query(`
+        UPDATE schools
+        SET
+          name=$2,
+          school_type=$3,
+          wilaya=$4,
+          moughataa=$5,
+          inspection=$6,
+          academic_year=$7,
+          updated_at=now()
+        WHERE id=$1
+        RETURNING *
+      `, [
+        schoolId,
+        name,
+        schoolType,
+        wilaya,
+        moughataa,
+        inspection,
+        academicYear
+      ]);
+
+      if (!result.rows[0]) {
+        return reply.code(404).send({ error: "SCHOOL_NOT_FOUND" });
+      }
+
+      return { ok:true, school:result.rows[0] };
+    }
   );
+
+  // حذف مدرسة
+  app.delete(
+    "/api/platform/schools/:schoolId",
+    async (request, reply) => {
+      if (!(await requireMutation(request, reply))) return;
+      if (!(await requireSuperAdmin(request, reply))) return;
+
+      const schoolId = String(request.params.schoolId || "");
+      if (!isUuid(schoolId)) {
+        return reply.code(400).send({ error: "INVALID_SCHOOL_ID" });
+      }
+
+      const result = await pool.query(
+        "DELETE FROM schools WHERE id=$1 RETURNING id,name",
+        [schoolId]
+      );
+
+      if (!result.rows[0]) {
+        return reply.code(404).send({ error: "SCHOOL_NOT_FOUND" });
+      }
+
+      return {
+        ok:true,
+        deleted:result.rows[0]
+      };
+    }
+  );
+  
 }
