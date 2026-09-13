@@ -10,6 +10,7 @@ function hideAll(){["authShell","pendingView","schoolChooser","appShell"].forEac
 function showAuth(){hideAll();$("authShell").classList.remove("hidden")}
 function setTab(register){$("registerPane").classList.toggle("hidden",!register);$("loginPane").classList.toggle("hidden",register);$("registerTab").classList.toggle("active",register);$("loginTab").classList.toggle("active",!register);$("authTitle").textContent=tr(register?"إنشاء حساب":"مرحبًا بعودتك")}
 async function boot(){try{me=await api("/api/auth/me");await refreshCsrf();await openForMe()}catch{showAuth()}}
+
 async function openForMe(){
 
   try{
@@ -73,7 +74,7 @@ async function openForMe(){
   }
 
   navigate("home");
-} 
+}
 function showSchoolChooser(schools){hideAll();$("schoolChooser").classList.remove("hidden");$("schoolChoices").innerHTML=schools.map(s=>`<button type="button" data-school="${s.id}"><b>${escapeHtml(s.name)}</b><br><small>${escapeHtml((s.roles||[]).join(" • "))}</small></button>`).join("");qsa("[data-school]").forEach(b=>b.onclick=()=>selectSchool(b.dataset.school))}
 async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
 async function login(){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر تسجيل الدخول")}}
@@ -143,16 +144,933 @@ async function loadAudit(){if(!(me.roles||[]).includes("DIRECTOR"))return;try{co
 async function loadBranding(){if(!me?.schoolId)return;try{const d=await api("/api/branding"),isPrivate=d.school?.school_type==="PRIVATE",custom=d.branding?.mode==="CUSTOM";$("brandingInfo").innerHTML=custom?`<img src="/api/branding/header?ts=${Date.now()}" alt="رأسية المدرسة">`:`<div><img src="/assets/official-logo.png" alt="الشعار" style="max-height:70px"><p>${isPrivate?"لم تُرفع رأسية خاصة بعد":"المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية"}</p></div>`;$("brandingControls")?.classList.toggle("hidden",!isPrivate||!(me.roles||[]).includes("DIRECTOR"))}catch{}}
 async function uploadBranding(){const file=$("brandingFile").files?.[0];if(!file)return toast("اختر ملفًا أولًا");const fd=new FormData();fd.append("file",file);try{let d;try{d=await api("/api/director/branding/upload",{method:"POST",body:fd})}catch(e){if(e.data?.error==="STEP_UP_REQUIRED"){const p=prompt("أعد إدخال كلمة مرور المدير لتأكيد رفع الرأسية");if(!p)return;await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password:p})});d=await api("/api/director/branding/upload",{method:"POST",body:fd})}else throw e}if(d.message==="SECURE_CONVERSION_REQUIRED")toast("تم عزل الملف بأمان ويحتاج مرحلة التحويل المعقمة");else{toast("تم اعتماد الرأسية المعقمة");await loadBranding()}}catch{toast("تعذر معالجة الملف أو نوعه غير مدعوم")}}
 function showModal(html){$("modalBody").innerHTML=html;$("modal").classList.remove("hidden")}
-function forgot(){showModal(`<h3>استرجاع كلمة المرور</h3><p class="hint">يمكنك بدء الاسترجاع باسم المستخدم أو البريد، أو استخدام رمز إعادة تعيين أعطاك إياه مدير المدرسة.</p><label>اسم المستخدم أو البريد<input id="recoverKey"></label><button id="recoverStart" class="ghost full">بدء الاسترجاع</button><hr><label>رمز إعادة التعيين<input id="resetToken"></label><label>كلمة المرور الجديدة<input id="resetPassword" type="password"></label><button id="resetDo" class="primary">تعيين كلمة مرور جديدة</button>`);$("recoverStart").onclick=async()=>{try{await api("/api/auth/password/forgot",{method:"POST",body:JSON.stringify({loginOrEmail:$("recoverKey").value.trim()})})}catch{}toast("إذا كان الحساب موجودًا فقد بدأت إجراءات الاسترجاع")};$("resetDo").onclick=async()=>{try{await api("/api/auth/password/reset",{method:"POST",body:JSON.stringify({token:$("resetToken").value.trim(),newPassword:$("resetPassword").value})});toast("تم تغيير كلمة المرور");$("modal").classList.add("hidden")}catch{toast("الرمز غير صالح أو كلمة المرور غير مطابقة للشروط")}}}
-function toggleLocale(){locale=locale==="ar"?"fr":"ar";document.documentElement.lang=locale;document.documentElement.dir=locale==="ar"?"rtl":"ltr";$("langToggle").textContent=locale==="ar"?"FR":"AR";$("langToggle2").textContent=locale==="ar"?"FR":"AR";translateStatic()}
-const originalText=new Map();function captureText(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const t=n.nodeValue.trim();if(t)originalText.set(n,n.nodeValue)}}function translateStatic(){for(const[n,orig]of originalText){const raw=orig.trim();const mapped=locale==="fr"?(FR[raw]||raw):raw;n.nodeValue=orig.replace(raw,mapped)}if(me)renderProfile()}
+async function loadInviteSubjects(){
+  if(
+    !(me.roles||[]).includes("DIRECTOR")
+  ){
+    return;
+  }
 
-$("loginTab").onclick=()=>setTab(false);$("registerTab").onclick=()=>setTab(true);$("loginBtn").onclick=login;$("registerBtn").onclick=register;$("redeemBtn").onclick=redeem;$("logoutBtn").onclick=logout;$("pendingLogout").onclick=logout;$("chooserLogout").onclick=logout;$("forgotBtn").onclick=forgot;$("modalClose").onclick=()=>$("modal").classList.add("hidden");$("modal").onclick=e=>{if(e.target===$("modal"))$("modal").classList.add("hidden")};$("langToggle").onclick=toggleLocale;$("langToggle2").onclick=toggleLocale;$("refreshBtn").onclick=async()=>{me=await api("/api/auth/me");await openForMe();toast("تم التحديث")};qsa("[data-page]").forEach(b=>b.onclick=()=>navigate(b.dataset.page));$("classSelect").onchange=loadAcademicScope;$("subjectSelect").onchange=renderGradeGrid;$("termSelect").onchange=renderGradeGrid;$("createClassBtn").onclick=createClass;$("createSubjectBtn").onclick=createSubject;$("createStudentBtn").onclick=createStudent;$("inviteRole").onchange=renderPermissionChecks;$("inviteClass").onchange=loadInviteStudents;$("createInviteBtn").onclick=createInvite;$("reloadUsers").onclick=loadUsers;$("uploadBrandingBtn").onclick=uploadBranding;
+  try{
+    const d=await api(
+      "/api/director/subjects"
+    );
 
-captureText();renderPermissionChecks();boot().then(()=>{if((me?.roles||[]).includes("DIRECTOR"))loadInviteSubjects()});
-if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
-if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}
+    const ss=d.subjects||[];
+
+    $("metricSubjects").textContent=
+      ss.filter(x=>x.active).length;
+
+    $("inviteSubject").innerHTML=
+      '<option value="">'+
+      'بدون مادة محددة'+
+      '</option>'+
+      ss
+        .filter(x=>x.active)
+        .map(
+          s=>
+            `<option value="${s.id}">
+              ${escapeHtml(s.name)}
+            </option>`
+        )
+        .join("");
+  }catch{}
+}
+
+async function loadInviteStudents(){
+  const classId=
+    $("inviteClass").value;
+
+  if(!classId){
+    $("inviteStudent").innerHTML=
+      '<option value="">'+
+      'اختر تلميذًا'+
+      '</option>';
+
+    return;
+  }
+
+  try{
+    const d=await api(
+      `/api/classes/${classId}/students`
+    );
+
+    $("inviteStudent").innerHTML=
+      '<option value="">'+
+      'اختر تلميذًا'+
+      '</option>'+
+      d.students
+        .map(
+          s=>
+            `<option value="${s.id}">
+              ${escapeHtml(s.full_name)}
+            </option>`
+        )
+        .join("");
+  }catch{}
+}
+
+async function createInvite(){
+  const role=
+    $("inviteRole").value;
+
+  const permissions=
+    qsa(
+      "#permissionChecks input:checked"
+    ).map(
+      x=>x.value
+    );
+
+  const studentIds=
+    role==="GUARDIAN" &&
+    $("inviteStudent").value
+      ?[$("inviteStudent").value]
+      :[];
+
+  const payload={
+    role,
+    targetLogin:
+      $("inviteTarget").value.trim()||null,
+    classId:
+      $("inviteClass").value||null,
+    subjectId:
+      $("inviteSubject").value||null,
+    permissions,
+    studentIds,
+    expiresHours:24
+  };
+
+  try{
+    let d;
+
+    try{
+      d=await api(
+        "/api/director/invites",
+        {
+          method:"POST",
+          body:JSON.stringify(
+            payload
+          )
+        }
+      );
+    }catch(e){
+      if(
+        e.data?.error===
+        "STEP_UP_REQUIRED"
+      ){
+        const p=prompt(
+          "أعد إدخال كلمة مرور المدير لتأكيد العملية"
+        );
+
+        if(!p)return;
+
+        await api(
+          "/api/auth/step-up",
+          {
+            method:"POST",
+            body:JSON.stringify({
+              password:p
+            })
+          }
+        );
+
+        d=await api(
+          "/api/director/invites",
+          {
+            method:"POST",
+            body:JSON.stringify(
+              payload
+            )
+          }
+        );
+      }else{
+        throw e;
+      }
+    }
+
+    $("inviteResult")
+      .classList
+      .remove("hidden");
+
+    $("inviteResult").textContent=
+      `رمز لمرة واحدة: ${d.code}`;
+
+    toast(
+      "تم إنشاء رمز الانضمام"
+    );
+  }catch{
+    toast(
+      "تعذر إنشاء الدعوة. تحقق من النطاق والصلاحيات"
+    );
+  }
+}
+
+async function loadUsers(){
+  if(
+    !(me.roles||[]).includes("DIRECTOR")
+  ){
+    return;
+  }
+
+  try{
+    const d=await api(
+      "/api/director/users"
+    );
+
+    $("metricUsers").textContent=
+      d.users.filter(
+        x=>x.status==="ACTIVE"
+      ).length;
+
+    $("usersTable")
+      .classList
+      .remove("empty");
+
+    $("usersTable").innerHTML=`
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>المستخدم</th>
+            <th>الدور</th>
+            <th>الحالة</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${d.users.map(u=>`
+            <tr>
+              <td>
+                ${escapeHtml(
+                  u.full_name
+                )}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  u.login
+                )}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  (u.roles||[])
+                    .join(" • ")
+                )}
+              </td>
+
+              <td>
+                <span class="badge">
+                  ${escapeHtml(
+                    u.status
+                  )}
+                </span>
+              </td>
+
+              <td>
+                ${
+                  u.id===me.id
+                    ?"—"
+                    :`
+                      <button
+                        class="ghost compact"
+                        data-reset-user="${u.id}">
+                        رمز استرجاع
+                      </button>
+
+                      <button
+                        class="ghost compact"
+                        data-revoke-user="${u.id}">
+                        سحب الوصول
+                      </button>
+                    `
+                }
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+
+    qsa(
+      "[data-reset-user]"
+    ).forEach(
+      b=>
+        b.onclick=()=>
+          issueResetCode(
+            b.dataset.resetUser
+          )
+    );
+
+    qsa(
+      "[data-revoke-user]"
+    ).forEach(
+      b=>
+        b.onclick=()=>
+          revokeUser(
+            b.dataset.revokeUser
+          )
+    );
+  }catch{}
+}
+
+async function ensureStepUp(){
+  const p=prompt(
+    "أعد إدخال كلمة مرور المدير لتأكيد العملية"
+  );
+
+  if(!p)return false;
+
+  try{
+    await api(
+      "/api/auth/step-up",
+      {
+        method:"POST",
+        body:JSON.stringify({
+          password:p
+        })
+      }
+    );
+
+    return true;
+  }catch{
+    toast(
+      "فشل التحقق من كلمة المرور"
+    );
+
+    return false;
+  }
+}
+
+async function issueResetCode(
+  userId
+){
+  try{
+    let d;
+
+    try{
+      d=await api(
+        `/api/director/users/${userId}/reset-code`,
+        {
+          method:"POST"
+        }
+      );
+    }catch(e){
+      if(
+        e.data?.error!==
+        "STEP_UP_REQUIRED"
+      ){
+        throw e;
+      }
+
+      if(
+        !(await ensureStepUp())
+      ){
+        return;
+      }
+
+      d=await api(
+        `/api/director/users/${userId}/reset-code`,
+        {
+          method:"POST"
+        }
+      );
+    }
+
+    showModal(`
+      <h3>
+        رمز استرجاع لمرة واحدة
+      </h3>
+
+      <p class="hint">
+        صالح لمدة
+        ${d.expiresInMinutes}
+        دقيقة.
+        أعطه لصاحب الحساب
+        عبر قناة موثوقة.
+      </p>
+
+      <div class="secret-result">
+        ${escapeHtml(d.code)}
+      </div>
+    `);
+  }catch{
+    toast(
+      "تعذر إنشاء رمز الاسترجاع"
+    );
+  }
+}
+
+async function revokeUser(
+  userId
+){
+  if(
+    !confirm(
+      "هل تريد سحب وصول هذا المستخدم وإلغاء جلساته المفتوحة؟"
+    )
+  ){
+    return;
+  }
+
+  try{
+    try{
+      await api(
+        `/api/director/users/${userId}/revoke`,
+        {
+          method:"POST"
+        }
+      );
+    }catch(e){
+      if(
+        e.data?.error!==
+        "STEP_UP_REQUIRED"
+      ){
+        throw e;
+      }
+
+      if(
+        !(await ensureStepUp())
+      ){
+        return;
+      }
+
+      await api(
+        `/api/director/users/${userId}/revoke`,
+        {
+          method:"POST"
+        }
+      );
+    }
+
+    toast(
+      "تم سحب الوصول وإلغاء الجلسات"
+    );
+
+    await loadUsers();
+    await loadDirectorHome();
+  }catch{
+    toast(
+      "تعذر سحب الوصول"
+    );
+  }
+}
+
+async function loadAudit(){
+  if(
+    !(me.roles||[]).includes("DIRECTOR")
+  ){
+    return;
+  }
+
+  try{
+    const d=await api(
+      "/api/director/audit"
+    );
+
+    $("auditList")
+      .classList
+      .toggle(
+        "empty",
+        !d.events.length
+      );
+
+    $("auditList").innerHTML=
+      d.events.length
+        ?d.events.map(e=>`
+          <div class="notice">
+            <b>
+              ${escapeHtml(e.action)}
+            </b>
+
+            <p>
+              ${escapeHtml(
+                e.entity_type||""
+              )}
+              ·
+              ${new Date(
+                e.created_at
+              ).toLocaleString(
+                locale==="fr"
+                  ?"fr-FR"
+                  :"ar-MR"
+              )}
+            </p>
+          </div>
+        `).join("")
+        :"لا توجد أحداث";
+  }catch{}
+}
+async function loadBranding(){
+  if(!me?.schoolId){
+    return;
+  }
+
+  try{
+    const d=await api(
+      "/api/branding"
+    );
+
+    const isPrivate=
+      d.school?.school_type===
+      "PRIVATE";
+
+    const custom=
+      d.branding?.mode===
+      "CUSTOM";
+
+    $("brandingInfo").innerHTML=
+      custom
+        ?`
+          <img
+            src="/api/branding/header?ts=${Date.now()}"
+            alt="رأسية المدرسة">
+        `
+        :`
+          <div>
+            <img
+              src="/assets/official-logo.png"
+              alt="الشعار"
+              style="max-height:70px">
+
+            <p>
+              ${
+                isPrivate
+                  ?"لم تُرفع رأسية خاصة بعد"
+                  :"المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية"
+              }
+            </p>
+          </div>
+        `;
+
+    $("brandingControls")
+      ?.classList
+      .toggle(
+        "hidden",
+        !isPrivate ||
+        !(me.roles||[])
+          .includes("DIRECTOR")
+      );
+  }catch{}
+}
+
+async function uploadBranding(){
+  const file=
+    $("brandingFile").files?.[0];
+
+  if(!file){
+    return toast(
+      "اختر ملفًا أولًا"
+    );
+  }
+
+  const fd=new FormData();
+
+  fd.append(
+    "file",
+    file
+  );
+
+  try{
+    let d;
+
+    try{
+      d=await api(
+        "/api/director/branding/upload",
+        {
+          method:"POST",
+          body:fd
+        }
+      );
+    }catch(e){
+      if(
+        e.data?.error===
+        "STEP_UP_REQUIRED"
+      ){
+        const p=prompt(
+          "أعد إدخال كلمة مرور المدير لتأكيد رفع الرأسية"
+        );
+
+        if(!p){
+          return;
+        }
+
+        await api(
+          "/api/auth/step-up",
+          {
+            method:"POST",
+            body:JSON.stringify({
+              password:p
+            })
+          }
+        );
+
+        d=await api(
+          "/api/director/branding/upload",
+          {
+            method:"POST",
+            body:fd
+          }
+        );
+      }else{
+        throw e;
+      }
+    }
+
+    if(
+      d.message===
+      "SECURE_CONVERSION_REQUIRED"
+    ){
+      toast(
+        "تم عزل الملف بأمان ويحتاج مرحلة التحويل المعقمة"
+      );
+    }else{
+      toast(
+        "تم اعتماد الرأسية المعقمة"
+      );
+
+      await loadBranding();
+    }
+  }catch{
+    toast(
+      "تعذر معالجة الملف أو نوعه غير مدعوم"
+    );
+  }
+}
+
+function showModal(html){
+  $("modalBody").innerHTML=
+    html;
+
+  $("modal")
+    .classList
+    .remove("hidden");
+}
+
+function forgot(){
+  showModal(`
+    <h3>
+      استرجاع كلمة المرور
+    </h3>
+
+    <p class="hint">
+      يمكنك بدء الاسترجاع
+      باسم المستخدم أو البريد،
+      أو استخدام رمز إعادة تعيين
+      أعطاك إياه مدير المدرسة.
+    </p>
+
+    <label>
+      اسم المستخدم أو البريد
+
+      <input id="recoverKey">
+    </label>
+
+    <button
+      id="recoverStart"
+      class="ghost full">
+      بدء الاسترجاع
+    </button>
+
+    <hr>
+
+    <label>
+      رمز إعادة التعيين
+
+      <input id="resetToken">
+    </label>
+
+    <label>
+      كلمة المرور الجديدة
+
+      <input
+        id="resetPassword"
+        type="password">
+    </label>
+
+    <button
+      id="resetDo"
+      class="primary">
+      تعيين كلمة مرور جديدة
+    </button>
+  `);
+
+  $("recoverStart").onclick=
+    async()=>{
+      try{
+        await api(
+          "/api/auth/password/forgot",
+          {
+            method:"POST",
+            body:JSON.stringify({
+              loginOrEmail:
+                $("recoverKey")
+                  .value
+                  .trim()
+            })
+          }
+        );
+      }catch{}
+
+      toast(
+        "إذا كان الحساب موجودًا فقد بدأت إجراءات الاسترجاع"
+      );
+    };
+
+  $("resetDo").onclick=
+    async()=>{
+      try{
+        await api(
+          "/api/auth/password/reset",
+          {
+            method:"POST",
+            body:JSON.stringify({
+              token:
+                $("resetToken")
+                  .value
+                  .trim(),
+
+              newPassword:
+                $("resetPassword")
+                  .value
+            })
+          }
+        );
+
+        toast(
+          "تم تغيير كلمة المرور"
+        );
+
+        $("modal")
+          .classList
+          .add("hidden");
+      }catch{
+        toast(
+          "الرمز غير صالح أو كلمة المرور غير مطابقة للشروط"
+        );
+      }
+    };
+}
+
+function toggleLocale(){
+  locale=
+    locale==="ar"
+      ?"fr"
+      :"ar";
+
+  document
+    .documentElement
+    .lang=locale;
+
+  document
+    .documentElement
+    .dir=
+      locale==="ar"
+        ?"rtl"
+        :"ltr";
+
+  $("langToggle").textContent=
+    locale==="ar"
+      ?"FR"
+      :"AR";
+
+  $("langToggle2").textContent=
+    locale==="ar"
+      ?"FR"
+      :"AR";
+
+  translateStatic();
+}
+
+const originalText=
+  new Map();
+
+function captureText(){
+  const w=
+    document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT
+    );
+
+  let n;
+
+  while(
+    n=w.nextNode()
+  ){
+    const t=
+      n.nodeValue.trim();
+
+    if(t){
+      originalText.set(
+        n,
+        n.nodeValue
+      );
+    }
+  }
+}
+
+function translateStatic(){
+  for(
+    const [n,orig]
+    of originalText
+  ){
+    const raw=
+      orig.trim();
+
+    const mapped=
+      locale==="fr"
+        ?(FR[raw]||raw)
+        :raw;
+
+    n.nodeValue=
+      orig.replace(
+        raw,
+        mapped
+      );
+  }
+
+  if(me){
+    renderProfile();
+  }
+}
+$("loginTab").onclick=
+  ()=>setTab(false);
+
+$("registerTab").onclick=
+  ()=>setTab(true);
+
+$("loginBtn").onclick=
+  login;
+
+$("registerBtn").onclick=
+  register;
+
+$("redeemBtn").onclick=
+  redeem;
+
+$("logoutBtn").onclick=
+  logout;
+
+$("pendingLogout").onclick=
+  logout;
+
+$("chooserLogout").onclick=
+  logout;
+
+$("forgotBtn").onclick=
+  forgot;
+
+$("modalClose").onclick=
+  ()=>
+    $("modal")
+      .classList
+      .add("hidden");
+
+$("modal").onclick=e=>{
+  if(
+    e.target===$("modal")
+  ){
+    $("modal")
+      .classList
+      .add("hidden");
+  }
+};
+
+$("langToggle").onclick=
+  toggleLocale;
+
+$("langToggle2").onclick=
+  toggleLocale;
+
+$("refreshBtn").onclick=
+  async()=>{
+    me=await api(
+      "/api/auth/me"
+    );
+
+    await openForMe();
+
+    toast(
+      "تم التحديث"
+    );
+  };
+
+qsa(
+  "[data-page]"
+).forEach(
+  b=>
+    b.onclick=
+      ()=>navigate(
+        b.dataset.page
+      )
+);
+
+$("classSelect").onchange=
+  loadAcademicScope;
+
+$("subjectSelect").onchange=
+  renderGradeGrid;
+
+$("termSelect").onchange=
+  renderGradeGrid;
+
+$("createClassBtn").onclick=
+  createClass;
+
+$("createSubjectBtn").onclick=
+  createSubject;
+
+$("createStudentBtn").onclick=
+  createStudent;
+
+$("inviteRole").onchange=
+  renderPermissionChecks;
+
+$("inviteClass").onchange=
+  loadInviteStudents;
+
+$("createInviteBtn").onclick=
+  createInvite;
+
+$("reloadUsers").onclick=
+  loadUsers;
+
+$("uploadBrandingBtn").onclick=
+  uploadBranding;
+
+captureText();
+
+renderPermissionChecks();
+
+boot().then(()=>{
+  if(
+    (me?.roles||[])
+      .includes("DIRECTOR")
+  ){
+    loadInviteSubjects();
+  }
+});
+
+if(
+  "serviceWorker" in navigator
+){
+  navigator
+    .serviceWorker
+    .register("/sw.js")
+    .catch(()=>{});
+}
+
+if(
+  "serviceWorker" in navigator
+){
+  navigator
+    .serviceWorker
+    .register("/sw.js")
+    .catch(()=>{});
+}
+
 (function(){
+
   const attendanceLabels={
     PRESENT:"حاضر",
     ABSENT:"غائب",
@@ -161,223 +1079,504 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
   };
 
   function attendanceToday(){
-    const d=new Date();
-    const offset=d.getTimezoneOffset();
-    return new Date(d.getTime()-offset*60000).toISOString().slice(0,10);
+    const d=
+      new Date();
+
+    const offset=
+      d.getTimezoneOffset();
+
+    return new Date(
+      d.getTime()-
+      offset*60000
+    )
+      .toISOString()
+      .slice(0,10);
   }
 
   function createAttendancePage(){
-    if($("page-attendance")) return;
+    if(
+      $("page-attendance")
+    ){
+      return;
+    }
 
-    const page=document.createElement("section");
-    page.id="page-attendance";
-    page.className="page";
+    const page=
+      document.createElement(
+        "section"
+      );
+
+    page.id=
+      "page-attendance";
+
+    page.className=
+      "page";
+
     page.innerHTML=`
-      <div class="panel filters attendance-filters">
+      <div
+        class="panel filters attendance-filters">
+
         <select id="attendanceClass">
-          <option value="">اختر قسمًا</option>
+          <option value="">
+            اختر قسمًا
+          </option>
         </select>
-        <input id="attendanceDate" type="date" value="${attendanceToday()}">
-        <button id="attendanceReload" class="ghost compact" type="button">تحديث</button>
+
+        <input
+          id="attendanceDate"
+          type="date"
+          value="${attendanceToday()}">
+
+        <button
+          id="attendanceReload"
+          class="ghost compact"
+          type="button">
+          تحديث
+        </button>
       </div>
 
       <div class="panel">
         <div class="panel-head">
           <div>
-            <span class="kicker">الحضور اليومي</span>
-            <h3>الحضور والغياب</h3>
+            <span class="kicker">
+              الحضور اليومي
+            </span>
+
+            <h3>
+              الحضور والغياب
+            </h3>
           </div>
-          <span id="attendanceSummary" class="status muted">اختر قسمًا</span>
+
+          <span
+            id="attendanceSummary"
+            class="status muted">
+            اختر قسمًا
+          </span>
         </div>
 
-        <div id="attendanceGrid" class="grade-grid empty">
+        <div
+          id="attendanceGrid"
+          class="grade-grid empty">
           اختر قسمًا لعرض التلاميذ.
         </div>
       </div>
     `;
 
-    document.querySelector(".workspace").appendChild(page);
+    document
+      .querySelector(
+        ".workspace"
+      )
+      .appendChild(page);
 
-    const style=document.createElement("style");
+    const style=
+      document.createElement(
+        "style"
+      );
+
     style.textContent=`
       .attendance-filters{
-        grid-template-columns:1fr 180px auto!important
+        grid-template-columns:
+          1fr 180px auto!important
       }
+
       .attendance-row{
         display:grid;
-        grid-template-columns:minmax(150px,1fr) minmax(260px,2fr) minmax(150px,1fr);
+        grid-template-columns:
+          minmax(150px,1fr)
+          minmax(260px,2fr)
+          minmax(150px,1fr);
         gap:10px;
         align-items:center;
         padding:12px 0;
-        border-bottom:1px solid #e5ecef
+        border-bottom:
+          1px solid #e5ecef
       }
+
       .attendance-actions{
         display:flex;
         gap:6px;
         flex-wrap:wrap
       }
+
       .attendance-btn{
-        border:1px solid #d4e0e3;
+        border:
+          1px solid #d4e0e3;
         background:#fff;
         border-radius:10px;
         padding:8px 10px;
         cursor:pointer
       }
+
       .attendance-btn.active{
         background:#0b6f63;
         color:#fff;
         border-color:#0b6f63
       }
-      @media(max-width:700px){
-        .attendance-filters{grid-template-columns:1fr!important}
-        .attendance-row{grid-template-columns:1fr}
+
+      @media(
+        max-width:700px
+      ){
+        .attendance-filters{
+          grid-template-columns:
+            1fr!important
+        }
+
+        .attendance-row{
+          grid-template-columns:
+            1fr
+        }
       }
     `;
-    document.head.appendChild(style);
 
-    const side=document.querySelector("aside nav");
-    const sideBtn=document.createElement("button");
-    sideBtn.className="nav-item";
-    sideBtn.dataset.attendanceNav="side";
-    sideBtn.innerHTML="✓ <span>الحضور والغياب</span>";
-    sideBtn.onclick=openAttendance;
+    document
+      .head
+      .appendChild(style);
+
+    const side=
+      document.querySelector(
+        "aside nav"
+      );
+
+    const sideBtn=
+      document.createElement(
+        "button"
+      );
+
+    sideBtn.className=
+      "nav-item";
+
+    sideBtn.dataset
+      .attendanceNav=
+      "side";
+
+    sideBtn.innerHTML=
+      "✓ <span>الحضور والغياب</span>";
+
+    sideBtn.onclick=
+      openAttendance;
+
     side.insertBefore(
       sideBtn,
-      side.querySelector('[data-page="admin"]') || side.lastElementChild
+      side.querySelector(
+        '[data-page="admin"]'
+      ) ||
+      side.lastElementChild
     );
 
-    const bottom=document.querySelector(".bottom-nav");
-    const bottomBtn=document.createElement("button");
-    bottomBtn.dataset.attendanceNav="bottom";
-    bottomBtn.innerHTML="✓<span>الحضور</span>";
-    bottomBtn.onclick=openAttendance;
+    const bottom=
+      document.querySelector(
+        ".bottom-nav"
+      );
+
+    const bottomBtn=
+      document.createElement(
+        "button"
+      );
+
+    bottomBtn.dataset
+      .attendanceNav=
+      "bottom";
+
+    bottomBtn.innerHTML=
+      "✓<span>الحضور</span>";
+
+    bottomBtn.onclick=
+      openAttendance;
+
     bottom.insertBefore(
       bottomBtn,
-      bottom.querySelector('[data-page="settings"]')
+      bottom.querySelector(
+        '[data-page="settings"]'
+      )
     );
 
-    $("attendanceClass").onchange=loadAttendance;
-    $("attendanceDate").onchange=loadAttendance;
-    $("attendanceReload").onclick=loadAttendance;
+    $("attendanceClass")
+      .onchange=
+      loadAttendance;
+
+    $("attendanceDate")
+      .onchange=
+      loadAttendance;
+
+    $("attendanceReload")
+      .onclick=
+      loadAttendance;
 
     updateAttendanceVisibility();
   }
+    function updateAttendanceVisibility(){
+    const roles=
+      me?.roles||[];
 
-  function updateAttendanceVisibility(){
-    const roles=me?.roles||[];
     const guardianOnly=
-      roles.includes("GUARDIAN") &&
-      !roles.includes("DIRECTOR") &&
-      !roles.includes("ADMIN") &&
-      !roles.includes("TEACHER");
+      roles.includes(
+        "GUARDIAN"
+      ) &&
+      !roles.includes(
+        "DIRECTOR"
+      ) &&
+      !roles.includes(
+        "ADMIN"
+      ) &&
+      !roles.includes(
+        "TEACHER"
+      );
 
-    qsa("[data-attendance-nav]").forEach(b=>{
-      b.classList.toggle("hidden",guardianOnly);
-    });
+    qsa(
+      "[data-attendance-nav]"
+    ).forEach(
+      b=>{
+        b.classList.toggle(
+          "hidden",
+          guardianOnly
+        );
+      }
+    );
   }
 
   async function openAttendance(){
-    navigate("attendance");
-    $("pageTitle").textContent="الحضور والغياب";
+    navigate(
+      "attendance"
+    );
 
-    qsa("[data-attendance-nav]").forEach(b=>b.classList.add("active"));
+    $("pageTitle").textContent=
+      "الحضور والغياب";
+
+    qsa(
+      "[data-attendance-nav]"
+    ).forEach(
+      b=>
+        b.classList.add(
+          "active"
+        )
+    );
 
     try{
-      const d=await api("/api/classes");
-      const classes=d.classes||[];
+      const d=await api(
+        "/api/classes"
+      );
 
-      $("attendanceClass").innerHTML=
-        '<option value="">اختر قسمًا</option>'+
-        classes.map(c=>
-          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
-        ).join("");
+      const classes=
+        d.classes||[];
+
+      $("attendanceClass")
+        .innerHTML=
+          '<option value="">'+
+          'اختر قسمًا'+
+          '</option>'+
+          classes.map(
+            c=>`
+              <option
+                value="${c.id}">
+                ${escapeHtml(
+                  c.name
+                )}
+              </option>
+            `
+          ).join("");
     }catch{
-      toast("تعذر تحميل الأقسام");
+      toast(
+        "تعذر تحميل الأقسام"
+      );
     }
   }
 
   async function loadAttendance(){
-    const classId=$("attendanceClass").value;
-    const date=$("attendanceDate").value;
+    const classId=
+      $("attendanceClass")
+        .value;
 
-    if(!classId||!date){
-      $("attendanceGrid").textContent="اختر قسمًا وتاريخًا.";
+    const date=
+      $("attendanceDate")
+        .value;
+
+    if(
+      !classId||
+      !date
+    ){
+      $("attendanceGrid")
+        .textContent=
+          "اختر قسمًا وتاريخًا.";
+
       return;
     }
 
-    $("attendanceGrid").textContent="جارٍ تحميل الحضور…";
+    $("attendanceGrid")
+      .textContent=
+        "جارٍ تحميل الحضور…";
 
     try{
       const d=await api(
-        `/api/attendance/students?classId=${encodeURIComponent(classId)}&date=${encodeURIComponent(date)}`
+        `/api/attendance/students?`+
+        `classId=${encodeURIComponent(
+          classId
+        )}&`+
+        `date=${encodeURIComponent(
+          date
+        )}`
       );
 
-      const students=d.students||[];
+      const students=
+        d.students||[];
 
-      if(!students.length){
-        $("attendanceGrid").textContent="لا يوجد تلاميذ في هذا القسم.";
+      if(
+        !students.length
+      ){
+        $("attendanceGrid")
+          .textContent=
+            "لا يوجد تلاميذ في هذا القسم.";
+
         return;
       }
 
-      $("attendanceGrid").innerHTML=students.map(st=>`
-        <div class="attendance-row" data-attendance-student="${st.student_id}">
-          <div class="student-name">
-            <b>${escapeHtml(st.full_name)}</b>
-            <small>${escapeHtml(st.student_uid||"")}</small>
-          </div>
+      $("attendanceGrid")
+        .innerHTML=
+          students.map(
+            st=>`
+              <div
+                class="attendance-row"
+                data-attendance-student=
+                  "${st.student_id}">
 
-          <div class="attendance-actions">
-            ${Object.entries(attendanceLabels).map(([status,label])=>`
-              <button
-                type="button"
-                class="attendance-btn ${st.status===status?"active":""}"
-                data-attendance-status="${status}">
-                ${label}
-              </button>
-            `).join("")}
-          </div>
+                <div class="student-name">
+                  <b>
+                    ${escapeHtml(
+                      st.full_name
+                    )}
+                  </b>
 
-          <input
-            class="attendance-note"
-            maxlength="500"
-            placeholder="ملاحظة اختيارية"
-            value="${escapeHtml(st.note||"")}">
-        </div>
-      `).join("");
+                  <small>
+                    ${escapeHtml(
+                      st.student_uid||""
+                    )}
+                  </small>
+                </div>
 
-      qsa("[data-attendance-status]").forEach(btn=>{
-        btn.onclick=()=>saveAttendance(btn);
-      });
+                <div
+                  class="attendance-actions">
 
-      const counts={PRESENT:0,ABSENT:0,LATE:0,EXCUSED:0};
+                  ${
+                    Object.entries(
+                      attendanceLabels
+                    ).map(
+                      ([status,label])=>`
+                        <button
+                          type="button"
+                          class=
+                            "attendance-btn ${
+                              st.status===status
+                                ?"active"
+                                :""
+                            }"
+                          data-attendance-status=
+                            "${status}">
+                          ${label}
+                        </button>
+                      `
+                    ).join("")
+                  }
+                </div>
 
-      students.forEach(st=>{
-        if(counts[st.status]!==undefined) counts[st.status]++;
-      });
+                <input
+                  class="attendance-note"
+                  maxlength="500"
+                  placeholder=
+                    "ملاحظة اختيارية"
+                  value="${
+                    escapeHtml(
+                      st.note||""
+                    )
+                  }">
+              </div>
+            `
+          ).join("");
 
-      $("attendanceSummary").textContent=
-        `${students.length} تلميذ · حاضر ${counts.PRESENT} · غائب ${counts.ABSENT} · متأخر ${counts.LATE}`;
+      qsa(
+        "[data-attendance-status]"
+      ).forEach(
+        btn=>{
+          btn.onclick=
+            ()=>saveAttendance(
+              btn
+            );
+        }
+      );
+
+      const counts={
+        PRESENT:0,
+        ABSENT:0,
+        LATE:0,
+        EXCUSED:0
+      };
+
+      students.forEach(
+        st=>{
+          if(
+            counts[
+              st.status
+            ]!==undefined
+          ){
+            counts[
+              st.status
+            ]++;
+          }
+        }
+      );
+
+      $("attendanceSummary")
+        .textContent=
+          `${students.length} تلميذ · `+
+          `حاضر ${counts.PRESENT} · `+
+          `غائب ${counts.ABSENT} · `+
+          `متأخر ${counts.LATE}`;
 
     }catch(e){
-      $("attendanceGrid").textContent=
-        e.status===403
-          ?"لا تملك صلاحية الحضور لهذا القسم."
-          :"تعذر تحميل الحضور.";
+      $("attendanceGrid")
+        .textContent=
+          e.status===403
+            ?"لا تملك صلاحية الحضور لهذا القسم."
+            :"تعذر تحميل الحضور.";
     }
   }
 
-  async function saveAttendance(button){
-    const row=button.closest("[data-attendance-student]");
+  async function saveAttendance(
+    button
+  ){
+    const row=
+      button.closest(
+        "[data-attendance-student]"
+      );
 
-    const studentId=row.dataset.attendanceStudent;
-    const classId=$("attendanceClass").value;
-    const date=$("attendanceDate").value;
-    const status=button.dataset.attendanceStatus;
-    const note=row.querySelector(".attendance-note").value.trim()||null;
+    const studentId=
+      row.dataset
+        .attendanceStudent;
+
+    const classId=
+      $("attendanceClass")
+        .value;
+
+    const date=
+      $("attendanceDate")
+        .value;
+
+    const status=
+      button.dataset
+        .attendanceStatus;
+
+    const note=
+      row
+        .querySelector(
+          ".attendance-note"
+        )
+        .value
+        .trim()||null;
 
     try{
       await api(
-        `/api/attendance/${encodeURIComponent(studentId)}`,
+        `/api/attendance/${
+          encodeURIComponent(
+            studentId
+          )
+        }`,
         {
           method:"PUT",
           body:JSON.stringify({
@@ -389,8 +1588,10 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         }
       );
 
-      toast("تم حفظ الحضور");
-      await loadAttendance();
+      toast(
+        "تم حفظ الحضور"
+      );
+            await loadAttendance();
 
     }catch(e){
       toast(
@@ -404,134 +1605,241 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
   createAttendancePage();
 
   let attendanceWait=0;
-  const attendanceTimer=setInterval(()=>{
-    updateAttendanceVisibility();
 
-    if(me || attendanceWait++>20){
-      clearInterval(attendanceTimer);
-    }
-  },250);
+  const attendanceTimer=
+    setInterval(
+      ()=>{
+        updateAttendanceVisibility();
+
+        if(
+          me ||
+          attendanceWait++>20
+        ){
+          clearInterval(
+            attendanceTimer
+          );
+        }
+      },
+      250
+    );
+
 })();
+
 (function(){
+
   let examCurrent=[];
 
   function createExamPage(){
-    if($("page-exams")) return;
+    if(
+      $("page-exams")
+    ){
+      return;
+    }
 
-    const page=document.createElement("section");
-    page.id="page-exams";
-    page.className="page";
+    const page=
+      document.createElement(
+        "section"
+      );
+
+    page.id=
+      "page-exams";
+
+    page.className=
+      "page";
 
     page.innerHTML=`
       <div class="panel">
+
         <div class="panel-head">
           <div>
-            <span class="kicker">التنظيم الدراسي</span>
-            <h3>جدول الامتحانات</h3>
+            <span class="kicker">
+              التنظيم الدراسي
+            </span>
+
+            <h3>
+              جدول الامتحانات
+            </h3>
           </div>
-          <span id="examStatus" class="status muted">اختر قسمًا</span>
+
+          <span
+            id="examStatus"
+            class="status muted">
+            اختر قسمًا
+          </span>
         </div>
 
         <div class="exam-filters">
+
           <select id="examClass">
-            <option value="">اختر قسمًا</option>
+            <option value="">
+              اختر قسمًا
+            </option>
           </select>
 
           <select id="examTerm">
-            <option value="T1">الفصل الأول</option>
-            <option value="T2">الفصل الثاني</option>
-            <option value="T3">الفصل الثالث</option>
+            <option value="T1">
+              الفصل الأول
+            </option>
+
+            <option value="T2">
+              الفصل الثاني
+            </option>
+
+            <option value="T3">
+              الفصل الثالث
+            </option>
           </select>
 
-          <button id="examReload" class="ghost compact" type="button">
+          <button
+            id="examReload"
+            class="ghost compact"
+            type="button">
             تحديث
           </button>
+
         </div>
       </div>
 
       <div class="content-grid">
-        <article class="panel" id="examCreatePanel">
+
+        <article
+          class="panel"
+          id="examCreatePanel">
+
           <div class="panel-head">
-            <h3>إضافة امتحان</h3>
+            <h3>
+              إضافة امتحان
+            </h3>
           </div>
 
           <label>
             المادة
+
             <select id="examSubject">
-              <option value="">اختر مادة</option>
+              <option value="">
+                اختر مادة
+              </option>
             </select>
           </label>
 
           <label>
             عنوان الامتحان
-            <input id="examTitle" placeholder="مثال: امتحان الرياضيات">
+
+            <input
+              id="examTitle"
+              placeholder=
+                "مثال: امتحان الرياضيات">
           </label>
 
           <label>
             التاريخ
-            <input id="examDate" type="date">
-          </label>
 
-          <div class="two">
+            <input
+              id="examDate"
+              type="date">
+          </label>
+                    <div class="two">
             <label>
               وقت البداية
-              <input id="examStart" type="time">
+
+              <input
+                id="examStart"
+                type="time">
             </label>
 
             <label>
               وقت النهاية
-              <input id="examEnd" type="time">
+
+              <input
+                id="examEnd"
+                type="time">
             </label>
           </div>
 
           <label>
             القاعة
-            <input id="examRoom" placeholder="اختياري">
+
+            <input
+              id="examRoom"
+              placeholder="اختياري">
           </label>
 
           <label>
             ملاحظات
-            <input id="examNotes" placeholder="اختياري">
+
+            <input
+              id="examNotes"
+              placeholder="اختياري">
           </label>
 
           <label class="check">
-            <input id="examPublished" type="checkbox">
-            نشر الامتحان للتلاميذ والأولياء
+            <input
+              id="examPublished"
+              type="checkbox">
+
+            نشر الامتحان
+            للتلاميذ والأولياء
           </label>
 
-          <button id="examCreateBtn" class="primary" type="button">
+          <button
+            id="examCreateBtn"
+            class="primary"
+            type="button">
             حفظ الامتحان
           </button>
+
         </article>
 
         <article class="panel">
+
           <div class="panel-head">
             <div>
-              <span class="kicker">المواعيد</span>
-              <h3>الامتحانات المسجلة</h3>
+              <span class="kicker">
+                المواعيد
+              </span>
+
+              <h3>
+                الامتحانات المسجلة
+              </h3>
             </div>
           </div>
 
-          <div id="examList" class="cards-list empty">
-            اختر قسمًا لعرض الامتحانات.
+          <div
+            id="examList"
+            class="cards-list empty">
+            اختر قسمًا
+            لعرض الامتحانات.
           </div>
+
         </article>
       </div>
     `;
 
-    document.querySelector(".workspace").appendChild(page);
+    document
+      .querySelector(
+        ".workspace"
+      )
+      .appendChild(page);
 
-    const style=document.createElement("style");
+    const style=
+      document.createElement(
+        "style"
+      );
+
     style.textContent=`
       .exam-filters{
         display:grid;
-        grid-template-columns:minmax(160px,1fr) minmax(150px,.7fr) auto;
+        grid-template-columns:
+          minmax(160px,1fr)
+          minmax(150px,.7fr)
+          auto;
         gap:10px;
         margin-top:12px
       }
 
       .exam-card{
-        border:1px solid #e3eaec;
+        border:
+          1px solid #e3eaec;
         border-radius:14px;
         padding:14px;
         margin-bottom:10px
@@ -539,7 +1847,8 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 
       .exam-card-head{
         display:flex;
-        justify-content:space-between;
+        justify-content:
+          space-between;
         gap:10px;
         align-items:flex-start
       }
@@ -575,340 +1884,761 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         font-size:12px
       }
 
-      @media(max-width:700px){
+      @media(
+        max-width:700px
+      ){
         .exam-filters{
-          grid-template-columns:1fr
+          grid-template-columns:
+            1fr
         }
       }
     `;
-    document.head.appendChild(style);
 
-    const side=document.querySelector("aside nav");
+    document
+      .head
+      .appendChild(style);
 
-    if(side&&!document.querySelector('[data-exams-nav="side"]')){
-      const b=document.createElement("button");
-      b.className="nav-item";
-      b.dataset.examsNav="side";
-      b.innerHTML='▣ <span>جدول الامتحانات</span>';
-      b.onclick=openExams;
+    const side=
+      document.querySelector(
+        "aside nav"
+      );
+
+    if(
+      side &&
+      !document.querySelector(
+        '[data-exams-nav="side"]'
+      )
+    ){
+      const b=
+        document.createElement(
+          "button"
+        );
+
+      b.className=
+        "nav-item";
+
+      b.dataset.examsNav=
+        "side";
+
+      b.innerHTML=
+        '▣ <span>'+
+        'جدول الامتحانات'+
+        '</span>';
+
+      b.onclick=
+        openExams;
 
       side.insertBefore(
         b,
-        side.querySelector('[data-page="admin"]') || side.lastElementChild
+        side.querySelector(
+          '[data-page="admin"]'
+        ) ||
+        side.lastElementChild
       );
     }
 
-    const bottom=document.querySelector(".bottom-nav");
+    const bottom=
+      document.querySelector(
+        ".bottom-nav"
+      );
 
-    if(bottom&&!document.querySelector('[data-exams-nav="bottom"]')){
-      const b=document.createElement("button");
-      b.dataset.examsNav="bottom";
-      b.innerHTML='▣<span>الامتحانات</span>';
-      b.onclick=openExams;
+    if(
+      bottom &&
+      !document.querySelector(
+        '[data-exams-nav="bottom"]'
+      )
+    ){
+      const b=
+        document.createElement(
+          "button"
+        );
+
+      b.dataset.examsNav=
+        "bottom";
+
+      b.innerHTML=
+        '▣<span>'+
+        'الامتحانات'+
+        '</span>';
+
+      b.onclick=
+        openExams;
 
       bottom.insertBefore(
         b,
-        bottom.querySelector('[data-page="settings"]')
+        bottom.querySelector(
+          '[data-page="settings"]'
+        )
       );
     }
 
-    $("examClass").onchange=async()=>{
-      await loadExamSubjects();
-      await loadExams();
-    };
+    $("examClass").onchange=
+      async()=>{
+        await loadExamSubjects();
+        await loadExams();
+      };
 
-    $("examTerm").onchange=loadExams;
-    $("examReload").onclick=loadExams;
-    $("examCreateBtn").onclick=createExam;
+    $("examTerm").onchange=
+      loadExams;
+
+    $("examReload").onclick=
+      loadExams;
+
+    $("examCreateBtn").onclick=
+      createExam;
 
     updateExamVisibility();
 
-    qsa("[data-page]").forEach(b=>{
-      b.addEventListener("click",()=>{
-        qsa("[data-exams-nav]").forEach(x=>x.classList.remove("active"));
-        qsa("[data-attendance-nav]").forEach(x=>x.classList.remove("active"));
-      });
-    });
+    qsa(
+      "[data-page]"
+    ).forEach(
+      b=>{
+        b.addEventListener(
+          "click",
+          ()=>{
+            qsa(
+              "[data-exams-nav]"
+            ).forEach(
+              x=>
+                x.classList.remove(
+                  "active"
+                )
+            );
 
-    qsa("[data-attendance-nav]").forEach(b=>{
-      b.addEventListener("click",()=>{
-        qsa("[data-exams-nav]").forEach(x=>x.classList.remove("active"));
-      });
-    });
+            qsa(
+              "[data-attendance-nav]"
+            ).forEach(
+              x=>
+                x.classList.remove(
+                  "active"
+                )
+            );
+          }
+        );
+      }
+    );
+
+    qsa(
+      "[data-attendance-nav]"
+    ).forEach(
+      b=>{
+        b.addEventListener(
+          "click",
+          ()=>{
+            qsa(
+              "[data-exams-nav]"
+            ).forEach(
+              x=>
+                x.classList.remove(
+                  "active"
+                )
+            );
+          }
+        );
+      }
+    );
   }
 
   function updateExamVisibility(){
-    const roles=me?.roles||[];
+    const roles=
+      me?.roles||[];
 
     const guardianOnly=
-      roles.includes("GUARDIAN") &&
-      !roles.includes("DIRECTOR") &&
-      !roles.includes("ADMIN") &&
-      !roles.includes("TEACHER");
+      roles.includes(
+        "GUARDIAN"
+      ) &&
+      !roles.includes(
+        "DIRECTOR"
+      ) &&
+      !roles.includes(
+        "ADMIN"
+      ) &&
+      !roles.includes(
+        "TEACHER"
+      );
 
-    qsa("[data-exams-nav]").forEach(b=>{
-      b.classList.toggle("hidden",guardianOnly);
-    });
+    qsa(
+      "[data-exams-nav]"
+    ).forEach(
+      b=>{
+        b.classList.toggle(
+          "hidden",
+          guardianOnly
+        );
+      }
+    );
   }
 
   async function openExams(){
-    navigate("exams");
+    navigate(
+      "exams"
+    );
 
-    $("pageTitle").textContent="جدول الامتحانات";
+    $("pageTitle").textContent=
+      "جدول الامتحانات";
 
-    qsa("[data-attendance-nav]").forEach(x=>{
-      x.classList.remove("active");
-    });
+    qsa(
+      "[data-attendance-nav]"
+    ).forEach(
+      x=>{
+        x.classList.remove(
+          "active"
+        );
+      }
+    );
 
-    qsa("[data-exams-nav]").forEach(x=>{
-      x.classList.add("active");
-    });
+    qsa(
+      "[data-exams-nav]"
+    ).forEach(
+      x=>{
+        x.classList.add(
+          "active"
+        );
+      }
+    );
 
     try{
-      const d=await api("/api/classes");
-      const classes=d.classes||[];
+      const d=
+        await api(
+          "/api/classes"
+        );
 
-      const old=$("examClass").value;
+      const classes=
+        d.classes||[];
+
+      const old=
+        $("examClass").value;
 
       $("examClass").innerHTML=
-        '<option value="">اختر قسمًا</option>'+
-        classes.map(c=>
-          `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+        '<option value="">'+
+        'اختر قسمًا'+
+        '</option>'+
+        classes.map(
+          c=>`
+            <option
+              value="${c.id}">
+              ${escapeHtml(
+                c.name
+              )}
+            </option>
+          `
         ).join("");
 
-      if(classes.some(c=>c.id===old)){
-        $("examClass").value=old;
+      if(
+        classes.some(
+          c=>c.id===old
+        )
+      ){
+        $("examClass").value=
+          old;
       }
 
-      if($("examClass").value){
+      if(
+        $("examClass").value
+      ){
         await loadExamSubjects();
         await loadExams();
       }
 
     }catch{
-      toast("تعذر تحميل الأقسام");
+      toast(
+        "تعذر تحميل الأقسام"
+      );
     }
   }
 
   async function loadExamSubjects(){
-    const classId=$("examClass").value;
+    const classId=
+      $("examClass").value;
 
     $("examSubject").innerHTML=
-      '<option value="">اختر مادة</option>';
+      '<option value="">'+
+      'اختر مادة'+
+      '</option>';
 
-    if(!classId) return;
+    if(!classId){
+      return;
+    }
 
     try{
-      const d=await api(
-        `/api/classes/${encodeURIComponent(classId)}/subjects`
-      );
+      const d=
+        await api(
+          `/api/classes/${
+            encodeURIComponent(
+              classId
+            )
+          }/subjects`
+        );
 
-      const subjects=d.subjects||[];
+      const subjects=
+        d.subjects||[];
 
       $("examSubject").innerHTML=
-        '<option value="">اختر مادة</option>'+
-        subjects.map(s=>
-          `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+        '<option value="">'+
+        'اختر مادة'+
+        '</option>'+
+        subjects.map(
+          s=>`
+            <option
+              value="${s.id}">
+              ${escapeHtml(
+                s.name
+              )}
+            </option>
+          `
         ).join("");
 
     }catch{
-      toast("تعذر تحميل المواد");
+      toast(
+        "تعذر تحميل المواد"
+      );
     }
   }
 
   async function loadExams(){
-    const classId=$("examClass").value;
-    const term=$("examTerm").value;
+    const classId=
+      $("examClass").value;
+
+    const term=
+      $("examTerm").value;
 
     if(!classId){
-      $("examList").classList.add("empty");
-      $("examList").textContent="اختر قسمًا لعرض الامتحانات.";
-      $("examStatus").textContent="اختر قسمًا";
+      $("examList")
+        .classList
+        .add("empty");
+
+      $("examList").textContent=
+        "اختر قسمًا لعرض الامتحانات.";
+
+      $("examStatus").textContent=
+        "اختر قسمًا";
+
       return;
     }
 
-    $("examList").classList.add("empty");
-    $("examList").textContent="جارٍ تحميل الامتحانات…";
+    $("examList")
+      .classList
+      .add("empty");
+
+    $("examList").textContent=
+      "جارٍ تحميل الامتحانات…";
 
     try{
-      const d=await api(
-        `/api/exams?classId=${encodeURIComponent(classId)}&term=${encodeURIComponent(term)}`
-      );
+      const d=
+        await api(
+          `/api/exams?`+
+          `classId=${
+            encodeURIComponent(
+              classId
+            )
+          }&`+
+          `term=${
+            encodeURIComponent(
+              term
+            )
+          }`
+        );
 
-      examCurrent=d.exams||[];
+      examCurrent=
+        d.exams||[];
 
       $("examStatus").textContent=
         `${examCurrent.length} امتحان`;
 
-      if(!examCurrent.length){
-        $("examList").classList.add("empty");
+      if(
+        !examCurrent.length
+      ){
+        $("examList")
+          .classList
+          .add("empty");
+
         $("examList").textContent=
-          "لا توجد امتحانات مسجلة لهذا الفصل.";
+          "لا توجد امتحانات "+
+          "مسجلة لهذا الفصل.";
+
         return;
       }
 
-      $("examList").classList.remove("empty");
+      $("examList")
+        .classList
+        .remove("empty");
 
-      $("examList").innerHTML=examCurrent.map(e=>`
-        <div class="exam-card">
-          <div class="exam-card-head">
-            <div>
-              <h4>${escapeHtml(e.title)}</h4>
+      $("examList").innerHTML=
+        examCurrent.map(
+          e=>`
+            <div class="exam-card">
+
+              <div
+                class="exam-card-head">
+
+                <div>
+                  <h4>
+                    ${escapeHtml(
+                      e.title
+                    )}
+                  </h4>
+
+                  <p>
+                    ${escapeHtml(
+                      e.subject_name||""
+                    )}
+                    ·
+                    ${escapeHtml(
+                      e.class_name||""
+                    )}
+                  </p>
+                </div>
+
+                <span
+                  class="${
+                    e.published
+                      ?"exam-published"
+                      :"exam-draft"
+                  }">
+                  ${
+                    e.published
+                      ?"منشور"
+                      :"مسودة"
+                  }
+                </span>
+
+              </div>
+
               <p>
-                ${escapeHtml(e.subject_name||"")}
-                ·
-                ${escapeHtml(e.class_name||"")}
+                📅
+                ${escapeHtml(
+                  String(
+                    e.exam_date||""
+                  ).slice(
+                    0,
+                    10
+                  )
+                )}
+
+                ${
+                  e.starts_at
+                    ?` · ⏰ ${
+                      escapeHtml(
+                        String(
+                          e.starts_at
+                        ).slice(
+                          0,
+                          5
+                        )
+                      )
+                    }`
+                    :""
+                }
+
+                ${
+                  e.ends_at
+                    ?` - ${
+                      escapeHtml(
+                        String(
+                          e.ends_at
+                        ).slice(
+                          0,
+                          5
+                        )
+                      )
+                    }`
+                    :""
+                }
               </p>
+
+              ${
+                e.room
+                  ?`
+                    <p>
+                      📍
+                      ${escapeHtml(
+                        e.room
+                      )}
+                    </p>
+                  `
+                  :""
+              }
+
+              ${
+                e.notes
+                  ?`
+                    <p>
+                      ${escapeHtml(
+                        e.notes
+                      )}
+                    </p>
+                  `
+                  :""
+              }
+
+              <div
+                class="exam-actions">
+
+                <button
+                  type="button"
+                  class="ghost compact"
+                  data-exam-edit=
+                    "${e.id}">
+                  تعديل
+                </button>
+
+                <button
+                  type="button"
+                  class="ghost compact"
+                  data-exam-publish=
+                    "${e.id}">
+                  ${
+                    e.published
+                      ?"إلغاء النشر"
+                      :"نشر"
+                  }
+                </button>
+
+                <button
+                  type="button"
+                  class="ghost compact"
+                  data-exam-delete=
+                    "${e.id}">
+                  حذف
+                </button>
+
+              </div>
             </div>
+          `
+        ).join("");
 
-            <span class="${e.published?"exam-published":"exam-draft"}">
-              ${e.published?"منشور":"مسودة"}
-            </span>
-          </div>
+      qsa(
+        "[data-exam-edit]"
+      ).forEach(
+        b=>{
+          b.onclick=
+            ()=>editExam(
+              b.dataset.examEdit
+            );
+        }
+      );
 
-          <p>
-            📅 ${escapeHtml(String(e.exam_date||"").slice(0,10))}
-            ${e.starts_at?` · ⏰ ${escapeHtml(String(e.starts_at).slice(0,5))}`:""}
-            ${e.ends_at?` - ${escapeHtml(String(e.ends_at).slice(0,5))}`:""}
-          </p>
+      qsa(
+        "[data-exam-publish]"
+      ).forEach(
+        b=>{
+          b.onclick=
+            ()=>toggleExamPublish(
+              b.dataset.examPublish
+            );
+        }
+      );
 
-          ${e.room?`<p>📍 ${escapeHtml(e.room)}</p>`:""}
-
-          ${e.notes?`<p>${escapeHtml(e.notes)}</p>`:""}
-
-          <div class="exam-actions">
-            <button
-              type="button"
-              class="ghost compact"
-              data-exam-edit="${e.id}">
-              تعديل
-            </button>
-
-            <button
-              type="button"
-              class="ghost compact"
-              data-exam-publish="${e.id}">
-              ${e.published?"إلغاء النشر":"نشر"}
-            </button>
-
-            <button
-              type="button"
-              class="ghost compact"
-              data-exam-delete="${e.id}">
-              حذف
-            </button>
-          </div>
-        </div>
-      `).join("");
-
-      qsa("[data-exam-edit]").forEach(b=>{
-        b.onclick=()=>editExam(b.dataset.examEdit);
-      });
-
-      qsa("[data-exam-publish]").forEach(b=>{
-        b.onclick=()=>toggleExamPublish(b.dataset.examPublish);
-      });
-
-      qsa("[data-exam-delete]").forEach(b=>{
-        b.onclick=()=>deleteExam(b.dataset.examDelete);
-      });
+      qsa(
+        "[data-exam-delete]"
+      ).forEach(
+        b=>{
+          b.onclick=
+            ()=>deleteExam(
+              b.dataset.examDelete
+            );
+        }
+      );
 
     }catch(e){
       $("examList").textContent=
         e.status===403
-          ?"لا تملك صلاحية قراءة جدول الامتحانات."
-          :"تعذر تحميل جدول الامتحانات.";
+          ?"لا تملك صلاحية قراءة "+
+            "جدول الامتحانات."
+          :"تعذر تحميل "+
+            "جدول الامتحانات.";
     }
   }
 
   async function createExam(){
-    const classId=$("examClass").value;
-    const subjectId=$("examSubject").value;
-    const term=$("examTerm").value;
-    const title=$("examTitle").value.trim();
-    const examDate=$("examDate").value;
-    const startsAt=$("examStart").value||null;
-    const endsAt=$("examEnd").value||null;
-    const room=$("examRoom").value.trim()||null;
-    const notes=$("examNotes").value.trim()||null;
-    const published=$("examPublished").checked;
+    const classId=
+      $("examClass").value;
+
+    const subjectId=
+      $("examSubject").value;
+
+    const term=
+      $("examTerm").value;
+
+    const title=
+      $("examTitle")
+        .value
+        .trim();
+
+    const examDate=
+      $("examDate").value;
+
+    const startsAt=
+      $("examStart").value||
+      null;
+
+    const endsAt=
+      $("examEnd").value||
+      null;
+
+    const room=
+      $("examRoom")
+        .value
+        .trim()||
+      null;
+
+    const notes=
+      $("examNotes")
+        .value
+        .trim()||
+      null;
+
+    const published=
+      $("examPublished").checked;
 
     if(!classId){
-      return toast("اختر القسم");
+      return toast(
+        "اختر القسم"
+      );
     }
 
     if(!subjectId){
-      return toast("اختر المادة");
+      return toast(
+        "اختر المادة"
+      );
     }
 
     if(!title){
-      return toast("أدخل عنوان الامتحان");
+      return toast(
+        "أدخل عنوان الامتحان"
+      );
     }
 
     if(!examDate){
-      return toast("اختر تاريخ الامتحان");
+      return toast(
+        "اختر تاريخ الامتحان"
+      );
     }
 
     try{
-      await api("/api/exams",{
-        method:"POST",
-        body:JSON.stringify({
-          classId,
-          subjectId,
-          term,
-          title,
-          examDate,
-          startsAt,
-          endsAt,
-          room,
-          notes,
-          published
-        })
-      });
+      await api(
+        "/api/exams",
+        {
+          method:"POST",
+          body:JSON.stringify({
+            classId,
+            subjectId,
+            term,
+            title,
+            examDate,
+            startsAt,
+            endsAt,
+            room,
+            notes,
+            published
+          })
+        }
+      );
 
-      $("examTitle").value="";
-      $("examDate").value="";
-      $("examStart").value="";
-      $("examEnd").value="";
-      $("examRoom").value="";
-      $("examNotes").value="";
-      $("examPublished").checked=false;
+      $("examTitle").value=
+        "";
 
-      toast("تم حفظ الامتحان");
+      $("examDate").value=
+        "";
+
+      $("examStart").value=
+        "";
+
+      $("examEnd").value=
+        "";
+
+      $("examRoom").value=
+        "";
+
+      $("examNotes").value=
+        "";
+
+      $("examPublished").checked=
+        false;
+
+      toast(
+        "تم حفظ الامتحان"
+      );
+
       await loadExams();
 
     }catch(e){
       toast(
         e.status===403
-          ?"لا تملك صلاحية إضافة الامتحانات"
+          ?"لا تملك صلاحية "+
+            "إضافة الامتحانات"
           :"تعذر حفظ الامتحان"
       );
     }
   }
 
-  async function toggleExamPublish(id){
-    const exam=examCurrent.find(x=>x.id===id);
+  async function toggleExamPublish(
+    id
+  ){
+    const exam=
+      examCurrent.find(
+        x=>x.id===id
+      );
 
-    if(!exam) return;
+    if(!exam){
+      return;
+    }
 
     try{
-      await api(`/api/exams/${encodeURIComponent(id)}`,{
-        method:"PATCH",
-        body:JSON.stringify({
-          version:exam.row_version,
-          title:exam.title,
-          examDate:String(exam.exam_date).slice(0,10),
-          startsAt:exam.starts_at
-            ?String(exam.starts_at).slice(0,5)
-            :null,
-          endsAt:exam.ends_at
-            ?String(exam.ends_at).slice(0,5)
-            :null,
-          room:exam.room||null,
-          notes:exam.notes||null,
-          published:!exam.published
-        })
-      });
+      await api(
+        `/api/exams/${
+          encodeURIComponent(
+            id
+          )
+        }`,
+        {
+          method:"PATCH",
+          body:JSON.stringify({
+            version:
+              exam.row_version,
+
+            title:
+              exam.title,
+
+            examDate:
+              String(
+                exam.exam_date
+              ).slice(
+                0,
+                10
+              ),
+
+            startsAt:
+              exam.starts_at
+                ?String(
+                  exam.starts_at
+                ).slice(
+                  0,
+                  5
+                )
+                :null,
+
+            endsAt:
+              exam.ends_at
+                ?String(
+                  exam.ends_at
+                ).slice(
+                  0,
+                  5
+                )
+                :null,
+
+            room:
+              exam.room||null,
+
+            notes:
+              exam.notes||null,
+
+            published:
+              !exam.published
+          })
+        }
+      );
 
       toast(
         exam.published
@@ -919,101 +2649,204 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       await loadExams();
 
     }catch(e){
-      if(e.status===409){
-        toast("تم تعديل الامتحان من جهاز آخر. حدّث الصفحة.");
+      if(
+        e.status===409
+      ){
+        toast(
+          "تم تعديل الامتحان "+
+          "من جهاز آخر. "+
+          "حدّث الصفحة."
+        );
       }else{
-        toast("تعذر تغيير حالة النشر");
+        toast(
+          "تعذر تغيير حالة النشر"
+        );
       }
     }
   }
 
-  async function editExam(id){
-    const exam=examCurrent.find(x=>x.id===id);
+  async function editExam(
+    id
+  ){
+    const exam=
+      examCurrent.find(
+        x=>x.id===id
+      );
 
-    if(!exam) return;
+    if(!exam){
+      return;
+    }
 
-    const title=prompt(
-      "عنوان الامتحان",
-      exam.title||""
-    );
+    const title=
+      prompt(
+        "عنوان الامتحان",
+        exam.title||""
+      );
 
-    if(title===null) return;
+    if(
+      title===null
+    ){
+      return;
+    }
 
-    const examDate=prompt(
-      "التاريخ YYYY-MM-DD",
-      String(exam.exam_date||"").slice(0,10)
-    );
+    const examDate=
+      prompt(
+        "التاريخ YYYY-MM-DD",
+        String(
+          exam.exam_date||""
+        ).slice(
+          0,
+          10
+        )
+      );
 
-    if(examDate===null) return;
+    if(
+      examDate===null
+    ){
+      return;
+    }
 
-    const startsAt=prompt(
-      "وقت البداية HH:MM",
-      exam.starts_at
-        ?String(exam.starts_at).slice(0,5)
-        :""
-    );
+    const startsAt=
+      prompt(
+        "وقت البداية HH:MM",
+        exam.starts_at
+          ?String(
+            exam.starts_at
+          ).slice(
+            0,
+            5
+          )
+          :""
+      );
 
-    if(startsAt===null) return;
+    if(
+      startsAt===null
+    ){
+      return;
+    }
 
-    const endsAt=prompt(
-      "وقت النهاية HH:MM",
-      exam.ends_at
-        ?String(exam.ends_at).slice(0,5)
-        :""
-    );
+    const endsAt=
+      prompt(
+        "وقت النهاية HH:MM",
+        exam.ends_at
+          ?String(
+            exam.ends_at
+          ).slice(
+            0,
+            5
+          )
+          :""
+      );
 
-    if(endsAt===null) return;
+    if(
+      endsAt===null
+    ){
+      return;
+    }
 
-    const room=prompt(
-      "القاعة",
-      exam.room||""
-    );
+    const room=
+      prompt(
+        "القاعة",
+        exam.room||""
+      );
 
-    if(room===null) return;
+    if(
+      room===null
+    ){
+      return;
+      }
+        try{
+      await api(
+        `/api/exams/${
+          encodeURIComponent(
+            id
+          )
+        }`,
+        {
+          method:"PATCH",
+          body:JSON.stringify({
+            version:
+              exam.row_version,
 
-    try{
-      await api(`/api/exams/${encodeURIComponent(id)}`,{
-        method:"PATCH",
-        body:JSON.stringify({
-          version:exam.row_version,
-          title:title.trim(),
-          examDate,
-          startsAt:startsAt||null,
-          endsAt:endsAt||null,
-          room:room.trim()||null,
-          notes:exam.notes||null,
-          published:exam.published
-        })
-      });
+            title:
+              title.trim(),
 
-      toast("تم تعديل الامتحان");
+            examDate,
+
+            startsAt:
+              startsAt||null,
+
+            endsAt:
+              endsAt||null,
+
+            room:
+              room.trim()||null,
+
+            notes:
+              exam.notes||null,
+
+            published:
+              exam.published
+          })
+        }
+      );
+
+      toast(
+        "تم تعديل الامتحان"
+      );
+
       await loadExams();
 
     }catch(e){
-      if(e.status===409){
-        toast("تعارض في التعديل. حدّث الجدول.");
+      if(
+        e.status===409
+      ){
+        toast(
+          "تعارض في التعديل. "+
+          "حدّث الجدول."
+        );
       }else{
-        toast("تعذر تعديل الامتحان");
+        toast(
+          "تعذر تعديل الامتحان"
+        );
       }
     }
   }
 
-  async function deleteExam(id){
-    if(!confirm("هل تريد حذف هذا الامتحان؟")) return;
+  async function deleteExam(
+    id
+  ){
+    if(
+      !confirm(
+        "هل تريد حذف هذا الامتحان؟"
+      )
+    ){
+      return;
+    }
 
     try{
       await api(
-        `/api/exams/${encodeURIComponent(id)}`,
-        {method:"DELETE"}
+        `/api/exams/${
+          encodeURIComponent(
+            id
+          )
+        }`,
+        {
+          method:"DELETE"
+        }
       );
 
-      toast("تم حذف الامتحان");
+      toast(
+        "تم حذف الامتحان"
+      );
+
       await loadExams();
 
     }catch(e){
       toast(
         e.status===403
-          ?"لا تملك صلاحية حذف الامتحانات"
+          ?"لا تملك صلاحية "+
+            "حذف الامتحانات"
           :"تعذر حذف الامتحان"
       );
     }
@@ -1023,17 +2856,29 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 
   let examWait=0;
 
-  const examTimer=setInterval(()=>{
-    updateExamVisibility();
+  const examTimer=
+    setInterval(
+      ()=>{
+        updateExamVisibility();
 
-    if(me||examWait++>20){
-      clearInterval(examTimer);
-    }
-  },250);
+        if(
+          me||
+          examWait++>20
+        ){
+          clearInterval(
+            examTimer
+          );
+        }
+      },
+      250
+    );
 
 })();
+
 (function(){
-  let activeViewRole=null;
+
+  let activeViewRole=
+    null;
 
   const roleNames={
     DIRECTOR:"مدير",
@@ -1043,79 +2888,161 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
   };
 
   function getActiveRole(){
-    const roles=me?.roles||[];
+    const roles=
+      me?.roles||[];
 
-    if(!roles.length) return null;
+    if(
+      !roles.length
+    ){
+      return null;
+    }
 
-    const saved=sessionStorage.getItem(
-      `mm-role-${me?.schoolId||"none"}`
-    );
+    const saved=
+      sessionStorage.getItem(
+        `mm-role-${
+          me?.schoolId||"none"
+        }`
+      );
 
-    if(saved&&roles.includes(saved)){
-      activeViewRole=saved;
+    if(
+      saved &&
+      roles.includes(
+        saved
+      )
+    ){
+      activeViewRole=
+        saved;
+
       return saved;
     }
 
-    if(activeViewRole&&roles.includes(activeViewRole)){
+    if(
+      activeViewRole &&
+      roles.includes(
+        activeViewRole
+      )
+    ){
       return activeViewRole;
     }
 
     activeViewRole=
-      roles.includes("DIRECTOR")?"DIRECTOR":
-      roles.includes("ADMIN")?"ADMIN":
-      roles.includes("TEACHER")?"TEACHER":
-      roles[0];
+      roles.includes(
+        "DIRECTOR"
+      )
+        ?"DIRECTOR"
+        :roles.includes(
+          "ADMIN"
+        )
+          ?"ADMIN"
+          :roles.includes(
+            "TEACHER"
+          )
+            ?"TEACHER"
+            :roles[0];
 
     return activeViewRole;
   }
 
   function createRoleSwitcher(){
-    if($("roleSwitcher")) return;
+    if(
+      $("roleSwitcher")
+    ){
+      return;
+    }
 
-    const top=document.querySelector(".top-actions");
-    if(!top) return;
-
-    const select=document.createElement("select");
-    select.id="roleSwitcher";
-    select.className="ghost compact";
-    select.style.maxWidth="150px";
-
-    top.insertBefore(select,top.firstChild);
-
-    select.onchange=()=>{
-      activeViewRole=select.value;
-
-      sessionStorage.setItem(
-        `mm-role-${me?.schoolId||"none"}`,
-        activeViewRole
+    const top=
+      document.querySelector(
+        ".top-actions"
       );
 
-      applyRoleVisibility();
-      renderProfile();
-      navigate("home");
+    if(!top){
+      return;
+    }
 
-      toast(
-        `تم التبديل إلى: ${roleNames[activeViewRole]||activeViewRole}`
+    const select=
+      document.createElement(
+        "select"
       );
-    };
+
+    select.id=
+      "roleSwitcher";
+
+    select.className=
+      "ghost compact";
+
+    select.style.maxWidth=
+      "150px";
+
+    top.insertBefore(
+      select,
+      top.firstChild
+    );
+
+    select.onchange=
+      ()=>{
+        activeViewRole=
+          select.value;
+
+        sessionStorage.setItem(
+          `mm-role-${
+            me?.schoolId||"none"
+          }`,
+          activeViewRole
+        );
+
+        applyRoleVisibility();
+
+        renderProfile();
+
+        navigate(
+          "home"
+        );
+
+        toast(
+          `تم التبديل إلى: ${
+            roleNames[
+              activeViewRole
+            ]||
+            activeViewRole
+          }`
+        );
+      };
   }
 
   function refreshRoleSwitcher(){
     createRoleSwitcher();
 
-    const select=$("roleSwitcher");
-    if(!select||!me) return;
+    const select=
+      $("roleSwitcher");
 
-    const roles=me.roles||[];
-    const active=getActiveRole();
+    if(
+      !select||
+      !me
+    ){
+      return;
+    }
 
-    select.innerHTML=roles.map(role=>
-      `<option value="${role}">
-        ${roleNames[role]||role}
-      </option>`
-    ).join("");
+    const roles=
+      me.roles||[];
 
-    select.value=active||"";
+    const active=
+      getActiveRole();
+
+    select.innerHTML=
+      roles.map(
+        role=>`
+          <option
+            value="${role}">
+            ${
+              roleNames[role]||
+              role
+            }
+          </option>
+        `
+      ).join("");
+
+    select.value=
+      active||"";
 
     select.classList.toggle(
       "hidden",
@@ -1123,107 +3050,193 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
     );
   }
 
-  const oldApplyRoleVisibility=applyRoleVisibility;
+  const oldApplyRoleVisibility=
+    applyRoleVisibility;
 
-  applyRoleVisibility=function(){
-    if(!me) return;
+  applyRoleVisibility=
+    function(){
+      if(!me){
+        return;
+      }
 
-    const role=getActiveRole();
+      const role=
+        getActiveRole();
 
-    qsa(".director-only").forEach(el=>{
-      el.classList.toggle(
-        "hidden",
-        role!=="DIRECTOR"
+      qsa(
+        ".director-only"
+      ).forEach(
+        el=>{
+          el.classList.toggle(
+            "hidden",
+            role!=="DIRECTOR"
+          );
+        }
       );
-    });
 
-    qsa(".guardian-only").forEach(el=>{
-      el.classList.toggle(
-        "hidden",
-        role!=="GUARDIAN"
+      qsa(
+        ".guardian-only"
+      ).forEach(
+        el=>{
+          el.classList.toggle(
+            "hidden",
+            role!=="GUARDIAN"
+          );
+        }
       );
-    });
 
-    qsa('[data-page="academic"]').forEach(el=>{
-      el.classList.toggle(
-        "hidden",
-        role==="GUARDIAN"
+      qsa(
+        '[data-page="academic"]'
+      ).forEach(
+        el=>{
+          el.classList.toggle(
+            "hidden",
+            role==="GUARDIAN"
+          );
+        }
       );
-    });
 
-    qsa("[data-attendance-nav]").forEach(el=>{
-      el.classList.toggle(
-        "hidden",
-        !["DIRECTOR","ADMIN","TEACHER"].includes(role)
+      qsa(
+        "[data-attendance-nav]"
+      ).forEach(
+        el=>{
+          el.classList.toggle(
+            "hidden",
+            ![
+              "DIRECTOR",
+              "ADMIN",
+              "TEACHER"
+            ].includes(
+              role
+            )
+          );
+        }
       );
-    });
 
-    qsa("[data-exams-nav]").forEach(el=>{
-      el.classList.toggle(
-        "hidden",
-        !["DIRECTOR","ADMIN","TEACHER"].includes(role)
+      qsa(
+        "[data-exams-nav]"
+      ).forEach(
+        el=>{
+          el.classList.toggle(
+            "hidden",
+            ![
+              "DIRECTOR",
+              "ADMIN",
+              "TEACHER"
+            ].includes(
+              role
+            )
+          );
+        }
       );
-    });
 
-    refreshRoleSwitcher();
-  };
-
-  const oldRenderProfile=renderProfile;
-
-  renderProfile=function(){
-    oldRenderProfile();
-
-    if(!me) return;
-
-    const role=getActiveRole();
-    const label=roleNames[role]||role||"—";
-
-    if($("roleText")){
-      $("roleText").textContent=label;
-    }
-
-    if($("profileRoles")){
-      $("profileRoles").textContent=label;
-    }
-
-    refreshRoleSwitcher();
-  };
-
-  const roleWatcher=setInterval(()=>{
-    if(me){
       refreshRoleSwitcher();
-      applyRoleVisibility();
-      renderProfile();
-      clearInterval(roleWatcher);
-    }
-  },250);
+    };
+
+  const oldRenderProfile=
+    renderProfile;
+
+  renderProfile=
+    function(){
+      oldRenderProfile();
+
+      if(!me){
+        return;
+      }
+
+      const role=
+        getActiveRole();
+
+      const label=
+        roleNames[role]||
+        role||
+        "—";
+
+      if(
+        $("roleText")
+      ){
+        $("roleText")
+          .textContent=
+          label;
+      }
+
+      if(
+        $("profileRoles")
+      ){
+        $("profileRoles")
+          .textContent=
+          label;
+      }
+
+      refreshRoleSwitcher();
+    };
+
+  const roleWatcher=
+    setInterval(
+      ()=>{
+        if(me){
+          refreshRoleSwitcher();
+
+          applyRoleVisibility();
+
+          renderProfile();
+
+          clearInterval(
+            roleWatcher
+          );
+        }
+      },
+      250
+    );
+
 })();
+
 (function(){
 
   function installFinalReportStyles(){
-    if(document.getElementById("final-report-styles")) return;
+    if(
+      document.getElementById(
+        "final-report-styles"
+      )
+    ){
+      return;
+    }
 
-    const style=document.createElement("style");
-    style.id="final-report-styles";
+    const style=
+      document.createElement(
+        "style"
+      );
+
+    style.id=
+      "final-report-styles";
 
     style.textContent=`
       .final-report{
         direction:rtl;
         background:#fff;
         color:#111;
-        width:min(900px,100%);
+        width:min(
+          900px,
+          100%
+        );
         margin:auto;
         padding:22px;
         border-radius:16px;
-        font-family:Arial,Tahoma,sans-serif
+        font-family:
+          Arial,
+          Tahoma,
+          sans-serif
       }
 
       .final-report-head{
         display:grid;
-        grid-template-columns:1fr 150px 1fr;
+        grid-template-columns:
+          1fr
+          150px
+          1fr;
         gap:15px;
         align-items:start;
-        border-bottom:2px solid #0b6f63;
+        border-bottom:
+          2px solid #0b6f63;
         padding-bottom:14px
       }
 
@@ -1241,7 +3254,8 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         text-align:center
       }
 
-      .final-report-logo .bismillah{
+      .final-report-logo
+      .bismillah{
         font-weight:700;
         margin-bottom:7px
       }
@@ -1256,16 +3270,29 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         text-align:center;
         font-size:22px;
         font-weight:800;
-        margin:18px 0 12px;
+        margin:
+          18px
+          0
+          12px;
         color:#0b6f63
       }
 
       .final-student-info{
         display:grid;
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:8px 20px;
+        grid-template-columns:
+          repeat(
+            2,
+            minmax(
+              0,
+              1fr
+            )
+          );
+        gap:
+          8px
+          20px;
         background:#f5faf8;
-        border:1px solid #dcebe6;
+        border:
+          1px solid #dcebe6;
         border-radius:12px;
         padding:12px;
         margin-bottom:15px
@@ -1277,14 +3304,18 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 
       .final-report-table{
         width:100%;
-        border-collapse:collapse;
+        border-collapse:
+          collapse;
         margin-top:8px
       }
 
       .final-report-table th,
       .final-report-table td{
-        border:1px solid #cfd8dc;
-        padding:8px 6px;
+        border:
+          1px solid #cfd8dc;
+        padding:
+          8px
+          6px;
         text-align:center;
         font-size:13px
       }
@@ -1294,20 +3325,27 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         font-weight:700
       }
 
-      .final-report-table td:first-child,
-      .final-report-table th:first-child{
+      .final-report-table
+      td:first-child,
+      .final-report-table
+      th:first-child{
         text-align:right
       }
 
       .final-report-averages{
         display:grid;
-        grid-template-columns:repeat(4,1fr);
+        grid-template-columns:
+          repeat(
+            4,
+            1fr
+          );
         gap:8px;
         margin-top:15px
       }
 
       .final-average{
-        border:1px solid #d8e4e1;
+        border:
+          1px solid #d8e4e1;
         border-radius:10px;
         padding:10px;
         text-align:center
@@ -1336,7 +3374,9 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 
       .final-signatures{
         display:grid;
-        grid-template-columns:1fr 1fr;
+        grid-template-columns:
+          1fr
+          1fr;
         gap:30px;
         margin-top:35px;
         text-align:center
@@ -1348,8 +3388,12 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
 
       .final-signature-line{
         width:130px;
-        border-top:1px solid #777;
-        margin:55px auto 0;
+        border-top:
+          1px solid #777;
+        margin:
+          55px
+          auto
+          0;
         padding-top:5px;
         font-size:12px
       }
@@ -1369,13 +3413,18 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         color:#667
       }
 
-      @media(max-width:700px){
+      @media(
+        max-width:700px
+      ){
         .final-report{
           padding:12px
         }
 
         .final-report-head{
-          grid-template-columns:1fr 90px 1fr;
+          grid-template-columns:
+            1fr
+            90px
+            1fr;
           gap:7px
         }
 
@@ -1390,59 +3439,82 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
         }
 
         .final-student-info{
-          grid-template-columns:1fr
+          grid-template-columns:
+            1fr
         }
 
         .final-report-averages{
-          grid-template-columns:1fr 1fr
+          grid-template-columns:
+            1fr
+            1fr
         }
 
         .final-report-table th,
         .final-report-table td{
           font-size:11px;
-          padding:6px 3px
+          padding:
+            6px
+            3px
         }
       }
 
       @media print{
         body *{
-          visibility:hidden!important
+          visibility:
+            hidden!important
         }
 
         #modal,
         #modal *,
         #modalBody,
         #modalBody *{
-          visibility:visible!important
+          visibility:
+            visible!important
         }
 
         #modal{
-          position:absolute!important;
-          inset:0!important;
-          background:#fff!important;
-          display:block!important;
-          overflow:visible!important
+          position:
+            absolute!important;
+          inset:
+            0!important;
+          background:
+            #fff!important;
+          display:
+            block!important;
+          overflow:
+            visible!important
         }
 
         #modalBody{
-          position:absolute!important;
-          top:0!important;
-          left:0!important;
-          width:100%!important;
-          margin:0!important;
-          padding:0!important
+          position:
+            absolute!important;
+          top:
+            0!important;
+          left:
+            0!important;
+          width:
+            100%!important;
+          margin:
+            0!important;
+          padding:
+            0!important
         }
 
         .final-report{
-          width:100%!important;
-          max-width:none!important;
-          box-shadow:none!important;
-          border-radius:0!important
+          width:
+            100%!important;
+          max-width:
+            none!important;
+          box-shadow:
+            none!important;
+          border-radius:
+            0!important
         }
 
         .no-print,
         #modalClose{
-          display:none!important
+          display:
+            none!important
         }
 
         @page{
@@ -1452,609 +3524,1235 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       }
     `;
 
-    document.head.appendChild(style);
+    document
+      .head
+      .appendChild(
+        style
+      );
   }
 
-  function reportValue(v){
-    return v===null||v===undefined||v===""
+  function reportValue(
+    v
+  ){
+    return (
+      v===null||
+      v===undefined||
+      v===""
+    )
       ?"—"
-      :escapeHtml(v);
+            :escapeHtml(v);
   }
 
-  function reportDecision(avg){
-    const n=Number(avg);
+  function reportDecision(
+    avg
+  ){
+    const n=
+      Number(avg);
 
-    if(!Number.isFinite(n)) return "—";
-    if(n>=16) return "ممتاز";
-    if(n>=14) return "جيد جدًا";
-    if(n>=12) return "جيد";
-    if(n>=10) return "مقبول";
+    if(
+      !Number.isFinite(n)
+    ){
+      return "—";
+    }
+
+    if(n>=16){
+      return "ممتاز";
+    }
+
+    if(n>=14){
+      return "جيد جدًا";
+    }
+
+    if(n>=12){
+      return "جيد";
+    }
+
+    if(n>=10){
+      return "مقبول";
+    }
 
     return "يحتاج إلى دعم";
   }
 
-  async function shareStudentReport(student,report){
+  async function shareStudentReport(
+    student,
+    report
+  ){
     const text=
-`كشف نتائج التلميذ: ${student.full_name}
-القسم: ${student.class_name||"—"}
-المعدل السنوي: ${report.annualAverage??"—"}/20`;
+      `كشف نتائج التلميذ: ${
+        student.full_name
+      }\n`+
+      `القسم: ${
+        student.class_name||"—"
+      }\n`+
+      `المعدل السنوي: ${
+        report.annualAverage??"—"
+      }/20`;
 
     try{
-      if(navigator.share){
+      if(
+        navigator.share
+      ){
         await navigator.share({
-          title:`كشف نتائج ${student.full_name}`,
+          title:
+            `كشف نتائج ${
+              student.full_name
+            }`,
           text
         });
       }else{
-        await navigator.clipboard.writeText(text);
-        toast("تم نسخ ملخص الكشف");
+        await navigator
+          .clipboard
+          .writeText(
+            text
+          );
+
+        toast(
+          "تم نسخ ملخص الكشف"
+        );
       }
     }catch(e){
-      if(e?.name!=="AbortError"){
-        toast("تعذرت المشاركة");
+      if(
+        e?.name!=="AbortError"
+      ){
+        toast(
+          "تعذرت المشاركة"
+        );
       }
     }
   }
 
-  openReport=async function(studentId){
+  openReport=
+    async function(
+      studentId
+    ){
 
-    installFinalReportStyles();
+      installFinalReportStyles();
 
-    try{
-      const [d,b,v]=await Promise.all([
-  api(`/api/students/${encodeURIComponent(studentId)}/report`),
-  api("/api/branding"),
-  api(`/api/reports/${encodeURIComponent(studentId)}/verification`,{
-    method:"POST"
-  })
-]);
+      try{
+        const [
+          d,
+          b,
+          v
+        ]=
+          await Promise.all([
+            api(
+              `/api/students/${
+                encodeURIComponent(
+                  studentId
+                )
+              }/report`
+            ),
 
-      const student=d.student;
-      const report=d.report;
-      const school=me.school||{};
+            api(
+              "/api/branding"
+            ),
 
-      const custom=b.branding?.mode==="CUSTOM";
-
-      const logo=custom
-        ?`/api/branding/header?ts=${Date.now()}`
-        :"/assets/official-logo.png";
-
-      const rows=(report.subjects||[]).map(subject=>`
-        <tr>
-          <td>${escapeHtml(subject.name)}</td>
-          <td>${reportValue(subject.coefficient)}</td>
-          <td>${reportValue(subject.terms?.T1)}</td>
-          <td>${reportValue(subject.terms?.T2)}</td>
-          <td>${reportValue(subject.terms?.T3)}</td>
-          <td>${reportValue(subject.annual)}</td>
-        </tr>
-      `).join("");
-
-      const annual=report.annualAverage;
-
-      showModal(`
-        <div class="final-report">
-
-          <div class="final-report-head">
-
-            <div class="right">
-              <b>الجمهورية الإسلامية الموريتانية</b><br>
-              وزارة التهذيب الوطني وإصلاح النظام التعليمي
-              ${school.wilaya
-                ?`<br>الإدارة الجهوية بولاية ${escapeHtml(school.wilaya)}`
-                :""
+            api(
+              `/api/reports/${
+                encodeURIComponent(
+                  studentId
+                )
+              }/verification`,
+              {
+                method:"POST"
               }
-              ${school.moughataa
-                ?`<br>مفتشية مقاطعة ${escapeHtml(school.moughataa)}`
-                :""
-              }
-              ${school.inspection
-                ?`<br>${escapeHtml(school.inspection)}`
-                :""
-              }
-            </div>
+            )
+          ]);
 
-            <div class="final-report-logo">
-              <div class="bismillah">
-                بسم الله الرحمن الرحيم
-              </div>
+        const student=
+          d.student;
 
-              <img
-                src="${logo}"
-                alt="الشعار"
-              >
-            </div>
+        const report=
+          d.report;
 
-            <div class="left">
-              <b>شرف - إخاء - عدالة</b><br>
-              المدرسة:
-              ${escapeHtml(school.name||"—")}<br>
-              السنة الدراسية:
-              ${escapeHtml(school.academic_year||"—")}
-            </div>
+        const school=
+          me.school||{};
 
-          </div>
+        const custom=
+          b.branding?.mode===
+          "CUSTOM";
 
-          <div class="final-report-title">
-            كشف نتائج التلميذ
-          </div>
+        const logo=
+          custom
+            ?`/api/branding/header?ts=${
+              Date.now()
+            }`
+            :"/assets/official-logo.png";
 
-          <div class="final-student-info">
-
-            <div>
-              <b>الاسم:</b>
-              ${escapeHtml(student.full_name||"—")}
-            </div>
-
-            <div>
-              <b>رقم التلميذ:</b>
-              ${escapeHtml(student.student_uid||"—")}
-            </div>
-
-            <div>
-              <b>القسم:</b>
-              ${escapeHtml(student.class_name||"—")}
-            </div>
-
-            <div>
-              <b>النتيجة العامة:</b>
-              ${reportDecision(annual)}
-            </div>
-
-          </div>
-
-          <table class="final-report-table">
-
-            <thead>
-              <tr>
-                <th>المادة</th>
-                <th>المعامل</th>
-                <th>الفصل الأول</th>
-                <th>الفصل الثاني</th>
-                <th>الفصل الثالث</th>
-                <th>المعدل السنوي</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              ${rows||`
+        const rows=
+          (report.subjects||[])
+            .map(
+              subject=>`
                 <tr>
-                  <td colspan="6">
-                    لا توجد نتائج مسجلة
+                  <td>
+                    ${escapeHtml(
+                      subject.name
+                    )}
+                  </td>
+
+                  <td>
+                    ${reportValue(
+                      subject.coefficient
+                    )}
+                  </td>
+
+                  <td>
+                    ${reportValue(
+                      subject.terms?.T1
+                    )}
+                  </td>
+
+                  <td>
+                    ${reportValue(
+                      subject.terms?.T2
+                    )}
+                  </td>
+
+                  <td>
+                    ${reportValue(
+                      subject.terms?.T3
+                    )}
+                  </td>
+
+                  <td>
+                    ${reportValue(
+                      subject.annual
+                    )}
                   </td>
                 </tr>
-              `}
-            </tbody>
+              `
+            )
+            .join("");
 
-          </table>
+        const annual=
+          report.annualAverage;
 
-          <div class="final-report-averages">
+        showModal(`
+          <div class="final-report">
 
-            <div class="final-average">
-              <small>معدل الفصل الأول</small>
-              <b>${reportValue(report.termAverages?.T1)}</b>
-              /20
-            </div>
+            <div
+              class="final-report-head">
 
-            <div class="final-average">
-              <small>معدل الفصل الثاني</small>
-              <b>${reportValue(report.termAverages?.T2)}</b>
-              /20
-            </div>
+              <div class="right">
+                <b>
+                  الجمهورية الإسلامية
+                  الموريتانية
+                </b>
+                <br>
 
-            <div class="final-average">
-              <small>معدل الفصل الثالث</small>
-              <b>${reportValue(report.termAverages?.T3)}</b>
-              /20
-            </div>
+                وزارة التهذيب الوطني
+                وإصلاح النظام التعليمي
 
-            <div class="final-average final-annual">
-              <small>المعدل السنوي</small>
-              <b>${reportValue(annual)}</b>
-              /20
-            </div>
+                ${
+                  school.wilaya
+                    ?`
+                      <br>
+                      الإدارة الجهوية
+                      بولاية
+                      ${escapeHtml(
+                        school.wilaya
+                      )}
+                    `
+                    :""
+                }
 
-          </div>
+                ${
+                  school.moughataa
+                    ?`
+                      <br>
+                      مفتشية مقاطعة
+                      ${escapeHtml(
+                        school.moughataa
+                      )}
+                    `
+                    :""
+                }
 
-          <div class="final-signatures">
-
-            <div class="final-signature-box">
-              <b>توقيع المدير</b>
-
-              <div class="final-signature-line">
-                التوقيع
+                ${
+                  school.inspection
+                    ?`
+                      <br>
+                      ${escapeHtml(
+                        school.inspection
+                      )}
+                    `
+                    :""
+                }
               </div>
-            </div>
 
-            <div class="final-signature-box">
-              <b>ختم المؤسسة</b>
+              <div
+                class="final-report-logo">
 
-              <div class="final-signature-line">
-                الختم
+                <div
+                  class="bismillah">
+                  بسم الله الرحمن الرحيم
+                </div>
+
+                <img
+                  src="${logo}"
+                  alt="الشعار">
               </div>
+
+              <div class="left">
+                <b>
+                  شرف - إخاء - عدالة
+                </b>
+                <br>
+
+                المدرسة:
+                ${escapeHtml(
+                  school.name||"—"
+                )}
+                <br>
+
+                السنة الدراسية:
+                ${escapeHtml(
+                  school.academic_year||
+                  "—"
+                )}
+              </div>
+
+            </div>
+
+            <div
+              class="final-report-title">
+              كشف نتائج التلميذ
+            </div>
+
+            <div
+              class="final-student-info">
+
+              <div>
+                <b>الاسم:</b>
+
+                ${escapeHtml(
+                  student.full_name||
+                  "—"
+                )}
+              </div>
+
+              <div>
+                <b>
+                  رقم التلميذ:
+                </b>
+
+                ${escapeHtml(
+                  student.student_uid||
+                  "—"
+                )}
+              </div>
+
+              <div>
+                <b>القسم:</b>
+
+                ${escapeHtml(
+                  student.class_name||
+                  "—"
+                )}
+              </div>
+
+              <div>
+                <b>
+                  النتيجة العامة:
+                </b>
+
+                ${reportDecision(
+                  annual
+                )}
+              </div>
+
+            </div>
+
+            <table
+              class="final-report-table">
+
+              <thead>
+                <tr>
+                  <th>المادة</th>
+                  <th>المعامل</th>
+                  <th>
+                    الفصل الأول
+                  </th>
+                  <th>
+                    الفصل الثاني
+                  </th>
+                  <th>
+                    الفصل الثالث
+                  </th>
+                  <th>
+                    المعدل السنوي
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${
+                  rows||
+                  `
+                    <tr>
+                      <td
+                        colspan="6">
+                        لا توجد نتائج
+                        مسجلة
+                      </td>
+                    </tr>
+                  `
+                }
+              </tbody>
+
+            </table>
+
+            <div
+              class="final-report-averages">
+
+              <div
+                class="final-average">
+
+                <small>
+                  معدل الفصل الأول
+                </small>
+
+                <b>
+                  ${reportValue(
+                    report
+                      .termAverages
+                      ?.T1
+                  )}
+                </b>
+
+                /20
+              </div>
+
+              <div
+                class="final-average">
+
+                <small>
+                  معدل الفصل الثاني
+                </small>
+
+                <b>
+                  ${reportValue(
+                    report
+                      .termAverages
+                      ?.T2
+                  )}
+                </b>
+
+                /20
+              </div>
+
+              <div
+                class="final-average">
+
+                <small>
+                  معدل الفصل الثالث
+                </small>
+
+                <b>
+                  ${reportValue(
+                    report
+                      .termAverages
+                      ?.T3
+                  )}
+                </b>
+
+                /20
+              </div>
+
+              <div
+                class=
+                  "final-average final-annual">
+
+                <small>
+                  المعدل السنوي
+                </small>
+
+                <b>
+                  ${reportValue(
+                    annual
+                  )}
+                </b>
+
+                /20
+              </div>
+
+            </div>
+
+            <div
+              class="final-signatures">
+
+              <div
+                class="final-signature-box">
+
+                <b>
+                  توقيع المدير
+                </b>
+
+                <div
+                  class="final-signature-line">
+                  التوقيع
+                </div>
+              </div>
+
+              <div
+                class="final-signature-box">
+
+                <b>
+                  ختم المؤسسة
+                </b>
+
+                <div
+                  class="final-signature-line">
+                  الختم
+                </div>
+              </div>
+
+            </div>
+
+            <div
+              style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:16px;
+                margin-top:22px;
+                padding:12px;
+                border:
+                  1px solid #d8e4e1;
+                border-radius:12px;
+              ">
+
+              <img
+                src="${v.qrDataUrl}"
+                alt="QR التحقق"
+                style="
+                  width:110px;
+                  height:110px
+                ">
+
+              <div>
+                <b>
+                  التحقق من صحة الكشف
+                </b>
+                <br>
+
+                <small>
+                  امسح الرمز لعرض
+                  النسخة الموثقة
+                </small>
+                <br>
+
+                <b>
+                  ${escapeHtml(
+                    v.code||""
+                  )}
+                </b>
+              </div>
+
+            </div>
+
+            <div
+              class="final-report-note">
+              تم إنشاء هذا الكشف
+              بواسطة منصة مدرستي
+              | Ma Madrassa
+            </div>
+
+            <div
+              class=
+                "final-report-actions no-print">
+
+              <button
+                id="finalPrintReport"
+                class="primary"
+                type="button">
+                حفظ PDF / طباعة
+              </button>
+
+              <button
+                id="finalShareReport"
+                class="ghost"
+                type="button">
+                مشاركة
+              </button>
+
             </div>
 
           </div>
-<div style="
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-  margin-top:22px;
-  padding:12px;
-  border:1px solid #d8e4e1;
-  border-radius:12px;
-">
-  <img
-    src="${v.qrDataUrl}"
-    alt="QR التحقق"
-    style="width:110px;height:110px"
-  >
+        `);
 
-  <div>
-    <b>التحقق من صحة الكشف</b><br>
-    <small>امسح الرمز لعرض النسخة الموثقة</small><br>
-    <b>${escapeHtml(v.code||"")}</b>
-  </div>
-</div>
-          <div class="final-report-note">
-            تم إنشاء هذا الكشف بواسطة منصة مدرستي | Ma Madrassa
-          </div>
+        $("finalPrintReport")
+          .onclick=
+          ()=>{
+            window.print();
+          };
 
-          <div class="final-report-actions no-print">
+        $("finalShareReport")
+          .onclick=
+          ()=>{
+            shareStudentReport(
+              student,
+              report
+            );
+          };
 
-            <button
-              id="finalPrintReport"
-              class="primary"
-              type="button">
-              حفظ PDF / طباعة
-            </button>
+      }catch(e){
+        toast(
+          e.status===403
+            ?"لا تملك صلاحية عرض هذا الكشف"
+            :"تعذر فتح كشف النتائج"
+        );
+      }
+    };
 
-            <button
-              id="finalShareReport"
-              class="ghost"
-              type="button">
-              مشاركة
-            </button>
+  async function openSuperAdminPanel(){
+    try{
+      const platform=
+        await api(
+          "/api/platform/me"
+        );
 
-          </div>
+      if(
+        !platform?.isSuperAdmin
+      ){
+        return false;
+      }
 
-        </div>
-      `);
+      hideAll();
 
-      $("finalPrintReport").onclick=()=>{
-        window.print();
-      };
+      $("appShell")
+        ?.classList
+        .remove(
+          "hidden"
+        );
 
-      $("finalShareReport").onclick=()=>{
-        shareStudentReport(student,report);
-      };
+      qsa(
+        ".page"
+      ).forEach(
+        p=>
+          p.classList.remove(
+            "active"
+          )
+      );
+
+      $("page-super-admin")
+        ?.classList
+        .add(
+          "active"
+        );
+
+      if(
+        $("pageTitle")
+      ){
+        $("pageTitle")
+          .textContent=
+          "إدارة منصة مدرستي";
+      }
+
+      await loadSuperAdminDashboard();
+
+      return true;
+
+    }catch{
+      return false;
+    }
+  }
+
+  async function loadSuperAdminDashboard(){
+    try{
+      const [
+        overviewData,
+        schoolsData
+      ]=
+        await Promise.all([
+          api(
+            "/api/platform/overview"
+          ),
+          api(
+            "/api/platform/schools"
+          )
+        ]);
+
+      const overview=
+        overviewData.overview||{};
+
+      if(
+        $("saSchoolsCount")
+      ){
+        $("saSchoolsCount")
+          .textContent=
+          overview.schools??0;
+      }
+
+      if(
+        $("saUsersCount")
+      ){
+        $("saUsersCount")
+          .textContent=
+          overview.users??0;
+      }
+
+      if(
+        $("saStudentsCount")
+      ){
+        $("saStudentsCount")
+          .textContent=
+          overview.students??0;
+      }
+
+      if(
+        $("saClassesCount")
+      ){
+        $("saClassesCount")
+          .textContent=
+          overview.classes??0;
+      }
+
+      renderSuperAdminSchools(
+        schoolsData.schools||[]
+      );
 
     }catch(e){
       toast(
-        e.status===403
-          ?"لا تملك صلاحية عرض هذا الكشف"
-          :"تعذر فتح كشف النتائج"
+        "تعذر تحميل لوحة مالك المنصة"
       );
     }
-  };
-async function openSuperAdminPanel(){
-  try{
-    const platform=await api("/api/platform/me");
+  }
 
-    if(!platform?.isSuperAdmin){
-      return false;
+  function renderSuperAdminSchools(
+    schools
+  ){
+    const box=
+      $("saSchoolsList");
+
+    if(!box){
+      return;
     }
 
-    hideAll();
+    if(
+      !schools.length
+    ){
+      box.innerHTML=
+        "<p>"+
+        "لا توجد مدارس مسجلة بعد."+
+        "</p>";
 
-    $("appShell")?.classList.remove("hidden");
-
-    qsa(".page").forEach(p=>p.classList.remove("active"));
-
-    $("page-super-admin")?.classList.add("active");
-
-    if($("pageTitle")){
-      $("pageTitle").textContent="إدارة منصة مدرستي";
+      return;
     }
 
-    await loadSuperAdminDashboard();
+    box.innerHTML=
+      schools.map(
+        s=>`
+          <div class="mini-card">
 
-    return true;
+            <div>
+              <b>
+                ${escapeHtml(
+                  s.name
+                )}
+              </b>
 
-  }catch{
-    return false;
-  }
-}
+              <small>
+                ${
+                  s.school_type===
+                  "PRIVATE"
+                    ?"خصوصية"
+                    :"عمومية"
+                }
 
+                ·
+                ${escapeHtml(
+                  s.wilaya||"—"
+                )}
 
-async function loadSuperAdminDashboard(){
-  try{
-    const [overviewData,schoolsData]=await Promise.all([
-      api("/api/platform/overview"),
-      api("/api/platform/schools")
-    ]);
+                ·
+                ${escapeHtml(
+                  s.academic_year||
+                  "—"
+                )}
+              </small>
 
-    const overview=overviewData.overview||{};
+              <small>
+                التلاميذ:
+                ${
+                  s.students_count||0
+                }
 
-    if($("saSchoolsCount"))
-      $("saSchoolsCount").textContent=overview.schools??0;
+                · الأقسام:
+                ${
+                  s.classes_count||0
+                }
 
-    if($("saUsersCount"))
-      $("saUsersCount").textContent=overview.users??0;
+                · المستخدمون:
+                ${
+                  s.users_count||0
+                }
+              </small>
+            </div>
 
-    if($("saStudentsCount"))
-      $("saStudentsCount").textContent=overview.students??0;
+            <div
+              style="
+                display:flex;
+                gap:8px;
+                flex-wrap:wrap
+              ">
 
-    if($("saClassesCount"))
-      $("saClassesCount").textContent=overview.classes??0;
+              <button
+                type="button"
+                data-school-director=
+                  "${s.id}">
+                تعيين مدير
+              </button>
 
-    renderSuperAdminSchools(schoolsData.schools||[]);
+              <button
+                type="button"
+                data-school-status=
+                  "${s.id}"
+                data-active=
+                  "${
+                    s.active
+                      ?"1"
+                      :"0"
+                  }">
+                ${
+                  s.active
+                    ?"تعطيل"
+                    :"تشغيل"
+                }
+              </button>
 
-  }catch(e){
-    toast("تعذر تحميل لوحة مالك المنصة");
-  }
-}
+              <button
+                type="button"
+                data-school-edit=
+                  "${s.id}">
+                تعديل
+              </button>
 
+              <button
+                type="button"
+                data-school-delete=
+                  "${s.id}">
+                حذف
+              </button>
 
-function renderSuperAdminSchools(schools){
-  const box=$("saSchoolsList");
+            </div>
+          </div>
+        `
+      ).join("");
 
-  if(!box)return;
+    qsa(
+      "[data-school-status]"
+    ).forEach(
+      btn=>{
+        btn.onclick=
+          async()=>{
+            const id=
+              btn.dataset
+                .schoolStatus;
 
-  if(!schools.length){
-    box.innerHTML="<p>لا توجد مدارس مسجلة بعد.</p>";
-    return;
-  }
+            const currentlyActive=
+              btn.dataset.active===
+              "1";
 
-  box.innerHTML=schools.map(s=>`
-    <div class="mini-card">
-      <div>
-        <b>${escapeHtml(s.name)}</b>
-        <small>
-          ${s.school_type==="PRIVATE"?"خصوصية":"عمومية"}
-          · ${escapeHtml(s.wilaya||"—")}
-          · ${escapeHtml(s.academic_year||"—")}
-        </small>
+            try{
+              await api(
+                `/api/platform/schools/${
+                  encodeURIComponent(
+                    id
+                  )
+                }/status`,
+                {
+                  method:"PATCH",
+                  body:JSON.stringify({
+                    active:
+                      !currentlyActive
+                  })
+                }
+              );
 
-        <small>
-          التلاميذ: ${s.students_count||0}
-          · الأقسام: ${s.classes_count||0}
-          · المستخدمون: ${s.users_count||0}
-        </small>
-      </div>
+              toast(
+                currentlyActive
+                  ?"تم تعطيل المدرسة"
+                  :"تم تشغيل المدرسة"
+              );
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-  <button
-    type="button"
-    data-school-director="${s.id}">
-    تعيين مدير
-  </button>
+              await loadSuperAdminDashboard();
 
-  <button
-    type="button"
-    data-school-status="${s.id}"
-    data-active="${s.active?"1":"0"}">
-    ${s.active?"تعطيل":"تشغيل"}
-  </button>
- <button
-  type="button"
-  data-school-edit="${s.id}">
-  تعديل
-</button>
-
-<button
-  type="button"
-  data-school-delete="${s.id}">
-  حذف
-</button>
-    </div>
-  `).join("");
-
-  qsa("[data-school-status]").forEach(btn=>{
-    btn.onclick=async()=>{
-      const id=btn.dataset.schoolStatus;
-      const currentlyActive=btn.dataset.active==="1";
-
-      try{
-        await api(
-          `/api/platform/schools/${encodeURIComponent(id)}/status`,
-          {
-            method:"PATCH",
-            body:JSON.stringify({
-              active:!currentlyActive
-            })
-          }
-        );
-
-        toast(
-          currentlyActive
-            ?"تم تعطيل المدرسة"
-            :"تم تشغيل المدرسة"
-        );
-
-        await loadSuperAdminDashboard();
-
-      }catch{
-        toast("تعذر تغيير حالة المدرسة");
+            }catch{
+              toast(
+                "تعذر تغيير حالة المدرسة"
+              );
+            }
+          };
       }
-    };
-  });
-qsa("[data-school-director]").forEach(btn=>{
-  btn.onclick=async()=>{
-    const schoolId=btn.dataset.schoolDirector;
-
-    const fullName=prompt("اسم المدير الكامل");
-    if(!fullName)return;
-
-    const login=prompt("اسم المستخدم للمدير");
-    if(!login)return;
-
-    const email=prompt("البريد الإلكتروني للمدير (اختياري)") || "";
-
-    const password=prompt("كلمة مرور المدير");
-    if(!password)return;
-
-    try{
-      await api(
-        `/api/platform/schools/${encodeURIComponent(schoolId)}/director`,
-        {
-          method:"POST",
-          body:JSON.stringify({
-            fullName,
-            login,
-            email,
-            password
-          })
-        }
-      );
-
-      toast("تم إنشاء حساب المدير وربطه بالمدرسة");
-      await loadSuperAdminDashboard();
-qsa("[data-school-edit]").forEach(btn=>{
-  btn.onclick=async()=>{
-    const id=btn.dataset.schoolEdit;
-    const school=schools.find(s=>String(s.id)===String(id));
-    if(!school)return;
-
-    const name=prompt("اسم المدرسة",school.name||"");
-    if(!name)return;
-
-    const schoolType=prompt(
-      "النوع: PUBLIC أو PRIVATE",
-      school.school_type||"PUBLIC"
     );
-    if(!schoolType)return;
 
-    const wilaya=prompt("الولاية",school.wilaya||"") ?? "";
-    const moughataa=prompt("المقاطعة",school.moughataa||"") ?? "";
-    const inspection=prompt("المفتشية",school.inspection||"") ?? "";
-    const academicYear=prompt(
-      "السنة الدراسية",
-      school.academic_year||"2026/2027"
+    qsa(
+      "[data-school-director]"
+    ).forEach(
+      btn=>{
+        btn.onclick=
+          async()=>{
+            const schoolId=
+              btn.dataset
+                .schoolDirector;
+
+            const fullName=
+              prompt(
+                "اسم المدير الكامل"
+              );
+
+            if(!fullName){
+              return;
+            }
+
+            const login=
+              prompt(
+                "اسم المستخدم للمدير"
+              );
+
+            if(!login){
+              return;
+            }
+
+            const email=
+              prompt(
+                "البريد الإلكتروني للمدير (اختياري)"
+              )||"";
+
+            const password=
+              prompt(
+                "كلمة مرور المدير"
+              );
+
+            if(!password){
+              return;
+            }
+
+            try{
+              await api(
+                `/api/platform/schools/${
+                  encodeURIComponent(
+                    schoolId
+                  )
+                }/director`,
+                {
+                  method:"POST",
+                  body:JSON.stringify({
+                    fullName,
+                    login,
+                    email,
+                    password
+                  })
+                }
+              );
+
+              toast(
+                "تم إنشاء حساب المدير وربطه بالمدرسة"
+              );
+
+              await loadSuperAdminDashboard();
+
+            }catch(e){
+              if(
+                e.data?.error===
+                "DIRECTOR_ACCOUNT_ALREADY_EXISTS"
+              ){
+                toast(
+                  "يوجد حساب مدير بهذا اسم الدخول أو البريد"
+                );
+              }else if(
+                e.data?.error===
+                "INVALID_DIRECTOR_DATA"
+              ){
+                toast(
+                  "بيانات المدير غير صحيحة"
+                );
+              }else{
+                toast(
+                  "تعذر إنشاء حساب المدير"
+                );
+              }
+            }
+          };
+      }
     );
-    if(!academicYear)return;
 
-    try{
-      await api(
-        `/api/platform/schools/${encodeURIComponent(id)}`,
-        {
-          method:"PATCH",
-          body:JSON.stringify({
-            name,
-            schoolType,
-            wilaya,
-            moughataa,
-            inspection,
-            academicYear
-          })
-        }
-      );
+    qsa(
+      "[data-school-edit]"
+    ).forEach(
+      btn=>{
+        btn.onclick=
+          async()=>{
+            const id=
+              btn.dataset
+                .schoolEdit;
 
-      toast("تم تعديل المدرسة");
-      await loadSuperAdminDashboard();
+            const school=
+              schools.find(
+                s=>
+                  String(s.id)===
+                  String(id)
+              );
 
-    }catch(e){
-      toast("تعذر تعديل المدرسة");
-    }
-  };
-});
+            if(!school){
+              return;
+            }
 
+            const name=
+              prompt(
+                "اسم المدرسة",
+                school.name||""
+              );
 
-qsa("[data-school-delete]").forEach(btn=>{
-  btn.onclick=async()=>{
-    const id=btn.dataset.schoolDelete;
-    const school=schools.find(s=>String(s.id)===String(id));
+            if(!name){
+              return;
+            }
 
-    if(!confirm(
-      `هل تريد حذف مدرسة ${school?.name||""} نهائياً؟`
-    ))return;
+            const schoolType=
+              prompt(
+                "النوع: PUBLIC أو PRIVATE",
+                school.school_type||
+                "PUBLIC"
+              );
 
-    try{
-      await api(
-        `/api/platform/schools/${encodeURIComponent(id)}`,
-        {
-          method:"DELETE"
-        }
-      );
+            if(!schoolType){
+              return;
+            }
 
-      toast("تم حذف المدرسة");
-      await loadSuperAdminDashboard();
+            const wilaya=
+              prompt(
+                "الولاية",
+                school.wilaya||""
+              )??"";
 
-    }catch(e){
-      toast("تعذر حذف المدرسة");
-    }
-  };
-});
-    
+            const moughataa=
+              prompt(
+                "المقاطعة",
+                school.moughataa||""
+              )??"";
 
+            const inspection=
+              prompt(
+                "المفتشية",
+     school.inspection||""
+  )??"";
 
-async function createSuperAdminSchool(){
-  const name=$("saSchoolName")?.value.trim();
-  const schoolType=$("saSchoolType")?.value;
-  const wilaya=$("saWilaya")?.value.trim();
-  const moughataa=$("saMoughataa")?.value.trim();
-  const inspection=$("saInspection")?.value.trim();
-  const academicYear=$("saAcademicYear")?.value.trim();
+const academicYear=
+  prompt(
+    "السنة الدراسية",
+    school.academic_year||
+    "2026/2027"
+  );
 
-  if(!name){
-    toast("أدخل اسم المدرسة");
-    return;
-  }
+if(
+  !academicYear
+){
+  return;
+}
 
-  if(!academicYear){
-    toast("أدخل السنة الدراسية");
-    return;
-  }
-
-  try{
-    await api("/api/platform/schools",{
-      method:"POST",
+try{
+  await api(
+    `/api/platform/schools/${
+      encodeURIComponent(
+        id
+      )
+    }`,
+    {
+      method:"PATCH",
       body:JSON.stringify({
         name,
         schoolType,
         wilaya,
         moughataa,
         inspection,
-        academicYear,
-        locale:"ar"
+        academicYear
       })
-    });
+    }
+  );
 
-    toast("تم إنشاء المدرسة بنجاح");
+  toast(
+    "تم تعديل المدرسة"
+  );
 
-    [
-      "saSchoolName",
-      "saWilaya",
-      "saMoughataa",
-      "saInspection",
-      "saAcademicYear"
-    ].forEach(id=>{
-      if($(id))$(id).value="";
-    });
+  await loadSuperAdminDashboard();
 
-    await loadSuperAdminDashboard();
+}catch(e){
+  toast(
+    "تعذر تعديل المدرسة"
+  );
+}
+          };
+      }
+    );
 
-  }catch(e){
-    toast(
-      e.data?.error==="SCHOOL_NAME_REQUIRED"
-        ?"اسم المدرسة مطلوب"
-        :"تعذر إنشاء المدرسة"
+    qsa(
+      "[data-school-delete]"
+    ).forEach(
+      btn=>{
+        btn.onclick=
+          async()=>{
+            const id=
+              btn.dataset
+                .schoolDelete;
+
+            const school=
+              schools.find(
+                s=>
+                  String(s.id)===
+                  String(id)
+              );
+
+            if(
+              !confirm(
+                `هل تريد حذف مدرسة ${
+                  school?.name||""
+                } نهائياً؟`
+              )
+            ){
+              return;
+            }
+
+            try{
+              await api(
+                `/api/platform/schools/${
+                  encodeURIComponent(
+                    id
+                  )
+                }`,
+                {
+                  method:"DELETE"
+                }
+              );
+
+              toast(
+                "تم حذف المدرسة"
+              );
+
+              await loadSuperAdminDashboard();
+
+            }catch(e){
+              toast(
+                "تعذر حذف المدرسة"
+              );
+            }
+          };
+      }
     );
   }
-}
 
+  async function createSuperAdminSchool(){
+    const name=
+      $("saSchoolName")
+        ?.value
+        .trim();
 
-$("saCreateSchool")?.addEventListener(
-  "click",
-  createSuperAdminSchool
-);
+    const schoolType=
+      $("saSchoolType")
+        ?.value;
 
-$("superAdminRefresh")?.addEventListener(
-  "click",
-  loadSuperAdminDashboard
-);
+    const wilaya=
+      $("saWilaya")
+        ?.value
+        .trim();
 
-  
-$("superAdminBootstrapBtn")?.addEventListener("click",bootstrapSuperAdmin);
+    const moughataa=
+      $("saMoughataa")
+        ?.value
+        .trim();
+
+    const inspection=
+      $("saInspection")
+        ?.value
+        .trim();
+
+    const academicYear=
+      $("saAcademicYear")
+        ?.value
+        .trim();
+
+    if(!name){
+      toast(
+        "أدخل اسم المدرسة"
+      );
+
+      return;
+    }
+
+    if(
+      !academicYear
+    ){
+      toast(
+        "أدخل السنة الدراسية"
+      );
+
+      return;
+    }
+
+    try{
+      await api(
+        "/api/platform/schools",
+        {
+          method:"POST",
+          body:JSON.stringify({
+            name,
+            schoolType,
+            wilaya,
+            moughataa,
+            inspection,
+            academicYear,
+            locale:"ar"
+          })
+        }
+      );
+
+      toast(
+        "تم إنشاء المدرسة بنجاح"
+      );
+
+      [
+        "saSchoolName",
+        "saWilaya",
+        "saMoughataa",
+        "saInspection",
+        "saAcademicYear"
+      ].forEach(
+        id=>{
+          if($(id)){
+            $(id).value="";
+          }
+        }
+      );
+
+      await loadSuperAdminDashboard();
+
+    }catch(e){
+      toast(
+        e.data?.error===
+        "SCHOOL_NAME_REQUIRED"
+          ?"اسم المدرسة مطلوب"
+          :"تعذر إنشاء المدرسة"
+      );
+    }
+  }
+
+  $("saCreateSchool")
+    ?.addEventListener(
+      "click",
+      createSuperAdminSchool
+    );
+
+  $("superAdminRefresh")
+    ?.addEventListener(
+      "click",
+      loadSuperAdminDashboard
+    );
+
+  $("superAdminBootstrapBtn")
+    ?.addEventListener(
+      "click",
+      bootstrapSuperAdmin
+    );
+
 })();
