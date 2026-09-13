@@ -10,7 +10,70 @@ function hideAll(){["authShell","pendingView","schoolChooser","appShell"].forEac
 function showAuth(){hideAll();$("authShell").classList.remove("hidden")}
 function setTab(register){$("registerPane").classList.toggle("hidden",!register);$("loginPane").classList.toggle("hidden",register);$("registerTab").classList.toggle("active",register);$("loginTab").classList.toggle("active",!register);$("authTitle").textContent=tr(register?"إنشاء حساب":"مرحبًا بعودتك")}
 async function boot(){try{me=await api("/api/auth/me");await refreshCsrf();await openForMe()}catch{showAuth()}}
-async function openForMe(){if(!me?.schoolId){try{const d=await api("/api/auth/schools");if(d.schools?.length){return showSchoolChooser(d.schools)}}catch{}hideAll();$("pendingView").classList.remove("hidden");return}hideAll();$("appShell").classList.remove("hidden");applyRoleVisibility();renderProfile();await Promise.all([loadClasses(),loadNotifications(),loadBranding()]);if((me.roles||[]).includes("DIRECTOR")){await loadDirectorHome();await loadInviteSubjects();}if((me.roles||[]).includes("GUARDIAN"))await loadChildren();navigate("home")}
+async function openForMe(){
+
+  try{
+    const platform=await api("/api/platform/me");
+
+    if(platform?.isSuperAdmin){
+      hideAll();
+
+      $("appShell")?.classList.remove("hidden");
+
+      qsa(".page").forEach(
+        p=>p.classList.remove("active")
+      );
+
+      $("page-super-admin")?.classList.add("active");
+
+      if($("pageTitle")){
+        $("pageTitle").textContent="إدارة منصة مدرستي";
+      }
+
+      await loadSuperAdminDashboard();
+
+      return;
+    }
+  }catch{}
+
+  if(!me?.schoolId){
+    try{
+      const d=await api("/api/auth/schools");
+
+      if(d.schools?.length){
+        return showSchoolChooser(d.schools);
+      }
+    }catch{}
+
+    hideAll();
+    $("pendingView").classList.remove("hidden");
+    return;
+  }
+
+  hideAll();
+
+  $("appShell").classList.remove("hidden");
+
+  applyRoleVisibility();
+  renderProfile();
+
+  await Promise.all([
+    loadClasses(),
+    loadNotifications(),
+    loadBranding()
+  ]);
+
+  if((me.roles||[]).includes("DIRECTOR")){
+    await loadDirectorHome();
+    await loadInviteSubjects();
+  }
+
+  if((me.roles||[]).includes("GUARDIAN")){
+    await loadChildren();
+  }
+
+  navigate("home");
+} 
 function showSchoolChooser(schools){hideAll();$("schoolChooser").classList.remove("hidden");$("schoolChoices").innerHTML=schools.map(s=>`<button type="button" data-school="${s.id}"><b>${escapeHtml(s.name)}</b><br><small>${escapeHtml((s.roles||[]).join(" • "))}</small></button>`).join("");qsa("[data-school]").forEach(b=>b.onclick=()=>selectSchool(b.dataset.school))}
 async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
 async function login(){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر تسجيل الدخول")}}
@@ -1868,18 +1931,6 @@ $("superAdminRefresh")?.addEventListener(
   loadSuperAdminDashboard
 );
 
-
-const originalOpenForMe=openForMe;
-
-openForMe=async function(){
-
-  const opened=await openSuperAdminPanel();
-
-  if(opened)return;
-
-  return originalOpenForMe();
-};
   
-
 $("superAdminBootstrapBtn")?.addEventListener("click",bootstrapSuperAdmin);
 })();
