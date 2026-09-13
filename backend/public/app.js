@@ -1675,5 +1675,211 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catc
       );
     }
   };
+async function openSuperAdminPanel(){
+  try{
+    const platform=await api("/api/platform/me");
+
+    if(!platform?.isSuperAdmin){
+      return false;
+    }
+
+    hideAll();
+
+    $("appShell")?.classList.remove("hidden");
+
+    qsa(".page").forEach(p=>p.classList.remove("active"));
+
+    $("page-super-admin")?.classList.add("active");
+
+    if($("pageTitle")){
+      $("pageTitle").textContent="إدارة منصة مدرستي";
+    }
+
+    await loadSuperAdminDashboard();
+
+    return true;
+
+  }catch{
+    return false;
+  }
+}
+
+
+async function loadSuperAdminDashboard(){
+  try{
+    const [overviewData,schoolsData]=await Promise.all([
+      api("/api/platform/overview"),
+      api("/api/platform/schools")
+    ]);
+
+    const overview=overviewData.overview||{};
+
+    if($("saSchoolsCount"))
+      $("saSchoolsCount").textContent=overview.schools??0;
+
+    if($("saUsersCount"))
+      $("saUsersCount").textContent=overview.users??0;
+
+    if($("saStudentsCount"))
+      $("saStudentsCount").textContent=overview.students??0;
+
+    if($("saClassesCount"))
+      $("saClassesCount").textContent=overview.classes??0;
+
+    renderSuperAdminSchools(schoolsData.schools||[]);
+
+  }catch(e){
+    toast("تعذر تحميل لوحة مالك المنصة");
+  }
+}
+
+
+function renderSuperAdminSchools(schools){
+  const box=$("saSchoolsList");
+
+  if(!box)return;
+
+  if(!schools.length){
+    box.innerHTML="<p>لا توجد مدارس مسجلة بعد.</p>";
+    return;
+  }
+
+  box.innerHTML=schools.map(s=>`
+    <div class="mini-card">
+      <div>
+        <b>${escapeHtml(s.name)}</b>
+        <small>
+          ${s.school_type==="PRIVATE"?"خصوصية":"عمومية"}
+          · ${escapeHtml(s.wilaya||"—")}
+          · ${escapeHtml(s.academic_year||"—")}
+        </small>
+
+        <small>
+          التلاميذ: ${s.students_count||0}
+          · الأقسام: ${s.classes_count||0}
+          · المستخدمون: ${s.users_count||0}
+        </small>
+      </div>
+
+      <button
+        type="button"
+        data-school-status="${s.id}"
+        data-active="${s.active?"1":"0"}">
+        ${s.active?"تعطيل":"تشغيل"}
+      </button>
+    </div>
+  `).join("");
+
+  qsa("[data-school-status]").forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.dataset.schoolStatus;
+      const currentlyActive=btn.dataset.active==="1";
+
+      try{
+        await api(
+          `/api/platform/schools/${encodeURIComponent(id)}/status`,
+          {
+            method:"PATCH",
+            body:JSON.stringify({
+              active:!currentlyActive
+            })
+          }
+        );
+
+        toast(
+          currentlyActive
+            ?"تم تعطيل المدرسة"
+            :"تم تشغيل المدرسة"
+        );
+
+        await loadSuperAdminDashboard();
+
+      }catch{
+        toast("تعذر تغيير حالة المدرسة");
+      }
+    };
+  });
+}
+
+
+async function createSuperAdminSchool(){
+  const name=$("saSchoolName")?.value.trim();
+  const schoolType=$("saSchoolType")?.value;
+  const wilaya=$("saWilaya")?.value.trim();
+  const moughataa=$("saMoughataa")?.value.trim();
+  const inspection=$("saInspection")?.value.trim();
+  const academicYear=$("saAcademicYear")?.value.trim();
+
+  if(!name){
+    toast("أدخل اسم المدرسة");
+    return;
+  }
+
+  if(!academicYear){
+    toast("أدخل السنة الدراسية");
+    return;
+  }
+
+  try{
+    await api("/api/platform/schools",{
+      method:"POST",
+      body:JSON.stringify({
+        name,
+        schoolType,
+        wilaya,
+        moughataa,
+        inspection,
+        academicYear,
+        locale:"ar"
+      })
+    });
+
+    toast("تم إنشاء المدرسة بنجاح");
+
+    [
+      "saSchoolName",
+      "saWilaya",
+      "saMoughataa",
+      "saInspection",
+      "saAcademicYear"
+    ].forEach(id=>{
+      if($(id))$(id).value="";
+    });
+
+    await loadSuperAdminDashboard();
+
+  }catch(e){
+    toast(
+      e.data?.error==="SCHOOL_NAME_REQUIRED"
+        ?"اسم المدرسة مطلوب"
+        :"تعذر إنشاء المدرسة"
+    );
+  }
+}
+
+
+$("saCreateSchool")?.addEventListener(
+  "click",
+  createSuperAdminSchool
+);
+
+$("superAdminRefresh")?.addEventListener(
+  "click",
+  loadSuperAdminDashboard
+);
+
+
+const originalOpenForMe=openForMe;
+
+openForMe=async function(){
+
+  const opened=await openSuperAdminPanel();
+
+  if(opened)return;
+
+  return originalOpenForMe();
+};
+  
+
 $("superAdminBootstrapBtn")?.addEventListener("click",bootstrapSuperAdmin);
 })();
