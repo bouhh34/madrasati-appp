@@ -14,23 +14,11 @@ AS $$
   )
 $$;
 
-DROP POLICY IF EXISTS school_settings_write
+DROP POLICY IF EXISTS school_settings_super_admin_write
 ON school_settings;
 
-CREATE POLICY school_settings_write
+CREATE POLICY school_settings_super_admin_write
 ON school_settings
 FOR ALL
-USING (
-  (
-    school_id = app.current_school_id()
-    AND app.has_role('DIRECTOR')
-  )
-  OR app.is_super_admin()
-)
-WITH CHECK (
-  (
-    school_id = app.current_school_id()
-    AND app.has_role('DIRECTOR')
-  )
-  OR app.is_super_admin()
-);
+USING (app.is_super_admin())
+WITH CHECK (app.is_super_admin());
