@@ -1,7 +1,13 @@
 import { pool } from "../db.js";
 import { config } from "../config.js";
-import { safeEqualText } from "../security.js";
-
+import {
+  safeEqualText,
+  hashPassword,
+  normalizeLogin,
+  normalizeEmail,
+  validPassword
+} from "../security.js";
+import { isUuid } from "../validators.js";
 export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
   async function requireSuperAdmin(request, reply) {
@@ -391,6 +397,134 @@ await client.query(
         ok: true,
         school: result.rows[0]
       };
+    }
+  );
+  // إنشاء مدير وربطه بمدرسة
+  app.post(
+    "/api/platform/schools/:schoolId/director",
+    async (request, reply) => {
+
+      if (!(await requireMutation(request, reply))) return;
+      if (!(await requireSuperAdmin(request, reply))) return;
+
+      const schoolId = String(request.params.schoolId || "");
+
+      if (!isUuid(schoolId)) {
+        return reply.code(400).send({
+          error: "INVALID_SCHOOL_ID"
+        });
+      }
+
+      const body = request.body || {};
+
+      const login = normalizeLogin(body.login);
+      const email = normalizeEmail(body.email);
+      const fullName = String(body.fullName || "").trim();
+      const password = String(body.password || "");
+
+      if (
+        !login ||
+        login.length < 3 ||
+        !fullName ||
+        fullName.length < 2 ||
+        !validPassword(password)
+      ) {
+        return reply.code(400).send({
+          error: "INVALID_DIRECTOR_DATA"
+        });
+      }
+
+      const schoolCheck = await pool.query(
+        "SELECT id FROM schools WHERE id=$1 LIMIT 1",
+        [schoolId]
+      );
+
+      if (!schoolCheck.rowCount) {
+        return reply.code(404).send({
+          error: "SCHOOL_NOT_FOUND"
+        });
+      }
+
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const passwordHash = await hashPassword(password);
+
+        const userResult = await client.query(`
+          INSERT INTO users (
+            login,
+            email,
+            full_name,
+            password_hash,
+            managed_by_school_id,
+            account_state
+          )
+          VALUES ($1,$2,$3,$4,$5,'ACTIVE')
+          RETURNING id,login,email,full_name
+        `, [
+          login,
+          email,
+          fullName,
+          passwordHash,
+          schoolId
+        ]);
+
+        const user = userResult.rows[0];
+
+        await client.query(`
+          INSERT INTO school_memberships (
+            school_id,
+            user_id,
+            status,
+            created_by
+          )
+          VALUES ($1,$2,'ACTIVE',$3)
+        `, [
+          schoolId,
+          user.id,
+          request.auth.userId
+        ]);
+
+        await client.query(`
+          INSERT INTO membership_roles (
+            school_id,
+            user_id,
+            role,
+            created_by
+          )
+          VALUES ($1,$2,'DIRECTOR',$3)
+        `, [
+          schoolId,
+          user.id,
+          request.auth.userId
+        ]);
+
+        await client.query("COMMIT");
+
+        return reply.code(201).send({
+          ok: true,
+          director: user
+        });
+
+      } catch (error) {
+
+        try {
+          await client.query("ROLLBACK");
+        } catch {}
+
+        if (error?.code === "23505") {
+          return reply.code(409).send({
+            error: "DIRECTOR_ACCOUNT_ALREADY_EXISTS"
+          });
+        }
+
+        throw error;
+
+      } finally {
+        client.release();
+      }
     }
   );
 }
