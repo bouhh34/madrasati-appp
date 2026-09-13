@@ -542,60 +542,85 @@ if(
 
     
 
-        await client.query(
-  `
-  INSERT INTO school_memberships (
-    school_id,
-    user_id,
-    status,
-    created_by
-  )
-  VALUES (
-    $1,
-    $2,
-    'ACTIVE',
-    $3
-  )
-  ON CONFLICT (
-    school_id,
-    user_id
-  )
-  DO UPDATE SET
-    status='ACTIVE'
-  `,
-  [
-    schoolId,
-    user.id,
-    request.auth.userId
-  ]
-);
-        await client.query(
-  `
-  INSERT INTO membership_roles (
-    school_id,
-    user_id,
-    role,
-    created_by
-  )
-  VALUES (
-    $1,
-    $2,
-    'DIRECTOR',
-    $3
-  )
-  ON CONFLICT (
-    school_id,
-    user_id,
-    role
-  )
-  DO NOTHING
-  `,
-  [
-    schoolId,
-    user.id,
-    request.auth.userId
-  ]
-);
+        const membershipUpdate =
+  await client.query(
+    `
+    UPDATE school_memberships
+    SET status='ACTIVE'
+    WHERE school_id=$1
+      AND user_id=$2
+    `,
+    [
+      schoolId,
+      user.id
+    ]
+  );
+
+if(
+  membershipUpdate.rowCount===0
+){
+  await client.query(
+    `
+    INSERT INTO school_memberships (
+      school_id,
+      user_id,
+      status,
+      created_by
+    )
+    VALUES (
+      $1,
+      $2,
+      'ACTIVE',
+      $3
+    )
+    `,
+    [
+      schoolId,
+      user.id,
+      request.auth.userId
+    ]
+  );
+}
+  await client.query(
+    `
+    SELECT 1
+    FROM membership_roles
+    WHERE school_id=$1
+      AND user_id=$2
+      AND role='DIRECTOR'
+    LIMIT 1
+    `,
+    [
+      schoolId,
+      user.id
+    ]
+  );
+
+if(
+  !directorRole.rowCount
+){
+  await client.query(
+    `
+    INSERT INTO membership_roles (
+      school_id,
+      user_id,
+      role,
+      created_by
+    )
+    VALUES (
+      $1,
+      $2,
+      'DIRECTOR',
+      $3
+    )
+    `,
+    [
+      schoolId,
+      user.id,
+      request.auth.userId
+    ]
+  );
+}
         await client.query("COMMIT");
 
         return reply.code(201).send({
