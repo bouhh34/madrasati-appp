@@ -462,10 +462,7 @@ const existingUser =
       full_name
     FROM users
     WHERE login=$1
-       OR (
-         $2 IS NOT NULL
-         AND email=$2
-       )
+   OR email=$2::text
     LIMIT 1
     `,
     [
