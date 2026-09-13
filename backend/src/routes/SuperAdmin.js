@@ -578,6 +578,7 @@ if(
     ]
   );
 }
+  const directorRole =
   await client.query(
     `
     SELECT 1
