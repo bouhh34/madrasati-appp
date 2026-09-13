@@ -276,7 +276,10 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
     try {
       await client.query("BEGIN");
-
+await client.query(
+  "SELECT set_config('app.user_id',$1,true)",
+  [request.auth.userId]
+);
       const schoolResult = await client.query(`
         INSERT INTO schools (
           name,
