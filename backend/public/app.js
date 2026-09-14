@@ -1,16 +1,24 @@
-let schoolView=false,logoutPending=false;
+let schoolView=false,logoutPending=false,loginPending=false,authGeneration=0,loginRetryAt=0;
 let csrf="",me=null,locale="ar",currentClasses=[],currentSubjects=[],currentStudents=[],currentGrades=[];
 const $=id=>document.getElementById(id);const qsa=s=>[...document.querySelectorAll(s)];
 const FR={"مرحبًا بعودتك":"Bon retour","دخول":"Connexion","إنشاء حساب":"Créer un compte","اسم المستخدم":"Nom d’utilisateur","كلمة المرور":"Mot de passe","دخول آمن":"Connexion sécurisée","نسيت كلمة المرور؟":"Mot de passe oublié ?","الاسم الكامل":"Nom complet","البريد الإلكتروني (اختياري)":"E-mail (facultatif)","كلمة مرور طويلة":"Mot de passe long","إنشاء الحساب":"Créer le compte","الحساب جاهز بدون صلاحيات مدرسية":"Compte prêt, sans accès scolaire","الانضمام إلى المدرسة":"Rejoindre l’école","رمز الانضمام":"Code d’accès","تفعيل الصلاحيات":"Activer les autorisations","تسجيل الخروج":"Déconnexion","اختر المدرسة":"Choisir l’école","الرئيسية":"Accueil","الأقسام والنتائج":"Classes et résultats","أبنائي":"Mes enfants","إدارة المدرسة":"Administration","الأمان والسجل":"Sécurité et journal","الإعدادات":"Paramètres","الأقسام":"Classes","التلاميذ":"Élèves","المواد":"Matières","المستخدمون":"Utilisateurs","أقسامك":"Vos classes","الإشعارات":"Notifications","اختر قسمًا":"Choisir une classe","اختر مادة":"Choisir une matière","الفصل الأول":"Trimestre 1","الفصل الثاني":"Trimestre 2","الفصل الثالث":"Trimestre 3","درجات التلاميذ":"Notes des élèves","إضافة قسم":"Ajouter une classe","اسم القسم":"Nom de la classe","المستوى":"Niveau","الشعبة":"Section","إنشاء القسم":"Créer la classe","إضافة مادة":"Ajouter une matière","اسم المادة":"Matière","المعامل":"Coefficient","الدرجة القصوى":"Note maximale","إضافة المادة":"Ajouter la matière","إضافة تلميذ":"Ajouter un élève","رقم التلميذ":"Identifiant élève","الجنس":"Sexe","ولد":"Garçon","بنت":"Fille","إضافة التلميذ":"Ajouter l’élève","دعوة آمنة":"Invitation sécurisée","الدور":"Rôle","معلم":"Enseignant","ولي تلميذ":"Tuteur","مدير إضافي":"Directeur supplémentaire","اسم المستخدم المستهدف":"Utilisateur ciblé","بدون قسم محدد":"Sans classe précise","بدون مادة محددة":"Sans matière précise","التلميذ":"Élève","إنشاء رمز لمرة واحدة":"Créer un code à usage unique","حسابات المدرسة":"Comptes de l’école","تحديث":"Actualiser","سجل العمليات":"Journal d’audit","مبادئ الحماية":"Principes de sécurité","رأسية المدرسة":"En-tête de l’école","رفع ومعالجة الرأسية":"Importer et traiter l’en-tête","الحساب":"Compte","الاسم":"Nom","المدرسة":"École","متصل وآمن":"Connecté et sécurisé"};
 function tr(s){return locale==="fr"?(FR[s]||s):s}
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function toast(msg){const t=$("toast");t.textContent=tr(msg);t.classList.remove("hidden");clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.add("hidden"),3000)}
-async function api(url,options={}){const method=(options.method||"GET").toUpperCase(),headers={...(options.headers||{})};if(options.body&&!(options.body instanceof FormData)&&!headers["Content-Type"])headers["Content-Type"]="application/json";if(["POST","PUT","PATCH","DELETE"].includes(method)&&csrf)headers["X-CSRF-Token"]=csrf;const r=await fetch(url,{credentials:"same-origin",...options,headers});let data={};const ct=r.headers.get("content-type")||"";if(ct.includes("application/json")){try{data=await r.json()}catch{}}if(!r.ok){const e=new Error(data.error||`HTTP_${r.status}`);e.data=data;e.status=r.status;throw e}return data}
+async function api(url,options={}){const method=(options.method||"GET").toUpperCase(),headers={...(options.headers||{})};if(options.body&&!(options.body instanceof FormData)&&!headers["Content-Type"])headers["Content-Type"]="application/json";if(["POST","PUT","PATCH","DELETE"].includes(method)&&csrf)headers["X-CSRF-Token"]=csrf;const r=await fetch(url,{credentials:"same-origin",...options,headers});let data={};const ct=r.headers.get("content-type")||"";if(ct.includes("application/json")){try{data=await r.json()}catch{}}if(!r.ok){const e=new Error(data.error||`HTTP_${r.status}`);e.data=data;e.status=r.status;const retry=r.headers.get("retry-after");e.retryAfter=retry?(Number(retry)||Math.ceil((Date.parse(retry)-Date.now())/1000)):0;throw e}return data}
 async function refreshCsrf(){try{csrf=(await api("/api/auth/csrf")).csrf||csrf}catch{}}
 function hideAll(){["authShell","pendingView","schoolChooser","appShell"].forEach(id=>$(id)?.classList.add("hidden"))}
 function showAuth(){hideAll();$("authShell").classList.remove("hidden")}
 function setTab(register){$("registerPane").classList.toggle("hidden",!register);$("loginPane").classList.toggle("hidden",register);$("registerTab").classList.toggle("active",register);$("loginTab").classList.toggle("active",!register);$("authTitle").textContent=tr(register?"إنشاء حساب":"مرحبًا بعودتك")}
-async function boot(){try{me=await api("/api/auth/me");await refreshCsrf();await openForMe()}catch{showAuth()}}
+async function authApi(url,options={},timeoutMs=60000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{return await api(url,{...options,signal:controller.signal});}finally{clearTimeout(timer);}
+}
+async function boot(){
+  const generation=authGeneration;
+  try{const account=await authApi("/api/auth/me",{},20000);if(generation!==authGeneration)return;me=account;await refreshCsrf();if(generation!==authGeneration)return;await openForMe();}
+  catch{if(generation===authGeneration)showAuth();}
+}
 
 async function openForMe(){
 
@@ -61,7 +69,43 @@ async function openForMe(){
 }
 function showSchoolChooser(schools){hideAll();$("schoolChooser").classList.remove("hidden");$("schoolChoices").innerHTML=schools.map(s=>`<button type="button" data-school="${s.id}"><b>${escapeHtml(s.name)}</b><br><small>${escapeHtml((s.roles||[]).join(" • "))}</small></button>`).join("");qsa("[data-school]").forEach(b=>b.onclick=()=>selectSchool(b.dataset.school))}
 async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");schoolView=!!me.isSuperAdmin;await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
-async function login(){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر تسجيل الدخول")}}
+function loginFeedback(ar,fr){
+  const node=$("loginStatus");node.textContent=locale==="fr"?fr:ar;node.classList.remove("hidden");
+}
+async function login(){
+  if(loginPending)return;
+  if(Date.now()<loginRetryAt){
+    const minutes=Math.max(1,Math.ceil((loginRetryAt-Date.now())/60000));
+    loginFeedback(`محاولات كثيرة. انتظر ${minutes} دقيقة قبل المحاولة مجددًا.`,`Trop de tentatives. Réessayez dans ${minutes} min.`);return;
+  }
+  if(!$("login").value.trim()||!$("password").value){loginFeedback("أدخل اسم المستخدم وكلمة المرور.","Saisissez votre identifiant et votre mot de passe.");return;}
+  loginPending=true;authGeneration++;
+  const button=$("loginBtn");button.disabled=true;button.setAttribute("aria-busy","true");
+  button.textContent=locale==="fr"?"Connexion en cours…":"جارٍ تسجيل الدخول…";
+  loginFeedback("جارٍ الاتصال بالخادم…","Connexion au serveur…");
+  const slow=setTimeout(()=>loginFeedback("الخادم يستغرق وقتًا أطول. ننتظر الرد؛ لا حاجة للضغط مجددًا.","Le serveur met plus de temps à répondre. Inutile de cliquer à nouveau."),8000);
+  try{
+    const d=await authApi("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});
+    csrf=d.csrf||"";
+    me=await authApi("/api/auth/me",{},20000);
+    $("password").value="";$("loginStatus").classList.add("hidden");
+    try{await openForMe();}catch{toast(locale==="fr"?"Connexion réussie, mais certaines données ne se chargent pas. Actualisez la page.":"تم الدخول، لكن تعذر تحميل بعض البيانات. حدّث الصفحة.");}
+  }catch(e){
+    if(e.status===429){
+      const seconds=Math.max(1,e.retryAfter||900);loginRetryAt=Date.now()+seconds*1000;
+      const minutes=Math.ceil(seconds/60);
+      loginFeedback(`محاولات كثيرة. انتظر ${minutes} دقيقة قبل المحاولة مجددًا.`,`Trop de tentatives. Réessayez dans ${minutes} min.`);
+    }else if(e.status===401){
+      loginFeedback("تحقق من بيانات الدخول. قد يكون الحساب مقيدًا مؤقتًا بعد محاولات فاشلة.","Vérifiez vos identifiants. Le compte peut être temporairement bloqué après plusieurs échecs.");
+    }else if(e.status===403){
+      loginFeedback("تعذر التحقق من الطلب. حدّث الصفحة ثم حاول مجددًا.","La requête n’a pas pu être vérifiée. Actualisez la page et réessayez.");
+    }else{
+      loginFeedback("تعذر إكمال الاتصال. تحقق من الإنترنت ثم حدّث الصفحة للتحقق من الجلسة قبل إعادة المحاولة.","Connexion interrompue. Vérifiez votre réseau puis actualisez la page pour vérifier la session avant de réessayer.");
+    }
+  }finally{
+    clearTimeout(slow);loginPending=false;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=tr("دخول آمن");
+  }
+}
 async function register(){try{const d=await api("/api/auth/register",{method:"POST",body:JSON.stringify({fullName:$("fullName").value.trim(),login:$("newLogin").value.trim(),email:$("email").value.trim()||null,password:$("newPassword").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe();toast("تم إنشاء الحساب. اطلب رمز الانضمام من المدير")}catch(e){toast(e.data?.error==="ACCOUNT_ALREADY_EXISTS"?"اسم المستخدم أو البريد مستخدم مسبقًا":"تحقق من البيانات وكلمة المرور")}}
 async function redeem(){try{const d=await api("/api/invites/redeem",{method:"POST",body:JSON.stringify({code:$("inviteCode").value.trim()})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe();toast("تم تفعيل الصلاحيات") }catch{toast("الرمز غير صالح أو ليس مخصصًا لهذا الحساب")}}
 async function bootstrapSuperAdmin(){
@@ -934,8 +978,10 @@ $("loginTab").onclick=
 $("registerTab").onclick=
   ()=>setTab(true);
 
-$("loginBtn").onclick=
-  login;
+$("loginBtn").onclick=login;
+["login","password"].forEach(id=>$(id).addEventListener("keydown",event=>{
+  if(event.key==="Enter"){event.preventDefault();login();}
+}));
 
 $("registerBtn").onclick=
   register;

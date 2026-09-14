@@ -4,15 +4,17 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {JSDOM,VirtualConsole} from 'jsdom';
 
-async function page(account){
+async function page(account,settings={}){
   const root=new URL('../public/',import.meta.url);
   const dom=new JSDOM(fs.readFileSync(new URL('index.html',root),'utf8'),{url:'http://localhost:3100',runScripts:'outside-only',virtualConsole:new VirtualConsole()});
-  let signedIn=true,failLogout=false;const calls=[];
+  let signedIn=settings.signedIn??true,failLogout=false;const calls=[];
   const w=dom.window;w.eval=source=>vm.runInContext(source,dom.getInternalVMContext());
   w.fetch=async(url,options={})=>{
     calls.push({url,method:options.method||'GET'});
+    if(settings.intercept){const result=await settings.intercept(url,options);if(result)return result;}
     let status=200,data={};
-    if(url==='/api/auth/me'){status=signedIn?200:401;data=account;}
+    if(url==='/api/auth/login'){signedIn=true;data={csrf:'new-fixture'};}
+    else if(url==='/api/auth/me'){status=signedIn?200:401;data=account;}
     else if(url==='/api/auth/csrf')data={csrf:'fixture'};
     else if(url==='/api/auth/logout'){status=failLogout?503:200;if(!failLogout)signedIn=false;}
     else if(url==='/api/platform/me')data={isSuperAdmin:account.isSuperAdmin};
@@ -57,5 +59,52 @@ test('a fresh school account has school navigation and no previous platform iden
     assert.equal(p.w.document.getElementById('schoolNameSide').textContent,'School A');
     p.w.eval("navigate('settings')");assert.ok(p.w.document.getElementById('page-settings').classList.contains('active'));
     assert.ok(p.w.document.getElementById('accountLogout'));
+  }finally{p.close();}
+});
+
+function response(status,retry=''){
+  return {ok:status===200,status,headers:{get:name=>name==='retry-after'?retry:'application/json'},json:async()=>({})};
+}
+function fillLogin(p){p.w.document.getElementById('login').value='owner';p.w.document.getElementById('password').value='test-only';}
+test('rapid clicks and Enter submit once and successful login clears password',async()=>{
+  let release;const blocked=new Promise(resolve=>{release=resolve;});
+  const p=await page(platform,{signedIn:false,intercept:async url=>{if(url==='/api/auth/login')await blocked;}});
+  try{
+    fillLogin(p);const pending=p.w.eval('login()');
+    assert.equal(p.w.document.getElementById('loginBtn').disabled,true);
+    await p.w.eval('login()');
+    p.w.document.getElementById('password').dispatchEvent(new p.w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+    assert.equal(p.calls.filter(c=>c.url==='/api/auth/login').length,1);
+    release();await pending;
+    assert.equal(p.w.document.getElementById('password').value,'');
+    assert.ok(p.w.document.body.classList.contains('platform-mode'));
+    assert.ok(p.w.document.getElementById('authShell').classList.contains('hidden'));
+  }finally{release();p.close();}
+});
+test('429 displays Retry-After in both languages and blocks repeated submissions',async()=>{
+  const p=await page(platform,{signedIn:false,intercept:async url=>url==='/api/auth/login'?response(429,'120'):undefined});
+  try{
+    fillLogin(p);await p.w.eval('login()');
+    assert.match(p.w.document.getElementById('loginStatus').textContent,/2 دقيقة/);
+    await p.w.eval('login()');assert.equal(p.calls.filter(c=>c.url==='/api/auth/login').length,1);
+    p.w.eval("locale='fr'");await p.w.eval('login()');assert.match(p.w.document.getElementById('loginStatus').textContent,/2 min/);
+  }finally{p.close();}
+});
+test('credentials and server errors leave usable form and persistent feedback',async()=>{
+  for(const status of [401,503]){
+    const p=await page(platform,{signedIn:false,intercept:async url=>url==='/api/auth/login'?response(status):undefined});
+    try{
+      fillLogin(p);await p.w.eval('login()');
+      assert.match(p.w.document.getElementById('loginStatus').textContent,status===401?/بيانات الدخول/:/الاتصال/);
+      assert.equal(p.w.document.getElementById('loginBtn').disabled,false);
+      assert.equal(p.w.document.getElementById('loginBtn').hasAttribute('aria-busy'),false);
+    }finally{p.close();}
+  }
+});
+test('unresponsive authentication is aborted at its deadline',async()=>{
+  const p=await page(platform);
+  try{
+    p.w.fetch=(_url,options)=>new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new p.w.DOMException('Timeout','AbortError'))));
+    await assert.rejects(p.w.eval("authApi('/api/auth/me',{},10)"),{name:'AbortError'});
   }finally{p.close();}
 });

@@ -649,3 +649,6 @@
 
 /* Keep the login screen hidden after authentication at every breakpoint. */
 #authShell.auth-shell.hidden{display:none!important}
+
+#loginStatus{margin:12px 0;line-height:1.7;text-align:start;overflow-wrap:anywhere;color:#174f49;}
+#loginBtn:disabled{opacity:.75;cursor:wait;}
