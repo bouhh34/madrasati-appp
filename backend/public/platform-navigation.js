@@ -1,3 +1,4 @@
+function platformValue(value){const labels={ACTIVE:"نشط",PENDING:"بانتظار التفعيل",DISABLED:"معطل",LOCKED:"مقفل",DIRECTOR:"مدير",TEACHER:"معلم",ADMIN:"إداري",GUARDIAN:"ولي تلميذ",SUPER_ADMIN:"مالك المنصة"};return locale==="ar"?(labels[value]||value):tr(value);}
 let platformAccountOffset=0;
 function platformSection(section){
   if(!me?.isSuperAdmin||schoolView)return;
@@ -11,7 +12,7 @@ async function loadPlatformAccounts(){
   try{
     const query=new URLSearchParams({q:$('platformAccountQuery').value,role:$('platformAccountRole').value,offset:String(platformAccountOffset)});
     const data=await api(`/api/platform/accounts?${query}`);
-    root.innerHTML=data.accounts.map(u=>`<div class="mini-card"><div><b>${escapeHtml(u.full_name)}</b><small>${escapeHtml(u.login)} · ${escapeHtml(u.account_state)}</small><small>${escapeHtml(u.schools.join(' · '))}</small></div><span>${escapeHtml(u.roles.join(' · '))}</span></div>`).join('')||st('لا توجد حسابات مطابقة.','Aucun compte correspondant.');
+    root.innerHTML=data.accounts.map(u=>`<div class="mini-card"><div><b>${escapeHtml(u.full_name)}</b><small>${escapeHtml(u.login)} · ${escapeHtml(platformValue(u.account_state))}</small><small>${escapeHtml(u.schools.join(' · '))}</small></div><span>${escapeHtml(u.roles.map(platformValue).join(' · '))}</span></div>`).join('')||st('لا توجد حسابات مطابقة.','Aucun compte correspondant.');
     $('platformAccountsPrevious').disabled=platformAccountOffset===0;$('platformAccountsNext').disabled=!data.hasMore;
   }catch{root.textContent=st('تعذّر تحميل الحسابات. أعد المحاولة.','Chargement impossible. Réessayez.');}
 }

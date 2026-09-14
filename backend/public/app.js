@@ -2,6 +2,7 @@ let schoolView=false,logoutPending=false,loginPending=false,authGeneration=0,log
 let csrf="",me=null,locale="ar",currentClasses=[],currentSubjects=[],currentStudents=[],currentGrades=[];
 const $=id=>document.getElementById(id);const qsa=s=>[...document.querySelectorAll(s)];
 const FR={"مرحبًا بعودتك":"Bon retour","دخول":"Connexion","إنشاء حساب":"Créer un compte","اسم المستخدم":"Nom d’utilisateur","كلمة المرور":"Mot de passe","دخول آمن":"Connexion sécurisée","نسيت كلمة المرور؟":"Mot de passe oublié ?","الاسم الكامل":"Nom complet","البريد الإلكتروني (اختياري)":"E-mail (facultatif)","كلمة مرور طويلة":"Mot de passe long","إنشاء الحساب":"Créer le compte","الحساب جاهز بدون صلاحيات مدرسية":"Compte prêt, sans accès scolaire","الانضمام إلى المدرسة":"Rejoindre l’école","رمز الانضمام":"Code d’accès","تفعيل الصلاحيات":"Activer les autorisations","تسجيل الخروج":"Déconnexion","اختر المدرسة":"Choisir l’école","الرئيسية":"Accueil","الأقسام والنتائج":"Classes et résultats","أبنائي":"Mes enfants","إدارة المدرسة":"Administration","الأمان والسجل":"Sécurité et journal","الإعدادات":"Paramètres","الأقسام":"Classes","التلاميذ":"Élèves","المواد":"Matières","المستخدمون":"Utilisateurs","أقسامك":"Vos classes","الإشعارات":"Notifications","اختر قسمًا":"Choisir une classe","اختر مادة":"Choisir une matière","الفصل الأول":"Trimestre 1","الفصل الثاني":"Trimestre 2","الفصل الثالث":"Trimestre 3","درجات التلاميذ":"Notes des élèves","إضافة قسم":"Ajouter une classe","اسم القسم":"Nom de la classe","المستوى":"Niveau","الشعبة":"Section","إنشاء القسم":"Créer la classe","إضافة مادة":"Ajouter une matière","اسم المادة":"Matière","المعامل":"Coefficient","الدرجة القصوى":"Note maximale","إضافة المادة":"Ajouter la matière","إضافة تلميذ":"Ajouter un élève","رقم التلميذ":"Identifiant élève","الجنس":"Sexe","ولد":"Garçon","بنت":"Fille","إضافة التلميذ":"Ajouter l’élève","دعوة آمنة":"Invitation sécurisée","الدور":"Rôle","معلم":"Enseignant","ولي تلميذ":"Tuteur","مدير إضافي":"Directeur supplémentaire","اسم المستخدم المستهدف":"Utilisateur ciblé","بدون قسم محدد":"Sans classe précise","بدون مادة محددة":"Sans matière précise","التلميذ":"Élève","إنشاء رمز لمرة واحدة":"Créer un code à usage unique","حسابات المدرسة":"Comptes de l’école","تحديث":"Actualiser","سجل العمليات":"Journal d’audit","مبادئ الحماية":"Principes de sécurité","رأسية المدرسة":"En-tête de l’école","رفع ومعالجة الرأسية":"Importer et traiter l’en-tête","الحساب":"Compte","الاسم":"Nom","المدرسة":"École","متصل وآمن":"Connecté et sécurisé"};
+Object.assign(FR,{"إدارة منصة مدرستي":"Administration de Ma Madrassa","إدارة المنصة":"Administration de la plateforme","لوحة مالك المنصة — SUPER ADMIN":"Console du propriétaire — SUPER ADMIN","الدخول إلى مدرسة مرتبطة بحسابي":"Ouvrir une école liée à mon compte","العودة للمنصة":"Retour à la plateforme","الإحصائيات":"Statistiques","المدارس والمديرون":"Écoles et directions","الحسابات":"Comptes","المدارس":"Écoles","إضافة مدرسة جديدة":"Ajouter une école","اسم المدرسة":"Nom de l’école","النوع":"Type","عمومية":"Publique","خصوصية":"Privée","الولاية":"Wilaya","المقاطعة":"Moughataa","المفتشية":"Inspection","السنة الدراسية":"Année scolaire","إضافة المدرسة":"Ajouter l’école","جميع المدارس":"Toutes les écoles","حسابات المنصة":"Comptes de la plateforme","البحث":"Recherche","بحث":"Rechercher","الكل":"Tous","المديرون":"Directeurs","المعلمون":"Enseignants","مالك المنصة":"Propriétaire","السابق":"Précédent","التالي":"Suivant","تعيين مدير":"Nommer un directeur","تعطيل":"Désactiver","تشغيل":"Activer","تعديل":"Modifier","أرشفة":"Archiver","لا توجد مدارس مسجلة بعد.":"Aucune école enregistrée.","التلاميذ:":"Élèves :","الأقسام:":"Classes :","المستخدمون:":"Utilisateurs :","ACTIVE":"Actif","PENDING":"En attente","DISABLED":"Désactivé","LOCKED":"Verrouillé","DIRECTOR":"Directeur","TEACHER":"Enseignant","ADMIN":"Administrateur","GUARDIAN":"Tuteur","SUPER_ADMIN":"SUPER ADMIN"});
 function tr(s){return locale==="fr"?(FR[s]||s):s}
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function toast(msg){const t=$("toast");t.textContent=tr(msg);t.classList.remove("hidden");clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.add("hidden"),3000)}
@@ -919,6 +920,13 @@ function toggleLocale(){
       :"AR";
 
   translateStatic();
+  if(me?.isSuperAdmin&&!schoolView){
+    renderPlatformProfile();
+    $("pageTitle").textContent=tr("إدارة منصة مدرستي");
+    $("platformAccountQuery").placeholder=locale==="fr"?"Nom ou identifiant":"الاسم أو اسم المستخدم";
+    loadSuperAdminDashboard();
+    if(!$("platformAccountsList").closest('[data-platform-area]').classList.contains('hidden'))loadPlatformAccounts();
+  }
 }
 
 const originalText=
@@ -3779,7 +3787,7 @@ if(
     ){
       box.innerHTML=
         "<p>"+
-        "لا توجد مدارس مسجلة بعد."+
+        tr("لا توجد مدارس مسجلة بعد.")+
         "</p>";
 
       return;
@@ -3801,8 +3809,8 @@ if(
                 ${
                   s.school_type===
                   "PRIVATE"
-                    ?"خصوصية"
-                    :"عمومية"
+                    ?tr("خصوصية")
+                    :tr("عمومية")
                 }
 
                 ·
@@ -3818,17 +3826,17 @@ if(
               </small>
 
               <small>
-                التلاميذ:
+                ${tr("التلاميذ:")}
                 ${
                   s.students_count||0
                 }
 
-                · الأقسام:
+                · ${tr("الأقسام:")}
                 ${
                   s.classes_count||0
                 }
 
-                · المستخدمون:
+                · ${tr("المستخدمون:")}
                 ${
                   s.users_count||0
                 }
@@ -3842,7 +3850,7 @@ if(
                 type="button"
                 data-school-director=
                   "${s.id}">
-                تعيين مدير
+                ${tr("تعيين مدير")}
               </button>
 
               <button
@@ -3857,8 +3865,8 @@ if(
                   }">
                 ${
                   s.active
-                    ?"تعطيل"
-                    :"تشغيل"
+                    ?tr("تعطيل")
+                    :tr("تشغيل")
                 }
               </button>
 
@@ -3866,14 +3874,14 @@ if(
                 type="button"
                 data-school-edit=
                   "${s.id}">
-                تعديل
+                ${tr("تعديل")}
               </button>
 
               <button
                 type="button"
                 data-school-delete=
                   "${s.id}">
-                أرشفة
+                ${tr("أرشفة")}
               </button>
 
             </div>

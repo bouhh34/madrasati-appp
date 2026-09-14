@@ -652,3 +652,47 @@
 
 #loginStatus{margin:12px 0;line-height:1.7;text-align:start;overflow-wrap:anywhere;color:#174f49;}
 #loginBtn:disabled{opacity:.75;cursor:wait;}
+
+/* Platform workspace: compact forms and touch targets in both writing directions. */
+#page-super-admin .panel{padding:20px;min-width:0;border-radius:18px}
+#page-super-admin .panel-head{align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+#page-super-admin h2{font-size:1.25rem;margin:0 0 8px}
+#page-super-admin h3{font-size:1rem;margin:0 0 12px}
+#page-super-admin p{margin:8px 0 14px;color:var(--muted)}
+#page-super-admin button{min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--mint);color:var(--green);font-weight:700;line-height:1.4;white-space:normal}
+#page-super-admin button:hover:not(:disabled){background:#d9eee7;border-color:var(--green)}
+#page-super-admin button:focus-visible{outline:3px solid var(--green2);outline-offset:2px}
+#page-super-admin button:disabled{opacity:.45;cursor:default}
+#page-super-admin #saCreateSchool,#platformAccountSearch button{background:var(--green);color:white;border-color:var(--green)}
+#page-super-admin [data-school-delete]{color:var(--danger);background:#fff5f3}
+#page-super-admin .admin-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-block:14px}
+#page-super-admin .admin-grid .panel{padding:16px;margin:0;min-height:100px}
+#page-super-admin .admin-grid h3{font-size:.85rem;color:var(--muted)}
+#page-super-admin .admin-grid strong{font-size:1.8rem;color:var(--green)}
+#page-super-admin .content-grid,#platformAccountSearch{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#page-super-admin label{margin:0 0 12px;gap:6px;font-size:.9rem}
+#page-super-admin input,#page-super-admin select{min-width:0;min-height:44px;padding:10px 12px}
+#saSchoolsList{display:grid;gap:12px}
+#saSchoolsList .mini-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px}
+#saSchoolsList small{display:block;line-height:1.7;color:var(--muted)}
+#saSchoolsList .feature-style-4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#platformAccountsList .mini-card>div{min-width:0}
+#platformAccountsList .mini-card>span{font-size:.8rem;background:var(--mint);padding:5px 8px;border-radius:8px;max-width:45%}
+#platformAccountsPrevious,#platformAccountsNext{margin-block-start:8px;margin-inline-end:8px}
+.platform-mode .topbar h2{font-size:1.15rem}
+@media(max-width:600px){
+  .platform-mode .workspace{padding-inline:12px}
+  .platform-mode .topbar{padding-block:8px;gap:6px;margin-bottom:12px}
+  .platform-mode .topbar h2{font-size:1rem;margin-block:4px}
+  .platform-mode .top-actions button{padding:8px 10px;min-height:44px;font-size:.85rem}
+  .platform-mode .avatar{display:none}
+  #page-super-admin .panel{padding:16px;margin-bottom:12px}
+  #page-super-admin .admin-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #page-super-admin .content-grid,#platformAccountSearch{grid-template-columns:minmax(0,1fr);gap:0}
+  #page-super-admin .panel-head>div{min-width:0;flex:1 1 100%}
+  #chooseManagedSchool,#saCreateSchool{width:100%}
+  #saSchoolsList .mini-card{grid-template-columns:minmax(0,1fr);padding:12px}
+  #platformAccountsList .mini-card{align-items:flex-start;gap:8px}
+  .platform-mode .bottom-nav.platform-navigation{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .platform-mode .bottom-nav.platform-navigation button{font-weight:700;flex:1;min-width:0;line-height:1.4}
+}
