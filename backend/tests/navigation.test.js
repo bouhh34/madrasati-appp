@@ -108,3 +108,21 @@ test('unresponsive authentication is aborted at its deadline',async()=>{
     await assert.rejects(p.w.eval("authApi('/api/auth/me',{},10)"),{name:'AbortError'});
   }finally{p.close();}
 });
+test('director association uses one request and does not ask for an existing password',async()=>{
+  let payload,release;const gate=new Promise(resolve=>{release=resolve;});
+  const p=await page(platform,{intercept:async(url,options)=>{
+    if(url==='/api/platform/schools/school-fixture/director'){payload=JSON.parse(options.body);await gate;return response(200);}
+  }});
+  try{
+    p.w.eval("openDirectorForm('school-fixture','<school>')");
+    const form=p.w.document.getElementById('directorAccountForm');
+    assert.equal(form.querySelector('school'),null);
+    form.elements.mode.value='existing';form.elements.mode.dispatchEvent(new p.w.Event('change'));
+    assert.equal(form.elements.password.disabled,true);assert.equal(form.elements.password.value,'');
+    form.elements.login.value='existing-user';
+    const event={preventDefault(){}};const first=form.onsubmit(event);await form.onsubmit(event);
+    assert.deepEqual(payload,{mode:'existing',login:'existing-user'});
+    assert.equal(p.calls.filter(c=>c.url.endsWith('/director')).length,1);
+    release();await first;assert.equal(p.w.document.getElementById('modalBody').childElementCount,0);
+  }finally{release();p.close();}
+});

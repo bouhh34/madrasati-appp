@@ -419,252 +419,59 @@ await client.query(
       };
     }
   );
-  // إنشاء مدير وربطه بمدرسة
-  app.post(
-    "/api/platform/schools/:schoolId/director",
-    async (request, reply) => {
-
-      if (!(await requireMutation(request, reply))) return;
-      if (!(await requireSuperAdmin(request, reply))) return;
-
-      const schoolId = String(request.params.schoolId || "");
-
-      if (!isUuid(schoolId)) {
-        return reply.code(400).send({
-          error: "INVALID_SCHOOL_ID"
-        });
-      }
-
-      const body = request.body || {};
-
-      const login = normalizeLogin(body.login);
-      const email = normalizeEmail(body.email);
-      const fullName = String(body.fullName || "").trim();
-      const password = String(body.password || "");
-
-      if (
-        !login ||
-        login.length < 3 ||
-        !fullName ||
-        fullName.length < 2 ||
-        !validPassword(password)
-      ) {
-        return reply.code(400).send({
-          error: "INVALID_DIRECTOR_DATA"
-        });
-      }
-
-      const schoolCheck = await pool.query(
-        "SELECT id FROM schools WHERE id=$1 LIMIT 1",
-        [schoolId]
-      );
-
-      if (!schoolCheck.rowCount) {
-        return reply.code(404).send({
-          error: "SCHOOL_NOT_FOUND"
-        });
-      }
-
-      const client = await pool.connect();
-
-      try {
-        await client.query("BEGIN");
-
-        let user;
-
-const existingUser =
-  await client.query(
-    `
-    SELECT
-      id,
-      login,
-      email,
-      full_name
-    FROM users
-    WHERE login=$1
-   OR email=$2::text
-    LIMIT 1
-    `,
-    [
-      login,
-      email
-    ]
-  );
-
-if(
-  existingUser.rowCount
-){
-  user =
-    existingUser.rows[0];
-
-  await client.query(
-    `
-    UPDATE users
-    SET
-      account_state='ACTIVE',
-      managed_by_school_id=$1,
-      updated_at=now()
-    WHERE id=$2
-    `,
-    [
-      schoolId,
-      user.id
-    ]
-  );
-
-}else{
-
-  const passwordHash =
-    await hashPassword(
-      password
-    );
-
-  const userResult =
-    await client.query(
-      `
-      INSERT INTO users (
-        login,
-        email,
-        full_name,
-        password_hash,
-        managed_by_school_id,
-        account_state
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        'ACTIVE'
-      )
-      RETURNING
-        id,
-        login,
-        email,
-        full_name
-      `,
-      [
-        login,
-        email,
-        fullName,
-        passwordHash,
-        schoolId
-      ]
-    );
-
-  user =
-    userResult.rows[0];
+  // Account creation and association are explicit; existing credentials are never replaced.
+  app.post("/api/platform/schools/:schoolId/director", async (request, reply) => {
+    if (!(await requireMutation(request, reply))) return;
+    if (!(await requireSuperAdmin(request, reply))) return;
+    const schoolId = String(request.params.schoolId || "");
+    if (!isUuid(schoolId)) return reply.code(400).send({error:"INVALID_SCHOOL_ID"});
+    const body = request.body || {}, mode = body.mode || "new";
+    const login = normalizeLogin(body.login), email = normalizeEmail(body.email);
+    const fullName = String(body.fullName || "").trim(), password = String(body.password || "");
+    if (!["new","existing"].includes(mode) || login.length < 3 || login.length > 80 ||
+        (mode === "new" && (fullName.length < 2 || fullName.length > 160 || !validPassword(password) ||
+          (body.email && (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))))) {
+      return reply.code(400).send({error:"INVALID_DIRECTOR_DATA"});
     }
-
-    
-
-        const membershipUpdate =
-  await client.query(
-    `
-    UPDATE school_memberships
-    SET status='ACTIVE'
-    WHERE school_id=$1
-      AND user_id=$2
-    `,
-    [
-      schoolId,
-      user.id
-    ]
-  );
-
-if(
-  membershipUpdate.rowCount===0
-){
-  await client.query(
-    `
-    INSERT INTO school_memberships (
-      school_id,
-      user_id,
-      status,
-      created_by
-    )
-    VALUES (
-      $1,
-      $2,
-      'ACTIVE',
-      $3
-    )
-    `,
-    [
-      schoolId,
-      user.id,
-      request.auth.userId
-    ]
-  );
-}
-  const directorRole =
-  await client.query(
-    `
-    SELECT 1
-    FROM membership_roles
-    WHERE school_id=$1
-      AND user_id=$2
-      AND role='DIRECTOR'
-    LIMIT 1
-    `,
-    [
-      schoolId,
-      user.id
-    ]
-  );
-
-if(
-  !directorRole.rowCount
-){
-  await client.query(
-    `
-    INSERT INTO membership_roles (
-      school_id,
-      user_id,
-      role,
-      created_by
-    )
-    VALUES (
-      $1,
-      $2,
-      'DIRECTOR',
-      $3
-    )
-    `,
-    [
-      schoolId,
-      user.id,
-      request.auth.userId
-    ]
-  );
-}
-        await client.query("COMMIT");
-
-        return reply.code(201).send({
-          ok: true,
-          director: user
-        });
-
-      } catch (error) {
-
-        try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const school = (await client.query("SELECT active FROM schools WHERE id=$1 FOR UPDATE", [schoolId])).rows[0];
+      if (!school || !school.active) {
+        await client.query("ROLLBACK");
+        return reply.code(school ? 409 : 404).send({error:school ? "SCHOOL_INACTIVE" : "SCHOOL_NOT_FOUND"});
+      }
+      let user;
+      if (mode === "existing") {
+        user = (await client.query("SELECT id,login,email,full_name,account_state FROM users WHERE login=$1 FOR UPDATE", [login])).rows[0];
+        if (!user || ["LOCKED","DISABLED"].includes(user.account_state)) {
           await client.query("ROLLBACK");
-        } catch {}
-
-        if (error?.code === "23505") {
-          return reply.code(409).send({
-            error: "DIRECTOR_ACCOUNT_ALREADY_EXISTS"
-          });
+          return reply.code(user ? 409 : 404).send({error:user ? "DIRECTOR_ACCOUNT_DISABLED" : "DIRECTOR_ACCOUNT_NOT_FOUND"});
         }
-
-        throw error;
-
-      } finally {
-        client.release();
+        await client.query(`UPDATE users SET account_state='ACTIVE',
+          managed_by_school_id=COALESCE(managed_by_school_id,$1), updated_at=now() WHERE id=$2`, [schoolId,user.id]);
+      } else {
+        if ((await client.query("SELECT 1 FROM users WHERE login=$1 OR email=$2",[login,email])).rowCount) {
+          await client.query("ROLLBACK");
+          return reply.code(409).send({error:"DIRECTOR_ACCOUNT_ALREADY_EXISTS"});
+        }
+        const passwordHash = await hashPassword(password);
+        user = (await client.query(`INSERT INTO users(login,email,full_name,password_hash,managed_by_school_id,account_state)
+          VALUES($1,$2,$3,$4,$5,'ACTIVE') RETURNING id,login,email,full_name`,[login,email,fullName,passwordHash,schoolId])).rows[0];
       }
-    }
-    );
+      await client.query(`INSERT INTO school_memberships(school_id,user_id,status,created_by)
+        VALUES($1,$2,'ACTIVE',$3) ON CONFLICT(school_id,user_id)
+        DO UPDATE SET status='ACTIVE',revoked_at=NULL`,[schoolId,user.id,request.auth.userId]);
+      await client.query(`INSERT INTO membership_roles(school_id,user_id,role,created_by)
+        VALUES($1,$2,'DIRECTOR',$3) ON CONFLICT(school_id,user_id,role) DO NOTHING`,[schoolId,user.id,request.auth.userId]);
+      await client.query("COMMIT");
+      return reply.code(201).send({ok:true,director:{id:user.id,login:user.login,email:user.email,full_name:user.full_name}});
+    } catch (error) {
+      await client.query("ROLLBACK");
+      if (error?.code === "23505") return reply.code(409).send({error:"DIRECTOR_ACCOUNT_ALREADY_EXISTS"});
+      throw error;
+    } finally { client.release(); }
+  });
     // تعديل بيانات مدرسة
   app.patch(
     "/api/platform/schools/:schoolId",

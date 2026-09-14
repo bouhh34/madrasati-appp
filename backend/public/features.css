@@ -699,3 +699,7 @@
 
 /* Unassigned accounts have no role badge. */
 #platformAccountsList .mini-card>span:empty{display:none}
+.director-account-form label{display:block;margin-block:16px 8px}
+.director-account-form input,.director-account-form select{width:100%;min-height:44px}
+.director-account-form button{min-height:44px;width:100%}
+.director-account-form [role="status"]{min-height:1.5em;color:var(--text,#183b37)}

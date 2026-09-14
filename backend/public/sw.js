@@ -1,4 +1,4 @@
-const CACHE = "ma-madrassa-v4-shell-7";
+const CACHE = "ma-madrassa-v4-shell-8";
 const STATIC_FILES = ["/app.css","/features.css","/app.js","/structure.js","/platform-navigation.js","/manifest.webmanifest","/assets/official-logo.png","/assets/mauritania-school.webp"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(STATIC_FILES)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("ma-madrassa-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

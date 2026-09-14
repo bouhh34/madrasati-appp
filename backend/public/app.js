@@ -3936,96 +3936,10 @@ if(
       }
     );
 
-    qsa(
-      "[data-school-director]"
-    ).forEach(
-      btn=>{
-        btn.onclick=
-          async()=>{
-            const schoolId=
-              btn.dataset
-                .schoolDirector;
-
-            const fullName=
-              prompt(
-                "اسم المدير الكامل"
-              );
-
-            if(!fullName){
-              return;
-            }
-
-            const login=
-              prompt(
-                "اسم المستخدم للمدير"
-              );
-
-            if(!login){
-              return;
-            }
-
-            const email=
-              prompt(
-                "البريد الإلكتروني للمدير (اختياري)"
-              )||"";
-
-            const password=
-              prompt(
-                "كلمة مرور المدير"
-              );
-
-            if(!password){
-              return;
-            }
-
-            try{
-              await api(
-                `/api/platform/schools/${
-                  encodeURIComponent(
-                    schoolId
-                  )
-                }/director`,
-                {
-                  method:"POST",
-                  body:JSON.stringify({
-                    fullName,
-                    login,
-                    email,
-                    password
-                  })
-                }
-              );
-
-              toast(
-                "تم إنشاء حساب المدير وربطه بالمدرسة"
-              );
-
-              await loadSuperAdminDashboard();
-
-            }catch(e){
-              if(
-                e.data?.error===
-                "DIRECTOR_ACCOUNT_ALREADY_EXISTS"
-              ){
-                toast(
-                  "يوجد حساب مدير بهذا اسم الدخول أو البريد"
-                );
-              }else if(
-                e.data?.error===
-                "INVALID_DIRECTOR_DATA"
-              ){
-                toast(
-                  "بيانات المدير غير صحيحة"
-                );
-              }else{
-                toast(
-                  "تعذر إنشاء حساب المدير"
-                );
-              }
-            }
-          };
-      }
-    );
+    qsa("[data-school-director]").forEach(btn=>{
+      btn.onclick=()=>openDirectorForm(btn.dataset.schoolDirector,
+        schools.find(s=>String(s.id)===btn.dataset.schoolDirector)?.name);
+    });
 
     qsa(
       "[data-school-edit]"

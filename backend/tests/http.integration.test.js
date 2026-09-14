@@ -92,6 +92,23 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
       assert.equal((await request('POST','/api/director/classes',{name:'Blocked'},d)).statusCode,403);
       await request('PATCH',`/api/platform/schools/${schoolA.id}/status`,{active:true},p);
     });
+    await t.test('director account creation and association are explicit and preserve credentials',async()=>{
+      const url=`/api/platform/schools/${schoolA.id}/director`;
+      assert.equal((await request('POST',url,{mode:'existing',login:'other'},d)).statusCode,403);
+      const duplicate=await request('POST',url,{login:'other',fullName:'Different name',password},p);
+      assert.equal(duplicate.statusCode,409,duplicate.body);
+      assert.equal((await request('POST',url,{mode:'existing',login:'unknown'},p)).statusCode,404);
+      const created=await request('POST',url,{mode:'new',login:'new-director',fullName:'New director',password},p);
+      assert.equal(created.statusCode,201,created.body);
+      const associated=await request('POST',url,{mode:'existing',login:'other',email:'ignored@example.org'},p);
+      assert.equal(associated.statusCode,201,associated.body);assert.equal(associated.json().director.id,other.id);
+      assert.equal((await request('POST',url,{mode:'existing',login:'other'},p)).statusCode,201);
+      await db.owner();
+      const user=await one('SELECT password_hash,full_name FROM users WHERE id=$1',[other.id]);
+      assert.equal(user.password_hash,hash);assert.equal(user.full_name,'Other fixture');
+      assert.equal((await one("SELECT count(*)::int n FROM membership_roles WHERE user_id=$1 AND role='DIRECTOR'",[other.id])).n,2);
+      await db.runtime();
+    });
     await t.test('school DELETE archives records and preserves account password',async()=>{
       const r=await request('DELETE',`/api/platform/schools/${schoolB.id}`,undefined,p);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().archived,true);
       await db.owner();assert.equal((await one('SELECT count(*)::int n FROM students WHERE school_id=$1',[schoolB.id])).n,1);
