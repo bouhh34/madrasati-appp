@@ -696,3 +696,6 @@
   .platform-mode .bottom-nav.platform-navigation{padding-bottom:max(8px,env(safe-area-inset-bottom))}
   .platform-mode .bottom-nav.platform-navigation button{font-weight:700;flex:1;min-width:0;line-height:1.4}
 }
+
+/* Unassigned accounts have no role badge. */
+#platformAccountsList .mini-card>span:empty{display:none}
