@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: ma-madrassa-v4
+    name: madrasati-appp
     runtime: node
     rootDir: backend
-    buildCommand: npm install --no-fund && npm run migrate && npm test
+    buildCommand: npm ci --omit=dev --no-fund && npm run migrate
     startCommand: npm start
     healthCheckPath: /api/ready
     envVars:

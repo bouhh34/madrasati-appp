@@ -1,4 +1,4 @@
-import { pool } from "../db.js";
+import { pool, withContext } from "../db.js";
 import { config } from "../config.js";
 import {
   safeEqualText,
@@ -177,14 +177,14 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
     if (!(await requireSuperAdmin(request, reply))) return;
 
-    const result = await pool.query(`
+    const result = await withContext(request.auth, c => c.query(`
       SELECT
         (SELECT COUNT(*)::int FROM schools) AS schools,
         (SELECT COUNT(*)::int FROM schools WHERE active = true) AS active_schools,
         (SELECT COUNT(*)::int FROM users) AS users,
         (SELECT COUNT(*)::int FROM students) AS students,
         (SELECT COUNT(*)::int FROM classes) AS classes
-    `);
+    `));
 
     return {
       ok: true,
@@ -198,7 +198,7 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
     if (!(await requireSuperAdmin(request, reply))) return;
 
-    const result = await pool.query(`
+    const result = await withContext(request.auth, c => c.query(`
       SELECT
         s.id,
         s.name,
@@ -232,7 +232,7 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
 
       FROM schools s
       ORDER BY s.created_at DESC
-    `);
+    `));
 
     return {
       ok: true,
@@ -370,12 +370,15 @@ await client.query(
         request.params.schoolId || ""
       );
 
-      const active =
-        request.body?.active === true;
+      if (!isUuid(schoolId) || typeof request.body?.active !== "boolean") {
+        return reply.code(400).send({error:"INVALID_SCHOOL_STATUS"});
+      }
+      const active = request.body.active;
 
       const result = await pool.query(`
         UPDATE schools
         SET active = $2,
+            archived_at = CASE WHEN $2 THEN NULL ELSE archived_at END,
             updated_at = now()
         WHERE id = $1
         RETURNING
@@ -666,7 +669,7 @@ if(
       const inspection = String(b.inspection || "").trim();
       const academicYear = String(b.academicYear || "").trim();
 
-      if (!name || !academicYear) {
+      if (!name || !academicYear || !["PUBLIC","PRIVATE"].includes(schoolType)) {
         return reply.code(400).send({ error: "INVALID_SCHOOL_DATA" });
       }
 
@@ -713,7 +716,7 @@ if(
       }
 
       const result = await pool.query(
-        "DELETE FROM schools WHERE id=$1 RETURNING id,name",
+        "UPDATE schools SET active=false,archived_at=now(),updated_at=now() WHERE id=$1 RETURNING id,name",
         [schoolId]
       );
 
@@ -723,6 +726,7 @@ if(
 
       return {
         ok:true,
+        archived:true,
         deleted:result.rows[0]
       };
     }

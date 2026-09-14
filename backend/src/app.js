@@ -20,10 +20,10 @@ import { registerProductRoutes } from "./routes/product.js";
 import { registerReportVerifyRoutes } from "./routes/reportVerify.js";
 import { registerSuperAdminRoutes } from "./routes/SuperAdmin.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
-const AUTH_ORIGIN_EXEMPT=new Set(["/api/auth/login","/api/auth/register","/api/auth/password/forgot","/api/auth/password/reset","/api/setup/bootstrap"]);
+const AUTH_ORIGIN_EXEMPT=new Set(["/api/setup/bootstrap"]);
 
 export async function buildApp(){
-  const app=Fastify({logger:{redact:["req.headers.cookie","req.headers.authorization","req.headers.x-csrf-token","req.body.password","req.body.newPassword","req.body.code","req.body.token"]},trustProxy:config.trustProxy,bodyLimit:256*1024,requestIdHeader:"x-request-id",genReqId:()=>crypto.randomUUID()});
+  const app=Fastify({logger:{redact:["req.headers.cookie","req.headers.authorization","req.headers.x-csrf-token","req.headers.x-bootstrap-secret","req.body.password","req.body.newPassword","req.body.code","req.body.token"]},trustProxy:config.trustProxy,bodyLimit:256*1024,requestIdHeader:"x-request-id",genReqId:()=>crypto.randomUUID()});
   await app.register(cookie);
   const cspDirectives={
     defaultSrc:["'self'"],

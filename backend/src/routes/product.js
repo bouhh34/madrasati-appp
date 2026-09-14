@@ -1,10 +1,6 @@
 import { withContext } from "../db.js";
 import { audit } from "../audit.js";
-import { isUuid, text, optionalText, oneOf } from "../validators.js";
-
-function validDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
-}
+import { isUuid, text, optionalText, oneOf, validDate } from "../validators.js";
 
 function validTime(value) {
   if (value === null || value === undefined || value === "") return true;
@@ -452,7 +448,7 @@ export async function registerProductRoutes(
       !title ||
       !validDate(examDate) ||
       !validTime(startsAt) ||
-      !validTime(endsAt)
+      !validTime(endsAt) || (startsAt && endsAt && endsAt <= startsAt)
     ) {
       return reply.code(400).send({
         error: "INVALID_EXAM"
@@ -580,7 +576,7 @@ export async function registerProductRoutes(
       !title ||
       !validDate(examDate) ||
       !validTime(startsAt) ||
-      !validTime(endsAt)
+      !validTime(endsAt) || (startsAt && endsAt && endsAt <= startsAt)
     ) {
       return reply.code(400).send({
         error: "INVALID_EXAM"

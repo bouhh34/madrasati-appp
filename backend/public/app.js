@@ -104,7 +104,7 @@ async function loadClasses(){try{const d=await api("/api/classes");currentClasse
 async function loadSubjectsForClass(classId){if(!classId){currentSubjects=[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>';return}try{const d=await api(`/api/classes/${encodeURIComponent(classId)}/subjects`);currentSubjects=d.subjects||[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>'+currentSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}catch{currentSubjects=[]}}
 async function loadAcademicScope(){const classId=$("classSelect").value;if(!classId){$("gradeGrid").textContent=tr("اختر قسمًا ومادة لبدء العمل.");return}await loadSubjectsForClass(classId);try{currentStudents=(await api(`/api/classes/${encodeURIComponent(classId)}/students`)).students||[];currentGrades=(await api(`/api/classes/${encodeURIComponent(classId)}/grades`)).grades||[];$("metricStudents").textContent=currentStudents.length;renderGradeGrid()}catch{$("gradeGrid").textContent="لا تملك صلاحية هذا القسم"}}
 function renderGradeGrid(){const classId=$("classSelect").value,subjectId=$("subjectSelect").value,term=$("termSelect").value;if(!classId||!subjectId){$("gradePermission").textContent=tr("اختر القسم والمادة");$("gradeGrid").textContent=tr("اختر قسمًا ومادة لبدء العمل.");return}const subject=currentSubjects.find(s=>s.id===subjectId);$("gradePermission").textContent=`${escapeHtml(subject?.name||"")} · /${subject?.max_score||20}`;$("gradeGrid").classList.toggle("empty",!currentStudents.length);$("gradeGrid").innerHTML=currentStudents.length?currentStudents.map(st=>{const g=currentGrades.find(x=>x.student_id===st.id&&x.subject_id===subjectId&&x.term===term&&x.assessment==="MAIN");return`<div class="grade-row"><div class="student-name"><b>${escapeHtml(st.full_name)}</b><small>${escapeHtml(st.student_uid)}</small></div><div class="score-wrap"><input inputmode="decimal" data-score="${st.id}" value="${g?escapeHtml(g.score):""}" min="0" max="${subject?.max_score||20}"><span>/${subject?.max_score||20}</span></div><button class="save-grade ${g?"saved":""}" data-save-grade="${st.id}" data-grade-id="${g?.id||""}" data-version="${g?.version||""}">${g?"✓ محفوظ":"حفظ"}</button></div>`}).join(""):"لا يوجد تلاميذ";qsa("[data-save-grade]").forEach(b=>b.onclick=()=>saveGrade(b,subject))}
-async function saveGrade(button,subject){const studentId=button.dataset.saveGrade,input=document.querySelector(`[data-score="${studentId}"]`),score=Number(input.value);if(!Number.isFinite(score)||score<0||score>Number(subject.max_score)){button.classList.add("error");toast("الدرجة خارج المجال المسموح");return}button.disabled=true;try{let d;if(button.dataset.gradeId){d=await api(`/api/grades/${button.dataset.gradeId}`,{method:"PUT",body:JSON.stringify({score,version:Number(button.dataset.version)})});button.dataset.version=d.version}else{d=await api("/api/grades",{method:"POST",body:JSON.stringify({classId:$("classSelect").value,studentId,subjectId:$("subjectSelect").value,term:$("termSelect").value,assessment:"MAIN",score})});button.dataset.gradeId=d.id;button.dataset.version=d.version}button.textContent="✓ محفوظ";button.classList.add("saved");$("saveState").textContent="تم الحفظ";toast("تم حفظ الدرجة");await loadAcademicScope()}catch(e){if(e.data?.error==="VERSION_CONFLICT"){toast("تم تعديل الدرجة من مستخدم آخر. تم تحديث البيانات.");await loadAcademicScope()}else{button.classList.add("error");toast("تعذر الحفظ أو لا تملك الصلاحية")}}finally{button.disabled=false}}
+async function saveGrade(button,subject){const studentId=button.dataset.saveGrade,input=document.querySelector(`[data-score="${studentId}"]`),score=input.value.trim()===""?NaN:Number(input.value);if(!Number.isFinite(score)||score<0||score>Number(subject.max_score)){button.classList.add("error");toast("الدرجة خارج المجال المسموح");return}button.disabled=true;try{let d;if(button.dataset.gradeId){d=await api(`/api/grades/${button.dataset.gradeId}`,{method:"PUT",body:JSON.stringify({score,version:Number(button.dataset.version)})});button.dataset.version=d.version}else{d=await api("/api/grades",{method:"POST",body:JSON.stringify({classId:$("classSelect").value,studentId,subjectId:$("subjectSelect").value,term:$("termSelect").value,assessment:"MAIN",score})});button.dataset.gradeId=d.id;button.dataset.version=d.version}button.textContent="✓ محفوظ";button.classList.add("saved");$("saveState").textContent="تم الحفظ";toast("تم حفظ الدرجة");await loadAcademicScope()}catch(e){if(e.data?.error==="VERSION_CONFLICT"){toast("تم تعديل الدرجة من مستخدم آخر. تم تحديث البيانات.");await loadAcademicScope()}else{button.classList.add("error");toast("تعذر الحفظ أو لا تملك الصلاحية")}}finally{button.disabled=false}}
 async function loadNotifications(){try{const d=await api("/api/notifications");const ns=d.notifications||[];$("notifications").classList.toggle("empty",!ns.length);$("notifications").innerHTML=ns.length?ns.slice(0,8).map(n=>`<div class="notice"><b>${escapeHtml(n.title)}</b><p>${escapeHtml(n.body)}</p></div>`).join(""):tr("لا توجد إشعارات جديدة.")}catch{}}
 async function loadChildren(){if(!(me.roles||[]).includes("GUARDIAN"))return;try{const d=await api("/api/guardian/students");const xs=d.students||[];$("childrenList").classList.toggle("empty",!xs.length);$("childrenList").innerHTML=xs.length?xs.map(s=>`<div class="child-card"><span class="status">${escapeHtml(s.class_name||"")}</span><h4>${escapeHtml(s.full_name)}</h4><p>${escapeHtml(s.student_uid)}</p><button class="ghost" data-report="${s.id}">عرض كشف النتائج</button></div>`).join(""):"لا توجد روابط تلاميذ بعد.";qsa("[data-report]").forEach(b=>b.onclick=()=>openReport(b.dataset.report))}catch{}}
 async function openReport(studentId){try{const [d,b]=await Promise.all([api(`/api/students/${studentId}/report`),api("/api/branding")]);const s=d.student,r=d.report,school=me.school||{};const custom=b.branding?.mode==="CUSTOM";const logo=custom?"/api/branding/header":"/assets/official-logo.png";const rows=r.subjects.map(x=>`<tr><td>${escapeHtml(x.name)}</td><td>${x.terms.T1??"—"}</td><td>${x.terms.T2??"—"}</td><td>${x.terms.T3??"—"}</td><td>${x.annual??"—"}</td></tr>`).join("");showModal(`<div class="report-sheet"><div class="official-head"><div class="gov"><b>الجمهورية الإسلامية الموريتانية</b><br>وزارة التهذيب الوطني وإصلاح النظام التعليمي<br>${escapeHtml(school.wilaya?`الإدارة الجهوية بولاية ${school.wilaya}`:"")}<br>${escapeHtml(school.moughataa?`مفتشية مقاطعة ${school.moughataa} للتربية`:"")}</div><div class="center"><div class="bismillah">بسم الله الرحمن الرحيم</div><img src="${logo}" alt="الشعار"></div><div class="meta"><b>شرف - إخاء - عدالة</b><br>المدرسة: ${escapeHtml(school.name||"—")}<br>الفصل: ${escapeHtml(s.class_name||"—")}<br>العام الدراسي: ${escapeHtml(school.academic_year||"—")}</div></div><div class="report-title">كشف درجات التلميذ</div><div class="student-line">الاسم: ${escapeHtml(s.full_name)} · الرقم: ${escapeHtml(s.student_uid)}</div><table class="report-table"><thead><tr><th>المادة</th><th>الفصل 1</th><th>الفصل 2</th><th>الفصل 3</th><th>السنوي</th></tr></thead><tbody>${rows}</tbody></table><div class="report-summary"><span>معدل الفصل 1: <b>${r.termAverages.T1??"—"}</b></span><span>معدل الفصل 2: <b>${r.termAverages.T2??"—"}</b></span><span>معدل الفصل 3: <b>${r.termAverages.T3??"—"}</b></span><span>المعدل السنوي: <b>${r.annualAverage??"—"}</b></span></div><div class="no-print"><button id="printReportBtn" class="primary">طباعة / حفظ PDF</button></div></div>`);$("printReportBtn").onclick=()=>window.print()}catch{toast("تعذر فتح التقرير")}}
@@ -133,17 +133,6 @@ function renderPermissionChecks(){
   $("guardianStudentWrap").classList.toggle("hidden",role!=="GUARDIAN");
 }
 
-async function loadInviteSubjects(){if(!(me.roles||[]).includes("DIRECTOR"))return;try{const d=await api("/api/director/subjects");const ss=d.subjects||[];$("metricSubjects").textContent=ss.filter(x=>x.active).length;$("inviteSubject").innerHTML='<option value="">بدون مادة محددة</option>'+ss.filter(x=>x.active).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}catch{}}
-async function loadInviteStudents(){const classId=$("inviteClass").value;if(!classId){$("inviteStudent").innerHTML='<option value="">اختر تلميذًا</option>';return}try{const d=await api(`/api/classes/${classId}/students`);$("inviteStudent").innerHTML='<option value="">اختر تلميذًا</option>'+d.students.map(s=>`<option value="${s.id}">${escapeHtml(s.full_name)}</option>`).join("")}catch{}}
-async function createInvite(){const role=$("inviteRole").value,permissions=qsa("#permissionChecks input:checked").map(x=>x.value),studentIds=role==="GUARDIAN"&&$("inviteStudent").value?[$("inviteStudent").value]:[];const payload={role,targetLogin:$("inviteTarget").value.trim()||null,classId:$("inviteClass").value||null,subjectId:$("inviteSubject").value||null,permissions,studentIds,expiresHours:24};try{let d;try{d=await api("/api/director/invites",{method:"POST",body:JSON.stringify(payload)})}catch(e){if(e.data?.error==="STEP_UP_REQUIRED"){const p=prompt("أعد إدخال كلمة مرور المدير لتأكيد العملية");if(!p)return;await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password:p})});d=await api("/api/director/invites",{method:"POST",body:JSON.stringify(payload)})}else throw e}$("inviteResult").classList.remove("hidden");$("inviteResult").textContent=`رمز لمرة واحدة: ${d.code}`;toast("تم إنشاء رمز الانضمام") }catch{toast("تعذر إنشاء الدعوة. تحقق من النطاق والصلاحيات")}}
-async function loadUsers(){if(!(me.roles||[]).includes("DIRECTOR"))return;try{const d=await api("/api/director/users");$("metricUsers").textContent=d.users.filter(x=>x.status==="ACTIVE").length;$("usersTable").classList.remove("empty");$("usersTable").innerHTML=`<table class="data-table"><thead><tr><th>الاسم</th><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>${d.users.map(u=>`<tr><td>${escapeHtml(u.full_name)}</td><td>${escapeHtml(u.login)}</td><td>${escapeHtml((u.roles||[]).join(" • "))}</td><td><span class="badge">${escapeHtml(u.status)}</span></td><td>${u.id===me.id?"—":`<button class="ghost compact" data-reset-user="${u.id}">رمز استرجاع</button> <button class="ghost compact" data-revoke-user="${u.id}">سحب الوصول</button>`}</td></tr>`).join("")}</tbody></table>`;qsa("[data-reset-user]").forEach(b=>b.onclick=()=>issueResetCode(b.dataset.resetUser));qsa("[data-revoke-user]").forEach(b=>b.onclick=()=>revokeUser(b.dataset.revokeUser))}catch{}}
-async function ensureStepUp(){const p=prompt("أعد إدخال كلمة مرور المدير لتأكيد العملية");if(!p)return false;try{await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password:p})});return true}catch{toast("فشل التحقق من كلمة المرور");return false}}
-async function issueResetCode(userId){try{let d;try{d=await api(`/api/director/users/${userId}/reset-code`,{method:"POST"})}catch(e){if(e.data?.error!=="STEP_UP_REQUIRED")throw e;if(!(await ensureStepUp()))return;d=await api(`/api/director/users/${userId}/reset-code`,{method:"POST"})}showModal(`<h3>رمز استرجاع لمرة واحدة</h3><p class="hint">صالح لمدة ${d.expiresInMinutes} دقيقة. أعطه لصاحب الحساب عبر قناة موثوقة.</p><div class="secret-result">${escapeHtml(d.code)}</div>`) }catch{toast("تعذر إنشاء رمز الاسترجاع")}}
-async function revokeUser(userId){if(!confirm("هل تريد سحب وصول هذا المستخدم وإلغاء جلساته المفتوحة؟"))return;try{try{await api(`/api/director/users/${userId}/revoke`,{method:"POST"})}catch(e){if(e.data?.error!=="STEP_UP_REQUIRED")throw e;if(!(await ensureStepUp()))return;await api(`/api/director/users/${userId}/revoke`,{method:"POST"})}toast("تم سحب الوصول وإلغاء الجلسات");await loadUsers();await loadDirectorHome()}catch{toast("تعذر سحب الوصول")}}
-async function loadAudit(){if(!(me.roles||[]).includes("DIRECTOR"))return;try{const d=await api("/api/director/audit");$("auditList").classList.toggle("empty",!d.events.length);$("auditList").innerHTML=d.events.length?d.events.map(e=>`<div class="notice"><b>${escapeHtml(e.action)}</b><p>${escapeHtml(e.entity_type||"")} · ${new Date(e.created_at).toLocaleString(locale==="fr"?"fr-FR":"ar-MR")}</p></div>`).join(""):"لا توجد أحداث"}catch{}}
-async function loadBranding(){if(!me?.schoolId)return;try{const d=await api("/api/branding"),isPrivate=d.school?.school_type==="PRIVATE",custom=d.branding?.mode==="CUSTOM";$("brandingInfo").innerHTML=custom?`<img src="/api/branding/header?ts=${Date.now()}" alt="رأسية المدرسة">`:`<div><img src="/assets/official-logo.png" alt="الشعار" style="max-height:70px"><p>${isPrivate?"لم تُرفع رأسية خاصة بعد":"المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية"}</p></div>`;$("brandingControls")?.classList.toggle("hidden",!isPrivate||!(me.roles||[]).includes("DIRECTOR"))}catch{}}
-async function uploadBranding(){const file=$("brandingFile").files?.[0];if(!file)return toast("اختر ملفًا أولًا");const fd=new FormData();fd.append("file",file);try{let d;try{d=await api("/api/director/branding/upload",{method:"POST",body:fd})}catch(e){if(e.data?.error==="STEP_UP_REQUIRED"){const p=prompt("أعد إدخال كلمة مرور المدير لتأكيد رفع الرأسية");if(!p)return;await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password:p})});d=await api("/api/director/branding/upload",{method:"POST",body:fd})}else throw e}if(d.message==="SECURE_CONVERSION_REQUIRED")toast("تم عزل الملف بأمان ويحتاج مرحلة التحويل المعقمة");else{toast("تم اعتماد الرأسية المعقمة");await loadBranding()}}catch{toast("تعذر معالجة الملف أو نوعه غير مدعوم")}}
-function showModal(html){$("modalBody").innerHTML=html;$("modal").classList.remove("hidden")}
 async function loadInviteSubjects(){
   if(
     !(me.roles||[]).includes("DIRECTOR")
@@ -631,7 +620,7 @@ async function loadBranding(){
             <img
               src="/assets/official-logo.png"
               alt="الشعار"
-              style="max-height:70px">
+              class="feature-style-1">
 
             <p>
               ${
@@ -1060,15 +1049,6 @@ if(
     .catch(()=>{});
 }
 
-if(
-  "serviceWorker" in navigator
-){
-  navigator
-    .serviceWorker
-    .register("/sw.js")
-    .catch(()=>{});
-}
-
 (function(){
 
   const attendanceLabels={
@@ -1167,69 +1147,7 @@ if(
       )
       .appendChild(page);
 
-    const style=
-      document.createElement(
-        "style"
-      );
-
-    style.textContent=`
-      .attendance-filters{
-        grid-template-columns:
-          1fr 180px auto!important
-      }
-
-      .attendance-row{
-        display:grid;
-        grid-template-columns:
-          minmax(150px,1fr)
-          minmax(260px,2fr)
-          minmax(150px,1fr);
-        gap:10px;
-        align-items:center;
-        padding:12px 0;
-        border-bottom:
-          1px solid #e5ecef
-      }
-
-      .attendance-actions{
-        display:flex;
-        gap:6px;
-        flex-wrap:wrap
-      }
-
-      .attendance-btn{
-        border:
-          1px solid #d4e0e3;
-        background:#fff;
-        border-radius:10px;
-        padding:8px 10px;
-        cursor:pointer
-      }
-
-      .attendance-btn.active{
-        background:#0b6f63;
-        color:#fff;
-        border-color:#0b6f63
-      }
-
-      @media(
-        max-width:700px
-      ){
-        .attendance-filters{
-          grid-template-columns:
-            1fr!important
-        }
-
-        .attendance-row{
-          grid-template-columns:
-            1fr
-        }
-      }
-    `;
-
-    document
-      .head
-      .appendChild(style);
+    // Module styles are served from features.css under the application CSP.
 
     const side=
       document.querySelector(
@@ -1821,82 +1739,7 @@ if(
       )
       .appendChild(page);
 
-    const style=
-      document.createElement(
-        "style"
-      );
-
-    style.textContent=`
-      .exam-filters{
-        display:grid;
-        grid-template-columns:
-          minmax(160px,1fr)
-          minmax(150px,.7fr)
-          auto;
-        gap:10px;
-        margin-top:12px
-      }
-
-      .exam-card{
-        border:
-          1px solid #e3eaec;
-        border-radius:14px;
-        padding:14px;
-        margin-bottom:10px
-      }
-
-      .exam-card-head{
-        display:flex;
-        justify-content:
-          space-between;
-        gap:10px;
-        align-items:flex-start
-      }
-
-      .exam-card h4{
-        margin:0 0 4px
-      }
-
-      .exam-card p{
-        margin:4px 0;
-        opacity:.78
-      }
-
-      .exam-actions{
-        display:flex;
-        gap:7px;
-        flex-wrap:wrap;
-        margin-top:10px
-      }
-
-      .exam-published{
-        background:#e7f6f1;
-        color:#0b6f63;
-        border-radius:20px;
-        padding:4px 9px;
-        font-size:12px
-      }
-
-      .exam-draft{
-        background:#f1f3f4;
-        border-radius:20px;
-        padding:4px 9px;
-        font-size:12px
-      }
-
-      @media(
-        max-width:700px
-      ){
-        .exam-filters{
-          grid-template-columns:
-            1fr
-        }
-      }
-    `;
-
-    document
-      .head
-      .appendChild(style);
+    // Module styles are served from features.css under the application CSP.
 
     const side=
       document.querySelector(
@@ -2399,7 +2242,7 @@ if(
                   class="ghost compact"
                   data-exam-delete=
                     "${e.id}">
-                  حذف
+                  أرشفة
                 </button>
 
               </div>
@@ -2897,12 +2740,7 @@ if(
       return null;
     }
 
-    const saved=
-      sessionStorage.getItem(
-        `mm-role-${
-          me?.schoolId||"none"
-        }`
-      );
+    const saved = activeViewRole;
 
     if(
       saved &&
@@ -2970,8 +2808,7 @@ if(
     select.className=
       "ghost compact";
 
-    select.style.maxWidth=
-      "150px";
+    select.classList.add("role-select");
 
     top.insertBefore(
       select,
@@ -2983,12 +2820,7 @@ if(
         activeViewRole=
           select.value;
 
-        sessionStorage.setItem(
-          `mm-role-${
-            me?.schoolId||"none"
-          }`,
-          activeViewRole
-        );
+
 
         applyRoleVisibility();
 
@@ -3201,334 +3033,7 @@ if(
       return;
     }
 
-    const style=
-      document.createElement(
-        "style"
-      );
-
-    style.id=
-      "final-report-styles";
-
-    style.textContent=`
-      .final-report{
-        direction:rtl;
-        background:#fff;
-        color:#111;
-        width:min(
-          900px,
-          100%
-        );
-        margin:auto;
-        padding:22px;
-        border-radius:16px;
-        font-family:
-          Arial,
-          Tahoma,
-          sans-serif
-      }
-
-      .final-report-head{
-        display:grid;
-        grid-template-columns:
-          1fr
-          150px
-          1fr;
-        gap:15px;
-        align-items:start;
-        border-bottom:
-          2px solid #0b6f63;
-        padding-bottom:14px
-      }
-
-      .final-report-head .right,
-      .final-report-head .left{
-        font-size:13px;
-        line-height:1.7
-      }
-
-      .final-report-head .left{
-        text-align:left
-      }
-
-      .final-report-logo{
-        text-align:center
-      }
-
-      .final-report-logo
-      .bismillah{
-        font-weight:700;
-        margin-bottom:7px
-      }
-
-      .final-report-logo img{
-        max-width:85px;
-        max-height:85px;
-        object-fit:contain
-      }
-
-      .final-report-title{
-        text-align:center;
-        font-size:22px;
-        font-weight:800;
-        margin:
-          18px
-          0
-          12px;
-        color:#0b6f63
-      }
-
-      .final-student-info{
-        display:grid;
-        grid-template-columns:
-          repeat(
-            2,
-            minmax(
-              0,
-              1fr
-            )
-          );
-        gap:
-          8px
-          20px;
-        background:#f5faf8;
-        border:
-          1px solid #dcebe6;
-        border-radius:12px;
-        padding:12px;
-        margin-bottom:15px
-      }
-
-      .final-student-info div{
-        font-size:14px
-      }
-
-      .final-report-table{
-        width:100%;
-        border-collapse:
-          collapse;
-        margin-top:8px
-      }
-
-      .final-report-table th,
-      .final-report-table td{
-        border:
-          1px solid #cfd8dc;
-        padding:
-          8px
-          6px;
-        text-align:center;
-        font-size:13px
-      }
-
-      .final-report-table th{
-        background:#edf7f4;
-        font-weight:700
-      }
-
-      .final-report-table
-      td:first-child,
-      .final-report-table
-      th:first-child{
-        text-align:right
-      }
-
-      .final-report-averages{
-        display:grid;
-        grid-template-columns:
-          repeat(
-            4,
-            1fr
-          );
-        gap:8px;
-        margin-top:15px
-      }
-
-      .final-average{
-        border:
-          1px solid #d8e4e1;
-        border-radius:10px;
-        padding:10px;
-        text-align:center
-      }
-
-      .final-average small{
-        display:block;
-        opacity:.7;
-        margin-bottom:4px
-      }
-
-      .final-average b{
-        font-size:18px;
-        color:#0b6f63
-      }
-
-      .final-annual{
-        background:#0b6f63;
-        color:#fff;
-        border-color:#0b6f63
-      }
-
-      .final-annual b{
-        color:#fff
-      }
-
-      .final-signatures{
-        display:grid;
-        grid-template-columns:
-          1fr
-          1fr;
-        gap:30px;
-        margin-top:35px;
-        text-align:center
-      }
-
-      .final-signature-box{
-        min-height:90px
-      }
-
-      .final-signature-line{
-        width:130px;
-        border-top:
-          1px solid #777;
-        margin:
-          55px
-          auto
-          0;
-        padding-top:5px;
-        font-size:12px
-      }
-
-      .final-report-actions{
-        display:flex;
-        justify-content:center;
-        gap:10px;
-        flex-wrap:wrap;
-        margin-top:22px
-      }
-
-      .final-report-note{
-        margin-top:18px;
-        text-align:center;
-        font-size:11px;
-        color:#667
-      }
-
-      @media(
-        max-width:700px
-      ){
-        .final-report{
-          padding:12px
-        }
-
-        .final-report-head{
-          grid-template-columns:
-            1fr
-            90px
-            1fr;
-          gap:7px
-        }
-
-        .final-report-head .right,
-        .final-report-head .left{
-          font-size:10px
-        }
-
-        .final-report-logo img{
-          max-width:60px;
-          max-height:60px
-        }
-
-        .final-student-info{
-          grid-template-columns:
-            1fr
-        }
-
-        .final-report-averages{
-          grid-template-columns:
-            1fr
-            1fr
-        }
-
-        .final-report-table th,
-        .final-report-table td{
-          font-size:11px;
-          padding:
-            6px
-            3px
-        }
-      }
-
-      @media print{
-        body *{
-          visibility:
-            hidden!important
-        }
-
-        #modal,
-        #modal *,
-        #modalBody,
-        #modalBody *{
-          visibility:
-            visible!important
-        }
-
-        #modal{
-          position:
-            absolute!important;
-          inset:
-            0!important;
-          background:
-            #fff!important;
-          display:
-            block!important;
-          overflow:
-            visible!important
-        }
-
-        #modalBody{
-          position:
-            absolute!important;
-          top:
-            0!important;
-          left:
-            0!important;
-          width:
-            100%!important;
-          margin:
-            0!important;
-          padding:
-            0!important
-        }
-
-        .final-report{
-          width:
-            100%!important;
-          max-width:
-            none!important;
-          box-shadow:
-            none!important;
-          border-radius:
-            0!important
-        }
-
-        .no-print,
-        #modalClose{
-          display:
-            none!important
-        }
-
-        @page{
-          size:A4;
-          margin:10mm
-        }
-      }
-    `;
-
-    document
-      .head
-      .appendChild(
-        style
-      );
+    // Module styles are served from features.css under the application CSP.
   }
 
   function reportValue(
@@ -4011,25 +3516,12 @@ if(
             </div>
 
             <div
-              style="
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                gap:16px;
-                margin-top:22px;
-                padding:12px;
-                border:
-                  1px solid #d8e4e1;
-                border-radius:12px;
-              ">
+              class="feature-style-2">
 
               <img
                 src="${v.qrDataUrl}"
                 alt="QR التحقق"
-                style="
-                  width:110px;
-                  height:110px
-                ">
+                class="feature-style-3">
 
               <div>
                 <b>
@@ -4159,7 +3651,7 @@ if(
     }
   }
 
-  async function loadSuperAdminDashboard(){
+  window.loadSuperAdminDashboard = async function loadSuperAdminDashboard(){
     try{
       const [
         overviewData,
@@ -4292,11 +3784,7 @@ if(
             </div>
 
             <div
-              style="
-                display:flex;
-                gap:8px;
-                flex-wrap:wrap
-              ">
+              class="feature-style-4">
 
               <button
                 type="button"
@@ -4333,7 +3821,7 @@ if(
                 type="button"
                 data-school-delete=
                   "${s.id}">
-                حذف
+                أرشفة
               </button>
 
             </div>
@@ -4606,9 +4094,9 @@ try{
 
             if(
               !confirm(
-                `هل تريد حذف مدرسة ${
+                `هل تريد أرشفة مدرسة ${
                   school?.name||""
-                } نهائياً؟`
+                } مع الاحتفاظ بجميع بياناتها؟`
               )
             ){
               return;
@@ -4627,14 +4115,14 @@ try{
               );
 
               toast(
-                "تم حذف المدرسة"
+                "تمت أرشفة المدرسة"
               );
 
               await loadSuperAdminDashboard();
 
             }catch(e){
               toast(
-                "تعذر حذف المدرسة"
+                "تعذرت أرشفة المدرسة"
               );
             }
           };

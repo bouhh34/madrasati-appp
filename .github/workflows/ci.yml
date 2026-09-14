@@ -1,0 +1,40 @@
+name: Verify application
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ma_madrassa_test
+          POSTGRES_PASSWORD: local_test_password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 12
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:local_test_password@localhost:5432/ma_madrassa_test
+      RUNTIME_DATABASE_URL: postgresql://mm_runtime_test:runtime_test_password@localhost:5432/ma_madrassa_test
+      PASSWORD_PEPPER: ci-test-pepper-not-a-production-secret-0000
+      AUDIT_HMAC_KEY: ci-test-audit-not-a-production-secret-00000
+      RUN_DB_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --no-fund
+      - run: npm run migrate
+      - run: npm run verify
