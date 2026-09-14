@@ -634,3 +634,15 @@
 .role-select{max-width:150px}
 
 .structure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px;margin-block:20px}.structure-checks{max-height:260px;overflow:auto;margin-block:12px}.structure-check{display:flex;align-items:center;gap:10px;min-height:44px}.structure-check input{width:20px;height:20px;flex:none}.structure-list{display:grid;gap:8px}.structure-list .mini-card{min-width:0;gap:12px}.structure-list small{display:block;overflow-wrap:anywhere}#structurePanel{margin-block-end:20px}#structurePanel button{min-height:44px}#structurePanel select,#structurePanel input{max-width:100%;min-width:0}
+
+.platform-navigation,#returnPlatform{display:none!important}
+.platform-mode .sidebar .platform-navigation{display:grid!important}
+.platform-mode .sidebar nav:not(.platform-navigation),.platform-mode .school-navigation,.platform-mode #roleSwitcher{display:none!important}
+.platform-mode .page:not(#page-super-admin){display:none!important}
+.school-preview #returnPlatform{display:inline-flex!important}
+.topbar{position:sticky;top:0;z-index:40;background:var(--bg,#f4f8f7);padding-block:10px;flex-wrap:wrap}
+#accountLogout{min-height:44px;white-space:nowrap}.top-actions{flex-wrap:wrap}
+#platformAccountsList .mini-card{margin-block:10px;gap:12px;overflow-wrap:anywhere}#platformAccountsList small{display:block}
+@media(max-width:900px){.platform-mode .bottom-nav.platform-navigation{display:flex!important}.topbar h2{font-size:1.05rem}.top-actions{gap:6px}.topbar{gap:8px}.platform-navigation button{min-height:44px;font-size:.8rem}}
+
+.platform-mode [data-attendance-nav],.platform-mode [data-exams-nav]{display:none!important}

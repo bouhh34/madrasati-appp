@@ -67,11 +67,15 @@
       <button class="nav-item director-only hidden" data-page="security">🛡 <span>الأمان والسجل</span></button>
       <button class="nav-item" data-page="settings">◉ <span>الإعدادات</span></button>
     </nav>
-    <div class="side-footer"><button id="logoutBtn" class="ghost full" type="button">تسجيل الخروج</button></div>
+    <nav class="platform-navigation" aria-label="إدارة المنصة">
+<button class="nav-item" data-platform-nav="overview">إحصائيات المنصة</button>
+<button class="nav-item" data-platform-nav="schools">المدارس والمديرون</button>
+<button class="nav-item" data-platform-nav="accounts">الحسابات</button>
+</nav><div class="side-footer"><button id="logoutBtn" class="ghost full" type="button">تسجيل الخروج</button></div>
   </aside>
 
   <main class="workspace">
-    <header class="topbar"><div><span id="schoolTypeBadge" class="status">—</span><h2 id="pageTitle">الرئيسية</h2></div><div class="top-actions"><button id="langToggle2" class="ghost compact" type="button">FR</button><button id="refreshBtn" class="icon-btn" type="button" aria-label="تحديث">↻</button><div class="avatar" id="avatar">م</div></div></header>
+    <header class="topbar"><div><span id="schoolTypeBadge" class="status">—</span><h2 id="pageTitle">الرئيسية</h2></div><div class="top-actions"><button id="returnPlatform" class="ghost" type="button">العودة للمنصة</button><button id="accountLogout" data-logout class="ghost" type="button">تسجيل الخروج</button><button id="langToggle2" class="ghost compact" type="button">FR</button><button id="refreshBtn" class="icon-btn" type="button" aria-label="تحديث">↻</button><div class="avatar" id="avatar">م</div></div></header>
 
     <section id="page-home" class="page active">
       <div class="welcome-card"><div><span class="kicker">مرحبًا</span><h3 id="hello">—</h3><p id="roleText">—</p></div><div class="save-state"><i></i><span id="saveState">متصل وآمن</span></div></div>
@@ -108,13 +112,13 @@
     <div class="panel-head">
       <div>
         <h2>إدارة منصة مدرستي</h2>
-        <p>لوحة مالك المنصة — SUPER ADMIN</p>
+        <p>لوحة مالك المنصة — SUPER ADMIN</p><button id="chooseManagedSchool" type="button">الدخول إلى مدرسة مرتبطة بحسابي</button>
       </div>
       <button id="superAdminRefresh" type="button">تحديث</button>
     </div>
   </div>
 
-  <div class="admin-grid">
+  <div class="admin-grid" data-platform-area="overview">
     <article class="panel">
       <h3>المدارس</h3>
       <strong id="saSchoolsCount">0</strong>
@@ -136,7 +140,7 @@
     </article>
   </div>
 
-  <article class="panel">
+  <article class="panel" data-platform-area="schools">
     <div class="panel-head">
       <h3>إضافة مدرسة جديدة</h3>
     </div>
@@ -181,7 +185,7 @@
     </button>
   </article>
 
-  <article class="panel">
+  <article class="panel" data-platform-area="schools">
     <div class="panel-head">
       <h3>جميع المدارس</h3>
     </div>
@@ -190,10 +194,12 @@
       جاري تحميل المدارس...
     </div>
   </article>
+<article class="panel hidden" data-platform-area="accounts"><h3>حسابات المنصة</h3><form id="platformAccountSearch" class="two"><label>البحث<input id="platformAccountQuery" maxlength="100" placeholder="الاسم أو اسم المستخدم"></label><label>الدور<select id="platformAccountRole"><option value="">الكل</option><option value="DIRECTOR">المديرون</option><option value="TEACHER">المعلمون</option><option value="SUPER_ADMIN">مالك المنصة</option></select></label><button type="submit">بحث</button></form><div id="platformAccountsList"></div><button id="platformAccountsPrevious" type="button">السابق</button><button id="platformAccountsNext" type="button">التالي</button></article>
 </section>
   </main>
 
-  <nav class="bottom-nav"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">▦<span>النتائج</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
+  <nav class="bottom-nav platform-navigation"> <button data-platform-nav="overview">الإحصائيات</button><button data-platform-nav="schools">المدارس والمديرون</button><button data-platform-nav="accounts">الحسابات</button></nav>
+  <nav class="bottom-nav school-navigation"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">▦<span>النتائج</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
@@ -201,5 +207,6 @@
   <div id="toast" class="toast hidden" role="status"></div>
 <script src="/app.js" defer></script>
 <script src="/structure.js" defer></script>
+<script src="/platform-navigation.js" defer></script>
 </body>
 </html>

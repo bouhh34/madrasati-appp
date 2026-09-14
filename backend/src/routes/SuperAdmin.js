@@ -172,6 +172,23 @@ export async function registerSuperAdminRoutes(app, { requireMutation }) {
   });
 
 
+  app.get('/api/platform/accounts',async(request,reply)=>{
+    if(!await requireSuperAdmin(request,reply))return;
+    const q=String(request.query?.q||'').trim().slice(0,100);
+    const role=String(request.query?.role||'');
+    const offset=Number(request.query?.offset||0);
+    if(!Number.isSafeInteger(offset)||offset<0||!['','DIRECTOR','TEACHER','SUPER_ADMIN'].includes(role))return reply.code(400).send({error:'INVALID_FILTER'});
+    const result=await pool.query(`SELECT u.id,u.login,u.full_name,u.account_state,
+      ARRAY(SELECT DISTINCT s.name FROM school_memberships sm JOIN schools s ON s.id=sm.school_id WHERE sm.user_id=u.id AND sm.status='ACTIVE' ORDER BY s.name) schools,
+      ARRAY(SELECT role FROM (SELECT mr.role FROM membership_roles mr JOIN school_memberships sm USING(school_id,user_id) WHERE mr.user_id=u.id AND sm.status='ACTIVE'
+        UNION SELECT pa.role FROM platform_admins pa WHERE pa.user_id=u.id AND pa.active) all_roles ORDER BY role) roles
+      FROM users u WHERE ($1='' OR u.full_name ILIKE '%'||$1||'%' OR u.login ILIKE '%'||$1||'%')
+      AND ($2='' OR EXISTS(SELECT 1 FROM membership_roles mr JOIN school_memberships sm USING(school_id,user_id) WHERE mr.user_id=u.id AND mr.role=$2 AND sm.status='ACTIVE')
+        OR EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id=u.id AND pa.role=$2 AND pa.active))
+      ORDER BY u.full_name,u.id LIMIT 51 OFFSET $3`,[q,role,offset]);
+    return {accounts:result.rows.slice(0,50),hasMore:result.rows.length>50};
+  });
+
   // ملخص المنصة
   app.get("/api/platform/overview", async (request, reply) => {
 

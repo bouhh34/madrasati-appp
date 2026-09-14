@@ -1,3 +1,4 @@
+let schoolView=false,logoutPending=false;
 let csrf="",me=null,locale="ar",currentClasses=[],currentSubjects=[],currentStudents=[],currentGrades=[];
 const $=id=>document.getElementById(id);const qsa=s=>[...document.querySelectorAll(s)];
 const FR={"مرحبًا بعودتك":"Bon retour","دخول":"Connexion","إنشاء حساب":"Créer un compte","اسم المستخدم":"Nom d’utilisateur","كلمة المرور":"Mot de passe","دخول آمن":"Connexion sécurisée","نسيت كلمة المرور؟":"Mot de passe oublié ?","الاسم الكامل":"Nom complet","البريد الإلكتروني (اختياري)":"E-mail (facultatif)","كلمة مرور طويلة":"Mot de passe long","إنشاء الحساب":"Créer le compte","الحساب جاهز بدون صلاحيات مدرسية":"Compte prêt, sans accès scolaire","الانضمام إلى المدرسة":"Rejoindre l’école","رمز الانضمام":"Code d’accès","تفعيل الصلاحيات":"Activer les autorisations","تسجيل الخروج":"Déconnexion","اختر المدرسة":"Choisir l’école","الرئيسية":"Accueil","الأقسام والنتائج":"Classes et résultats","أبنائي":"Mes enfants","إدارة المدرسة":"Administration","الأمان والسجل":"Sécurité et journal","الإعدادات":"Paramètres","الأقسام":"Classes","التلاميذ":"Élèves","المواد":"Matières","المستخدمون":"Utilisateurs","أقسامك":"Vos classes","الإشعارات":"Notifications","اختر قسمًا":"Choisir une classe","اختر مادة":"Choisir une matière","الفصل الأول":"Trimestre 1","الفصل الثاني":"Trimestre 2","الفصل الثالث":"Trimestre 3","درجات التلاميذ":"Notes des élèves","إضافة قسم":"Ajouter une classe","اسم القسم":"Nom de la classe","المستوى":"Niveau","الشعبة":"Section","إنشاء القسم":"Créer la classe","إضافة مادة":"Ajouter une matière","اسم المادة":"Matière","المعامل":"Coefficient","الدرجة القصوى":"Note maximale","إضافة المادة":"Ajouter la matière","إضافة تلميذ":"Ajouter un élève","رقم التلميذ":"Identifiant élève","الجنس":"Sexe","ولد":"Garçon","بنت":"Fille","إضافة التلميذ":"Ajouter l’élève","دعوة آمنة":"Invitation sécurisée","الدور":"Rôle","معلم":"Enseignant","ولي تلميذ":"Tuteur","مدير إضافي":"Directeur supplémentaire","اسم المستخدم المستهدف":"Utilisateur ciblé","بدون قسم محدد":"Sans classe précise","بدون مادة محددة":"Sans matière précise","التلميذ":"Élève","إنشاء رمز لمرة واحدة":"Créer un code à usage unique","حسابات المدرسة":"Comptes de l’école","تحديث":"Actualiser","سجل العمليات":"Journal d’audit","مبادئ الحماية":"Principes de sécurité","رأسية المدرسة":"En-tête de l’école","رفع ومعالجة الرأسية":"Importer et traiter l’en-tête","الحساب":"Compte","الاسم":"Nom","المدرسة":"École","متصل وآمن":"Connecté et sécurisé"};
@@ -13,30 +14,13 @@ async function boot(){try{me=await api("/api/auth/me");await refreshCsrf();await
 
 async function openForMe(){
 
-  try{
-    const platform=await api("/api/platform/me");
-
-    if(platform?.isSuperAdmin){
-      hideAll();
-
-      $("appShell")?.classList.remove("hidden");
-
-      qsa(".page").forEach(
-        p=>p.classList.remove("active")
-      );
-
-      $("page-super-admin")?.classList.add("active");
-
-      if($("pageTitle")){
-        $("pageTitle").textContent="إدارة منصة مدرستي";
-      }
-
-      await loadSuperAdminDashboard();
-
-      return;
-    }
-  }catch{}
-
+  document.body.classList.toggle('platform-mode',!!me?.isSuperAdmin&&!schoolView);
+  document.body.classList.toggle('school-preview',!!me?.isSuperAdmin&&schoolView);
+  if(me?.isSuperAdmin&&!schoolView){
+    hideAll();$('appShell').classList.remove('hidden');
+    renderPlatformProfile();navigate('super-admin');platformSection('overview');
+    await loadSuperAdminDashboard();return;
+  }
   if(!me?.schoolId){
     try{
       const d=await api("/api/auth/schools");
@@ -76,7 +60,7 @@ async function openForMe(){
   navigate("home");
 }
 function showSchoolChooser(schools){hideAll();$("schoolChooser").classList.remove("hidden");$("schoolChoices").innerHTML=schools.map(s=>`<button type="button" data-school="${s.id}"><b>${escapeHtml(s.name)}</b><br><small>${escapeHtml((s.roles||[]).join(" • "))}</small></button>`).join("");qsa("[data-school]").forEach(b=>b.onclick=()=>selectSchool(b.dataset.school))}
-async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
+async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");schoolView=!!me.isSuperAdmin;await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
 async function login(){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({login:$("login").value.trim(),password:$("password").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe()}catch{toast("تعذر تسجيل الدخول")}}
 async function register(){try{const d=await api("/api/auth/register",{method:"POST",body:JSON.stringify({fullName:$("fullName").value.trim(),login:$("newLogin").value.trim(),email:$("email").value.trim()||null,password:$("newPassword").value})});csrf=d.csrf||"";me=await api("/api/auth/me");await openForMe();toast("تم إنشاء الحساب. اطلب رمز الانضمام من المدير")}catch(e){toast(e.data?.error==="ACCOUNT_ALREADY_EXISTS"?"اسم المستخدم أو البريد مستخدم مسبقًا":"تحقق من البيانات وكلمة المرور")}}
 async function redeem(){try{const d=await api("/api/invites/redeem",{method:"POST",body:JSON.stringify({code:$("inviteCode").value.trim()})});csrf=d.csrf||csrf;me=await api("/api/auth/me");await openForMe();toast("تم تفعيل الصلاحيات") }catch{toast("الرمز غير صالح أو ليس مخصصًا لهذا الحساب")}}
@@ -95,10 +79,32 @@ async function bootstrapSuperAdmin(){
     alert(e.message||"فشل التفعيل");
   }
 }
-async function logout(){try{await api("/api/auth/logout",{method:"POST"})}catch{}csrf="";me=null;showAuth()}
+async function logout(){
+  if(logoutPending)return;
+  logoutPending=true;qsa('[data-logout],#logoutBtn,#chooserLogout,#pendingLogout').forEach(b=>b.disabled=true);
+  try{
+    try{await api('/api/auth/logout',{method:'POST'});}catch(e){
+      if(e.status!==403)throw e;
+      await refreshCsrf();await api('/api/auth/logout',{method:'POST'});
+    }
+    csrf='';me=null;schoolView=false;currentClasses=[];currentSubjects=[];currentStudents=[];currentGrades=[];
+    document.querySelectorAll('input,textarea').forEach(el=>{el.value='';});
+    $('modalBody')?.replaceChildren();hideAll();
+    // A fresh document discards module closures, outstanding requests and prior account DOM.
+    window.location.replace('/');
+  }catch{toast(locale==='fr'?'Déconnexion impossible. Réessayez.':'تعذر إنهاء الجلسة. أعد المحاولة.');}
+  finally{logoutPending=false;qsa('[data-logout],#logoutBtn,#chooserLogout,#pendingLogout').forEach(b=>b.disabled=false);}
+}
+function renderPlatformProfile(){
+  $('schoolNameSide').textContent=locale==='fr'?'Administration de la plateforme':'إدارة المنصة';
+  $('schoolTypeBadge').textContent='SUPER ADMIN';$('roleText').textContent='SUPER ADMIN';
+  $('hello').textContent=me.fullName||me.login;$('avatar').textContent=(me.fullName||me.login||'M').charAt(0);
+  $('roleSwitcher')?.classList.add('hidden');
+}
+
 function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const pureGuardian=roles.includes("GUARDIAN")&&!roles.includes("DIRECTOR")&&!roles.includes("TEACHER");qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
 function renderProfile(){const school=me.school||{};$("hello").textContent=me.fullName||me.login;$("avatar").textContent=(me.fullName||"م").trim().charAt(0);$("roleText").textContent=(me.roles||[]).map(r=>({DIRECTOR:"مدير",ADMIN:"إداري",TEACHER:"معلم",GUARDIAN:"ولي تلميذ"}[r]||r)).join(" • ");$("schoolNameSide").textContent=school.name||"—";$("schoolTypeBadge").textContent=school.school_type==="PRIVATE"?"مدرسة خصوصية":"مدرسة عمومية";$("profileName").textContent=me.fullName||"—";$("profileRoles").textContent=$("roleText").textContent;$("profileSchool").textContent=school.name||"—"}
-function navigate(page){qsa(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));qsa("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const titles={home:"الرئيسية",academic:"الأقسام والنتائج",children:"أبنائي",admin:"إدارة المدرسة",security:"الأمان والسجل",settings:"الإعدادات"};$("pageTitle").textContent=tr(titles[page]||"مدرستي");if(page==="admin"){loadUsers();loadStructure();}if(page==="security")loadAudit();if(page==="children")loadChildren();if(page==="settings")loadBranding()}
+function navigate(page){if(!me)return;if(me.isSuperAdmin&&!schoolView)page="super-admin";else if(page==="super-admin")page="home";qsa(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));qsa("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const titles={"super-admin":locale==="fr"?"Administration de la plateforme":"إدارة منصة مدرستي",home:"الرئيسية",academic:"الأقسام والنتائج",children:"أبنائي",admin:"إدارة المدرسة",security:"الأمان والسجل",settings:"الإعدادات"};$("pageTitle").textContent=tr(titles[page]||"مدرستي");if(page==="admin"){loadUsers();loadStructure();}if(page==="security")loadAudit();if(page==="children")loadChildren();if(page==="settings")loadBranding()}
 async function loadDirectorHome(){try{const d=await api("/api/director/overview");$("metricClasses").textContent=d.classes;$("metricStudents").textContent=d.students;$("metricSubjects").textContent=d.subjects;$("metricUsers").textContent=d.users}catch{}}
 async function loadClasses(){try{const d=await api("/api/classes");currentClasses=d.classes||[];$("metricClasses").textContent=currentClasses.length;const opts='<option value="">'+tr("اختر قسمًا")+'</option>'+currentClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.academic_year||"")}</option>`).join("");$("classSelect").innerHTML=opts;$("studentClassSelect").innerHTML=opts;$("inviteClass").innerHTML='<option value="">'+tr("بدون قسم محدد")+'</option>'+currentClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.academic_year||"")}</option>`).join("");$("homeClasses").classList.toggle("empty",!currentClasses.length);$("homeClasses").innerHTML=currentClasses.length?currentClasses.slice(0,8).map(c=>`<div class="mini-card"><div><b>${escapeHtml(c.name)}</b><small>${escapeHtml(c.level||"")}</small></div><button data-open-class="${c.id}">فتح</button></div>`).join(""):tr("لا توجد أقسام متاحة بعد.");qsa("[data-open-class]").forEach(b=>b.onclick=()=>{$("classSelect").value=b.dataset.openClass;navigate("academic");loadAcademicScope()})}catch{}}
 async function loadSubjectsForClass(classId){if(!classId){currentSubjects=[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>';return}try{const d=await api(`/api/classes/${encodeURIComponent(classId)}/subjects`);currentSubjects=d.subjects||[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>'+currentSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}catch{currentSubjects=[]}}
@@ -1182,7 +1188,7 @@ if(
 
     const bottom=
       document.querySelector(
-        ".bottom-nav"
+        ".bottom-nav.school-navigation"
       );
 
     const bottomBtn=
@@ -1782,7 +1788,7 @@ if(
 
     const bottom=
       document.querySelector(
-        ".bottom-nav"
+        ".bottom-nav.school-navigation"
       );
 
     if(
@@ -2842,6 +2848,7 @@ if(
   }
 
   function refreshRoleSwitcher(){
+    if(me?.isSuperAdmin&&!schoolView){$("roleSwitcher")?.classList.add("hidden");return;}
     createRoleSwitcher();
 
     const select=
@@ -2887,9 +2894,8 @@ if(
 
   applyRoleVisibility=
     function(){
-      if(!me){
-        return;
-      }
+      if(!me){return;}
+      if(me.isSuperAdmin&&!schoolView){renderPlatformProfile();return;}
 
       const role=
         getActiveRole();
@@ -2969,11 +2975,11 @@ if(
 
   renderProfile=
     function(){
+      if(me?.isSuperAdmin&&!schoolView){renderPlatformProfile();return;}
       oldRenderProfile();
 
-      if(!me){
-        return;
-      }
+      if(!me){return;}
+      if(me.isSuperAdmin&&!schoolView){renderPlatformProfile();return;}
 
       const role=
         getActiveRole();

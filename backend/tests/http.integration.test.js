@@ -54,6 +54,22 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
     await t.test('missing grade is not saved as zero',async()=>{
       const r=await request('POST','/api/grades',{classId:classA.id,studentId:studentA.id,subjectId:subject.id,term:'T2',score:''},d);assert.equal(r.statusCode,400,r.body);
     });
+    await t.test('platform identity is explicit and account directory stays platform-only',async()=>{
+      const identity=await request('GET','/api/auth/me',undefined,p);assert.equal(identity.json().isSuperAdmin,true);assert.equal(identity.json().schoolId,null);assert.deepEqual(identity.json().roles,[]);
+      assert.equal((await request('GET','/api/auth/me',undefined,d)).json().isSuperAdmin,false);
+      assert.equal((await request('GET','/api/platform/accounts',undefined,d)).statusCode,403);
+      const accounts=await request('GET','/api/platform/accounts?role=DIRECTOR',undefined,p);assert.equal(accounts.statusCode,200,accounts.body);assert.equal(accounts.json().accounts.length,2);assert.equal(accounts.body.includes('password_hash'),false);
+    });
+    await t.test('logout revokes old cookies and allows fresh login for each role',async()=>{
+      for(const user of ['platform','director','teacher']){
+        const session=await login(user);
+        const result=await request('POST','/api/auth/logout',undefined,session);assert.equal(result.statusCode,200,result.body);assert.ok(result.cookies.some(c=>c.value===''));
+        assert.equal((await request('GET','/api/auth/me',undefined,session)).statusCode,401);
+        const again=await login(user);assert.notEqual(again.cookie,session.cookie);
+        assert.equal((await request('GET','/api/auth/me',undefined,again)).json().login,user);
+        await request('POST','/api/auth/logout',undefined,again);
+      }
+    });
     await t.test('platform aggregates see both schools despite forced RLS',async()=>{
       const r=await request('GET','/api/platform/overview',undefined,p);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().overview.students,2);assert.equal(r.json().overview.classes,2);
     });
