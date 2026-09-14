@@ -87,8 +87,9 @@
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
 
     <section id="page-admin" class="page">
+      <article id="structurePanel" class="panel director-only"></article>
       <div class="admin-grid">
-        <article class="panel"><div class="panel-head"><h3>إضافة قسم</h3></div><label>اسم القسم<input id="newClassName"></label><div class="two"><label>المستوى<input id="newClassLevel"></label><label>الشعبة<input id="newClassSection"></label></div><button id="createClassBtn" class="primary">إنشاء القسم</button></article>
+        <article class="panel"><div class="panel-head"><h3>إضافة قسم</h3></div><label>السنة الدراسية<select id="newClassYear"></select></label><label>اسم القسم<input id="newClassName"></label><div class="two"><label>المستوى<input id="newClassLevel"></label><label>الشعبة<input id="newClassSection"></label></div><button id="createClassBtn" class="primary">إنشاء القسم</button></article>
         <article class="panel"><div class="panel-head"><h3>إضافة مادة</h3></div><label>اسم المادة<input id="newSubjectName"></label><div class="two"><label>المعامل<input id="newSubjectCoeff" type="number" step="0.01" value="1"></label><label>الدرجة القصوى<input id="newSubjectMax" type="number" step="0.01" value="20"></label></div><button id="createSubjectBtn" class="primary">إضافة المادة</button></article>
         <article class="panel"><div class="panel-head"><h3>إضافة تلميذ</h3></div><label>القسم<select id="studentClassSelect"><option value="">اختر القسم</option></select></label><label>الاسم الكامل<input id="studentName"></label><div class="two"><label>رقم التلميذ<input id="studentUid"></label><label>الجنس<select id="studentGender"><option value="">—</option><option value="M">ولد</option><option value="F">بنت</option></select></label></div><button id="createStudentBtn" class="primary">إضافة التلميذ</button></article>
         <article class="panel"><div class="panel-head"><h3>دعوة آمنة</h3></div><label>الدور<select id="inviteRole"><option value="TEACHER">معلم</option>
@@ -199,5 +200,6 @@
 
   <div id="toast" class="toast hidden" role="status"></div>
 <script src="/app.js" defer></script>
+<script src="/structure.js" defer></script>
 </body>
 </html>

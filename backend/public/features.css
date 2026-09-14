@@ -632,3 +632,5 @@
                 flex-wrap:wrap
               }
 .role-select{max-width:150px}
+
+.structure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px;margin-block:20px}.structure-checks{max-height:260px;overflow:auto;margin-block:12px}.structure-check{display:flex;align-items:center;gap:10px;min-height:44px}.structure-check input{width:20px;height:20px;flex:none}.structure-list{display:grid;gap:8px}.structure-list .mini-card{min-width:0;gap:12px}.structure-list small{display:block;overflow-wrap:anywhere}#structurePanel{margin-block-end:20px}#structurePanel button{min-height:44px}#structurePanel select,#structurePanel input{max-width:100%;min-width:0}

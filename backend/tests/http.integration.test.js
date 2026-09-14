@@ -26,6 +26,7 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
   const studentA=await one("INSERT INTO students(school_id,class_id,student_uid,full_name) VALUES($1,$2,'A01','Student A') RETURNING id",[schoolA.id,classA.id]);
   const studentB=await one("INSERT INTO students(school_id,class_id,student_uid,full_name) VALUES($1,$2,'B01','Student B') RETURNING id",[schoolB.id,classB.id]);
   await db.query("INSERT INTO permission_grants(school_id,user_id,permission,class_id,subject_id,granted_by) VALUES($1,$2,'GRADE_WRITE',$3,$4,$5)",[schoolA.id,teacher.id,classA.id,subject.id,director.id]);
+  await db.query('INSERT INTO class_subjects(school_id,class_id,subject_id) VALUES($1,$2,$3)',[schoolA.id,classA.id,subject.id]);
   await db.runtime();
   const {buildApp}=await import('../src/app.js');
   const app=await buildApp();app.log.level='silent';
@@ -55,6 +56,19 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
     });
     await t.test('platform aggregates see both schools despite forced RLS',async()=>{
       const r=await request('GET','/api/platform/overview',undefined,p);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().overview.students,2);assert.equal(r.json().overview.classes,2);
+    });
+    await t.test('academic years and curriculum preserve existing grades',async()=>{
+      const years=await request('GET','/api/academic-years',undefined,d);assert.equal(years.statusCode,200,years.body);assert.equal(years.json().years[0].name,'2026/2027');
+      const made=await request('POST','/api/director/academic-years',{name:'2027/2028'},d);assert.equal(made.statusCode,201,made.body);
+      assert.equal((await request('POST','/api/director/academic-years',{name:'2028/2029'},te)).statusCode,403);
+      const nc=await request('POST','/api/director/classes',{name:'A1',academicYearId:made.json().id},d);assert.equal(nc.statusCode,201,nc.body);
+      assert.equal((await request('PUT',`/api/director/classes/${classB.id}/curriculum`,{subjectIds:[subject.id]},d)).statusCode,404);
+      const retained=await request('PUT',`/api/director/classes/${classA.id}/curriculum`,{subjectIds:[]},d);assert.equal(retained.statusCode,409,retained.body);
+      const scale=await request('PATCH',`/api/director/subjects/${subject.id}`,{name:'Math',coefficient:1,maxScore:100,version:1},d);assert.equal(scale.statusCode,409,scale.body);
+      const assign=await request('POST','/api/director/assignments',{userId:teacher.id,classId:classA.id,subjectId:subject.id,attendance:true},d);assert.equal(assign.statusCode,200,assign.body);
+      const crossAssignment=await request('POST','/api/director/assignments',{userId:other.id,classId:classA.id,subjectId:subject.id},d);assert.equal(crossAssignment.statusCode,400,crossAssignment.body);
+      const crossCurriculum=await request('PUT',`/api/director/classes/${classB.id}/curriculum`,{subjectIds:[subject.id]},d);assert.equal(crossCurriculum.statusCode,404,crossCurriculum.body);
+      const report=await request('GET',`/api/students/${studentA.id}/report`,undefined,d);assert.equal(report.json().report.termAverages.T1,12);
     });
     await t.test('disabled school cannot be selected or used with existing session',async()=>{
       const r=await request('PATCH',`/api/platform/schools/${schoolA.id}/status`,{active:false},p);assert.equal(r.statusCode,200,r.body);
