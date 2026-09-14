@@ -646,3 +646,6 @@
 @media(max-width:900px){.platform-mode .bottom-nav.platform-navigation{display:flex!important}.topbar h2{font-size:1.05rem}.top-actions{gap:6px}.topbar{gap:8px}.platform-navigation button{min-height:44px;font-size:.8rem}}
 
 .platform-mode [data-attendance-nav],.platform-mode [data-exams-nav]{display:none!important}
+
+/* Keep the login screen hidden after authentication at every breakpoint. */
+#authShell.auth-shell.hidden{display:none!important}
