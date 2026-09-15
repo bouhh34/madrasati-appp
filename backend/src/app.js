@@ -22,6 +22,7 @@ import { registerBrandingRoutes } from "./routes/branding.js";
 import { registerProductRoutes } from "./routes/product.js";
 import { registerReportVerifyRoutes } from "./routes/reportVerify.js";
 import { registerSuperAdminRoutes } from "./routes/SuperAdmin.js";
+import { registerPlatformRecoveryRoutes } from "./routes/platformRecovery.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ORIGIN_EXEMPT=new Set(["/api/setup/bootstrap"]);
 
@@ -64,6 +65,7 @@ export async function buildApp(){
 
   await registerAuthRoutes(app,{requireSession,requireMutation});
  await registerSuperAdminRoutes(app,{requireMutation});
+  await registerPlatformRecoveryRoutes(app,{requireMutation});
   await registerDirectorRoutes(app,{requireDirector});
   await registerStructureRoutes(app,{requireSession,requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
