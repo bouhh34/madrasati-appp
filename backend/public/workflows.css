@@ -1,0 +1,13 @@
+.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.grade-toolbar{display:grid;grid-template-columns:1fr auto;align-items:end;gap:12px;padding-block:8px 16px;border-bottom:1px solid var(--line)}
+.grade-toolbar label{margin:0}.grade-toolbar [role="status"]{grid-column:1/-1;margin:0;color:var(--muted)}
+.grade-toolbar button{grid-column:2;grid-row:1;width:auto}
+[data-grade-row][hidden],.result-row[hidden]{display:none!important}
+#gradeGrid{overflow:visible}#gradeGrid button{min-height:44px}#gradeGrid .student-name{min-width:0;overflow-wrap:anywhere}#gradeGrid .linkbtn{display:block;font-size:.8rem;padding:4px 0}
+#gradeGrid input[aria-invalid="true"]{border-color:var(--danger);background:#fff5f4}
+.results-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.results-controls label{margin:0;flex:1}.results-controls button{min-height:48px}
+.results-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-block:12px}
+.results-stats span{background:var(--mint);padding:12px;border-radius:12px;color:var(--green)}.results-stats b{display:block;font-size:1.25rem}
+.result-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;border-block-end:1px solid var(--line);padding-block:12px}.result-row small{display:block;color:var(--muted)}.result-row b{overflow-wrap:anywhere}.result-row strong{white-space:nowrap}
+button:disabled{cursor:default;opacity:.55}.modal-close{width:44px;height:44px}.modal-card h3{padding-inline-end:32px}
+@media(max-width:480px){.grade-toolbar{grid-template-columns:1fr}.grade-toolbar button{grid-column:1;grid-row:auto;width:100%}.grade-row{grid-template-columns:minmax(0,1fr) minmax(80px,1fr)}.result-row{grid-template-columns:minmax(0,1fr) auto}.result-row button{grid-column:1/-1}.results-controls{align-items:stretch}.results-controls button{width:100%}.modal{padding:10px}.modal-card{padding:18px;max-height:calc(100dvh - 20px)}}

@@ -25,7 +25,7 @@ async function page(account,settings={}){
     return {ok:status===200,status,headers:{get:()=> 'application/json'},json:async()=>data};
   };
   for(const file of ['app.css','features.css']){const style=w.document.createElement('style');style.textContent=fs.readFileSync(new URL(file,root),'utf8');w.document.head.append(style);}
-  for(const file of ['app.js','structure.js','platform-navigation.js'])w.eval(fs.readFileSync(new URL(file,root),'utf8'));
+  for(const file of ['app.js','structure.js','platform-navigation.js','academic-workflows.js'])w.eval(fs.readFileSync(new URL(file,root),'utf8'));
   await new Promise(resolve=>setTimeout(resolve,350));
   return {w,calls,fail:()=>{failLogout=true;},close:()=>w.close()};
 }
@@ -124,5 +124,29 @@ test('director association uses one request and does not ask for an existing pas
     assert.deepEqual(payload,{mode:'existing',login:'existing-user'});
     assert.equal(p.calls.filter(c=>c.url.endsWith('/director')).length,1);
     release();await first;assert.equal(p.w.document.getElementById('modalBody').childElementCount,0);
+  }finally{release();p.close();}
+});
+test('bulk entry validates blanks and maximum, preserves scope and prevents duplicate saves',async()=>{
+  let release,payload;const gate=new Promise(resolve=>{release=resolve;});
+  const p=await page({id:'director',login:'director',fullName:'Director',roles:['DIRECTOR'],schoolId:'school'},{intercept:async(url,options)=>{
+    const json=data=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>data});
+    if(url==='/api/classes')return json({classes:[{id:'class',name:'Class A'}]});
+    if(url==='/api/classes/class/students')return json({students:[{id:'s1',full_name:'Student 1',student_uid:'A1',status:'ACTIVE'},{id:'s2',full_name:'Student 2',student_uid:'A2',status:'ACTIVE'}]});
+    if(url==='/api/classes/class/subjects')return json({subjects:[{id:'math',name:'Math',max_score:20}]});
+    if(url==='/api/classes/class/grades')return json({grades:[]});
+    if(url.endsWith('/grades/bulk')){payload=JSON.parse(options.body);await gate;return json({grades:payload.grades.map((g,i)=>({id:'g'+i,student_id:g.studentId,score:g.score,version:1}))});}
+  }});
+  try{
+    p.w.document.getElementById('classSelect').value='class';await p.w.eval('loadAcademicScope()');
+    p.w.document.getElementById('subjectSelect').value='math';p.w.eval('renderGradeGrid()');
+    const field=p.w.document.querySelector('[data-score="s1"]');
+    field.value='21';await p.w.eval('saveBulkGrades()');assert.equal(payload,undefined);
+    field.value='١٥٫٥';const pending=p.w.eval('saveBulkGrades()');await p.w.eval('saveBulkGrades()');
+    assert.equal(p.calls.filter(c=>c.url.endsWith('/grades/bulk')).length,1);
+    assert.deepEqual(payload.grades,[{studentId:'s1',score:15.5,version:0}]);
+    release();await pending;
+    assert.equal(p.w.document.getElementById('subjectSelect').value,'math');
+    assert.equal(p.w.document.querySelector('[data-score="s2"]').value,'');
+    field.value='';await p.w.eval('saveBulkGrades()');assert.match(p.w.document.getElementById('gradeFeedback').textContent,/لا تُحذف/);
   }finally{release();p.close();}
 });

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/features.css">
   <title>مدرستي | Ma Madrassa</title>
 
+<link rel="stylesheet" href="/workflows.css">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -87,6 +88,7 @@
     <section id="page-academic" class="page">
       <div class="panel filters"><select id="classSelect"><option value="">اختر قسمًا</option></select><select id="subjectSelect"><option value="">اختر مادة</option></select><select id="termSelect"><option value="T1">الفصل الأول</option><option value="T2">الفصل الثاني</option><option value="T3">الفصل الثالث</option></select></div>
       <div class="panel"><div class="panel-head"><div><span class="kicker">إدخال ذكي</span><h3>درجات التلاميذ</h3></div><span id="gradePermission" class="status muted">اختر القسم والمادة</span></div><div id="gradeGrid" class="grade-grid empty">اختر قسمًا ومادة لبدء العمل.</div></div>
+      <article id="classResultsPanel" class="panel"></article>
     </section>
 
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
@@ -209,5 +211,6 @@
 <script src="/app.js" defer></script>
 <script src="/structure.js" defer></script>
 <script src="/platform-navigation.js" defer></script>
+<script src="/academic-workflows.js" defer></script>
 </body>
 </html>

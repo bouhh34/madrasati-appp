@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {registerStructureRoutes} from "./routes/structure.js";
+import {registerAcademicWorkflows} from "./routes/academicWorkflows.js";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -65,6 +66,7 @@ export async function buildApp(){
   await registerDirectorRoutes(app,{requireDirector});
   await registerStructureRoutes(app,{requireSession,requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
+  await registerAcademicWorkflows(app,{requireSession,requireMutation});
 await registerReportVerifyRoutes(app,{requireMutation});
   await registerBrandingRoutes(app,{requireSession,requireDirector});
 await registerProductRoutes(app,{requireSession,requireMutation});
