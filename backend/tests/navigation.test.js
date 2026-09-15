@@ -25,7 +25,7 @@ async function page(account,settings={}){
     return {ok:status===200,status,headers:{get:()=> 'application/json'},json:async()=>data};
   };
   for(const file of ['app.css','features.css']){const style=w.document.createElement('style');style.textContent=fs.readFileSync(new URL(file,root),'utf8');w.document.head.append(style);}
-  for(const file of ['app.js','structure.js','platform-navigation.js','academic-workflows.js'])w.eval(fs.readFileSync(new URL(file,root),'utf8'));
+  for(const file of ['app.js','structure.js','platform-navigation.js','academic-workflows.js','attendance-workflows.js','print-actions.js'])w.eval(fs.readFileSync(new URL(file,root),'utf8'));
   await new Promise(resolve=>setTimeout(resolve,350));
   return {w,calls,fail:()=>{failLogout=true;},close:()=>w.close()};
 }
@@ -148,5 +148,23 @@ test('bulk entry validates blanks and maximum, preserves scope and prevents dupl
     assert.equal(p.w.document.getElementById('subjectSelect').value,'math');
     assert.equal(p.w.document.querySelector('[data-score="s2"]').value,'');
     field.value='';await p.w.eval('saveBulkGrades()');assert.match(p.w.document.getElementById('gradeFeedback').textContent,/لا تُحذف/);
+  }finally{release();p.close();}
+});
+test('attendance leaves unrecorded students unchanged and saves edited rows once',async()=>{
+  let payload,release;const gate=new Promise(resolve=>{release=resolve;});
+  const p=await page({id:'director',login:'director',roles:['DIRECTOR'],schoolId:'school'},{intercept:async(url,options)=>{
+    if(url==='/api/classes/class/attendance/bulk'){
+      payload=JSON.parse(options.body);await gate;
+      return {ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({attendance:payload.attendance.map(r=>({student_id:r.studentId,status:r.status,note:r.note,version:1}))})};
+    }
+  }});
+  try{
+    p.w.eval("attendanceEditor.scope={classId:'class',date:'2026-09-14'};attendanceEditor.canWrite=true;attendanceEditor.rows=[{student_id:'a',full_name:'A',student_uid:'1',status:null,note:null,version:0},{student_id:'b',full_name:'B',student_uid:'2',status:null,note:null,version:0}];renderAttendanceWorkflow()");
+    const rows=p.w.document.querySelectorAll('[data-attendance-row]');assert.equal(rows[1].querySelector('select').value,'');
+    rows[0].querySelector('select').value='EXCUSED';rows[0].querySelector('input').value='Justification';
+    const first=p.w.eval('saveAttendanceBatch()');await p.w.eval('saveAttendanceBatch()');
+    assert.equal(payload.attendance.length,1);assert.equal(payload.attendance[0].status,'EXCUSED');
+    assert.equal(p.calls.filter(c=>c.url.endsWith('/attendance/bulk')).length,1);
+    release();await first;assert.equal(p.w.eval('hasUnsavedAttendance()'),false);assert.equal(rows[1].querySelector('select').value,'');
   }finally{release();p.close();}
 });

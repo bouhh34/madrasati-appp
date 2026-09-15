@@ -91,8 +91,12 @@ export async function registerStructureRoutes(app,{requireSession,requireDirecto
       if(!(await c.query('SELECT 1 FROM class_subjects WHERE class_id=$1 AND subject_id=$2',[classId,subjectId])).rowCount)return reply.code(400).send({error:'SUBJECT_NOT_IN_CLASS'});
       const permissions=['CLASS_READ','STUDENT_READ','SUBJECT_READ','GRADE_READ','GRADE_WRITE'];
       if(attendance)permissions.push('ATTENDANCE_READ','ATTENDANCE_WRITE');
-      for(const permission of permissions)await c.query(`INSERT INTO permission_grants(school_id,user_id,class_id,subject_id,permission,granted_by)
-        SELECT $1,$2,$3,$4,$5,$6 WHERE NOT EXISTS(SELECT 1 FROM permission_grants WHERE school_id=$1 AND user_id=$2 AND class_id=$3 AND subject_id=$4 AND permission=$5 AND revoked_at IS NULL AND (ends_at IS NULL OR ends_at>now()))`,[r.auth.schoolId,userId,classId,subjectId,permission,r.auth.userId]);
+      for(const permission of permissions){
+        // Attendance records belong to a class/day, not to a subject.
+        const subjectScope=permission.startsWith('ATTENDANCE_')?null:subjectId;
+        await c.query(`INSERT INTO permission_grants(school_id,user_id,class_id,subject_id,permission,granted_by)
+          SELECT $1,$2,$3,$4,$5,$6 WHERE NOT EXISTS(SELECT 1 FROM permission_grants WHERE school_id=$1 AND user_id=$2 AND class_id=$3 AND subject_id IS NOT DISTINCT FROM $4::uuid AND permission=$5 AND revoked_at IS NULL AND (ends_at IS NULL OR ends_at>now()))`,[r.auth.schoolId,userId,classId,subjectScope,permission,r.auth.userId]);
+      }
       await audit(c,r.auth,'TEACHER_ASSIGNED','class',classId,{userId,subjectId,permissions});
       return {ok:true};
     });

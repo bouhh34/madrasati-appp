@@ -132,6 +132,7 @@ async function logout(){
       if(e.status!==403)throw e;
       await refreshCsrf();await api('/api/auth/logout',{method:'POST'});
     }
+    if(typeof BroadcastChannel!=='undefined'){const channel=new BroadcastChannel('ma-madrassa-session');channel.postMessage('logout');channel.close();}
     csrf='';me=null;schoolView=false;currentClasses=[];currentSubjects=[];currentStudents=[];currentGrades=[];
     document.querySelectorAll('input,textarea').forEach(el=>{el.value='';});
     $('modalBody')?.replaceChildren();hideAll();
@@ -1312,6 +1313,9 @@ if(
   }
 
   async function openAttendance(){
+    if(!allowAttendanceScopeChange())return;
+    attendanceEditor.scope=null;
+    $("attendanceGrid").textContent=tr("اختر قسمًا");
     navigate(
       "attendance"
     );
@@ -1358,227 +1362,7 @@ if(
     }
   }
 
-  async function loadAttendance(){
-    const classId=
-      $("attendanceClass")
-        .value;
-
-    const date=
-      $("attendanceDate")
-        .value;
-
-    if(
-      !classId||
-      !date
-    ){
-      $("attendanceGrid")
-        .textContent=
-          "اختر قسمًا وتاريخًا.";
-
-      return;
-    }
-
-    $("attendanceGrid")
-      .textContent=
-        "جارٍ تحميل الحضور…";
-
-    try{
-      const d=await api(
-        `/api/attendance/students?`+
-        `classId=${encodeURIComponent(
-          classId
-        )}&`+
-        `date=${encodeURIComponent(
-          date
-        )}`
-      );
-
-      const students=
-        d.students||[];
-
-      if(
-        !students.length
-      ){
-        $("attendanceGrid")
-          .textContent=
-            "لا يوجد تلاميذ في هذا القسم.";
-
-        return;
-      }
-
-      $("attendanceGrid")
-        .innerHTML=
-          students.map(
-            st=>`
-              <div
-                class="attendance-row"
-                data-attendance-student=
-                  "${st.student_id}">
-
-                <div class="student-name">
-                  <b>
-                    ${escapeHtml(
-                      st.full_name
-                    )}
-                  </b>
-
-                  <small>
-                    ${escapeHtml(
-                      st.student_uid||""
-                    )}
-                  </small>
-                </div>
-
-                <div
-                  class="attendance-actions">
-
-                  ${
-                    Object.entries(
-                      attendanceLabels
-                    ).map(
-                      ([status,label])=>`
-                        <button
-                          type="button"
-                          class=
-                            "attendance-btn ${
-                              st.status===status
-                                ?"active"
-                                :""
-                            }"
-                          data-attendance-status=
-                            "${status}">
-                          ${label}
-                        </button>
-                      `
-                    ).join("")
-                  }
-                </div>
-
-                <input
-                  class="attendance-note"
-                  maxlength="500"
-                  placeholder=
-                    "ملاحظة اختيارية"
-                  value="${
-                    escapeHtml(
-                      st.note||""
-                    )
-                  }">
-              </div>
-            `
-          ).join("");
-
-      qsa(
-        "[data-attendance-status]"
-      ).forEach(
-        btn=>{
-          btn.onclick=
-            ()=>saveAttendance(
-              btn
-            );
-        }
-      );
-
-      const counts={
-        PRESENT:0,
-        ABSENT:0,
-        LATE:0,
-        EXCUSED:0
-      };
-
-      students.forEach(
-        st=>{
-          if(
-            counts[
-              st.status
-            ]!==undefined
-          ){
-            counts[
-              st.status
-            ]++;
-          }
-        }
-      );
-
-      $("attendanceSummary")
-        .textContent=
-          `${students.length} تلميذ · `+
-          `حاضر ${counts.PRESENT} · `+
-          `غائب ${counts.ABSENT} · `+
-          `متأخر ${counts.LATE}`;
-
-    }catch(e){
-      $("attendanceGrid")
-        .textContent=
-          e.status===403
-            ?"لا تملك صلاحية الحضور لهذا القسم."
-            :"تعذر تحميل الحضور.";
-    }
-  }
-
-  async function saveAttendance(
-    button
-  ){
-    const row=
-      button.closest(
-        "[data-attendance-student]"
-      );
-
-    const studentId=
-      row.dataset
-        .attendanceStudent;
-
-    const classId=
-      $("attendanceClass")
-        .value;
-
-    const date=
-      $("attendanceDate")
-        .value;
-
-    const status=
-      button.dataset
-        .attendanceStatus;
-
-    const note=
-      row
-        .querySelector(
-          ".attendance-note"
-        )
-        .value
-        .trim()||null;
-
-    try{
-      await api(
-        `/api/attendance/${
-          encodeURIComponent(
-            studentId
-          )
-        }`,
-        {
-          method:"PUT",
-          body:JSON.stringify({
-            classId,
-            date,
-            status,
-            note
-          })
-        }
-      );
-
-      toast(
-        "تم حفظ الحضور"
-      );
-            await loadAttendance();
-
-    }catch(e){
-      toast(
-        e.status===403
-          ?"لا تملك صلاحية تعديل الحضور"
-          :"تعذر حفظ الحضور"
-      );
-    }
-  }
+  async function loadAttendance(){return loadAttendanceWorkflow();}
 
   createAttendancePage();
 
@@ -3373,7 +3157,7 @@ if(
 
                 السنة الدراسية:
                 ${escapeHtml(
-                  school.academic_year||
+                  student.academic_year||
                   "—"
                 )}
               </div>
@@ -3422,9 +3206,7 @@ if(
                   النتيجة العامة:
                 </b>
 
-                ${reportDecision(
-                  annual
-                )}
+                ${report.completeness?.ANNUAL?.complete===false?"نتائج غير مكتملة":reportDecision(annual)}
               </div>
 
             </div>
@@ -3634,11 +3416,7 @@ if(
           </div>
         `);
 
-        $("finalPrintReport")
-          .onclick=
-          ()=>{
-            window.print();
-          };
+        $("finalPrintReport").onclick=()=>printStudentReport(student.id);
 
         $("finalShareReport")
           .onclick=

@@ -46,6 +46,7 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
       }
     });
     await t.test('teacher can grade assigned subject but cannot manage school',async()=>{
+      assert.equal((await request('GET',`/api/classes/${classA.id}/attendance/roster?date=2026-09-14`,undefined,te)).statusCode,403);
       assert.equal((await request('POST','/api/director/classes',{name:'Denied'},te)).statusCode,403);
       const r=await request('POST','/api/grades',{classId:classA.id,studentId:studentA.id,subjectId:subject.id,term:'T1',score:12},te);assert.equal(r.statusCode,201,r.body);
       const report=await request('GET',`/api/students/${studentA.id}/report`,undefined,d);assert.equal(report.statusCode,200,report.body);assert.equal(report.json().report.termAverages.T1,12);
@@ -118,6 +119,22 @@ test('HTTP security and existing school flows with real PostgreSQL RLS',async t=
       const report=await request('GET',`/api/students/${studentA.id}/report`,undefined,d);
       assert.equal(report.json().report.subjects.length,2);assert.equal(report.json().report.completeness.T1.complete,false);
       assert.equal(report.json().report.termAverages.T1,14);
+    });
+    await t.test('bulk attendance preserves unrecorded days, rejects stale batches and isolates schools',async()=>{
+      const base=`/api/classes/${classA.id}/attendance`,date='2026-09-14';
+      const roster=await request('GET',`${base}/roster?date=${date}`,undefined,te);assert.equal(roster.statusCode,200,roster.body);
+      assert.equal(roster.json().canWrite,true);assert.ok(roster.json().students.every(s=>s.status===null&&s.version===0));
+      assert.equal((await request('GET',`/api/classes/${classB.id}/attendance/roster?date=${date}`,undefined,te)).statusCode,404);
+      const rows=roster.json().students.map((s,i)=>({studentId:s.student_id,status:i?'ABSENT':'PRESENT',version:0,note:null}));
+      const denied=await request('PUT',`${base}/bulk`,{date,attendance:[rows[0],{studentId:studentB.id,status:'ABSENT',version:0}]},d);assert.equal(denied.statusCode,404,denied.body);
+      assert.equal((await request('GET',`${base}/report?from=${date}&to=${date}`,undefined,d)).json().recordedDays,0);
+      const saved=await request('PUT',`${base}/bulk`,{date,attendance:rows},te);assert.equal(saved.statusCode,200,saved.body);
+      const stale=await request('PUT',`${base}/bulk`,{date,attendance:[{...rows[0],status:'LATE',version:1},rows[1]]},te);assert.equal(stale.statusCode,409,stale.body);
+      const report=await request('GET',`${base}/report?from=2026-09-01&to=2026-09-30`,undefined,d);assert.equal(report.statusCode,200,report.body);
+      assert.deepEqual(report.json().totals,{PRESENT:1,ABSENT:1,LATE:0,EXCUSED:0});assert.equal(report.json().recordedDays,1);
+      assert.equal((await request('GET',`${base}/report?from=2026-09-30&to=2026-09-01`,undefined,d)).statusCode,400);
+      assert.equal((await request('PUT',`${base}/bulk`,{date:'2026-02-30',attendance:rows},te)).statusCode,400);
+      assert.equal((await request('GET',`${base}/roster?date=${date}`,undefined,p)).statusCode,400);
     });
     await t.test('disabled school cannot be selected or used with existing session',async()=>{
       const r=await request('PATCH',`/api/platform/schools/${schoolA.id}/status`,{active:false},p);assert.equal(r.statusCode,200,r.body);
