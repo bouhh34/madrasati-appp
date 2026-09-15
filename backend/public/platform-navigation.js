@@ -12,9 +12,19 @@ async function loadPlatformAccounts(){
   try{
     const query=new URLSearchParams({q:$('platformAccountQuery').value,role:$('platformAccountRole').value,offset:String(platformAccountOffset)});
     const data=await api(`/api/platform/accounts?${query}`);
-    root.innerHTML=data.accounts.map(u=>`<div class="mini-card"><div><b>${escapeHtml(u.full_name)}</b><small>${escapeHtml(u.login)} · ${escapeHtml(platformValue(u.account_state))}</small><small>${escapeHtml(u.schools.join(' · '))}</small></div><span>${escapeHtml(u.roles.map(platformValue).join(' · '))}</span></div>`).join('')||st('لا توجد حسابات مطابقة.','Aucun compte correspondant.');
+    root.innerHTML=data.accounts.map(u=>`<div class="mini-card"><div><b>${escapeHtml(u.full_name)}</b><small>${escapeHtml(u.login)} · ${escapeHtml(platformValue(u.account_state))}</small><small>${escapeHtml(u.schools.join(' · '))}</small></div><span>${escapeHtml(u.roles.map(platformValue).join(' · '))}${u.roles.includes('DIRECTOR')&&!u.roles.includes('SUPER_ADMIN')?`<br><button type="button" class="ghost compact" data-platform-reset-user="${u.id}">${st('رمز استرجاع','Code de récupération')}</button>`:''}</span></div>`).join('')||st('لا توجد حسابات مطابقة.','Aucun compte correspondant.');
+    qsa('[data-platform-reset-user]').forEach(b=>b.onclick=()=>issuePlatformDirectorResetCode(b.dataset.platformResetUser));
     $('platformAccountsPrevious').disabled=platformAccountOffset===0;$('platformAccountsNext').disabled=!data.hasMore;
   }catch{root.textContent=st('تعذّر تحميل الحسابات. أعد المحاولة.','Chargement impossible. Réessayez.');}
+}
+async function issuePlatformDirectorResetCode(userId){
+  try{
+    const d=await api(`/api/platform/accounts/${encodeURIComponent(userId)}/reset-code`,{method:'POST'});
+    showModal(`<h3>${st('رمز استرجاع لمرة واحدة','Code de récupération à usage unique')}</h3><p class="hint">${st(`صالح لمدة ${d.expiresInMinutes} دقيقة. استخدمه في شاشة «نسيت كلمة المرور؟».`,`Valable ${d.expiresInMinutes} minutes. Utilisez-le dans « Mot de passe oublié ? ».`)}</p><div class="secret-result">${escapeHtml(d.code)}</div>`);
+  }catch(e){
+    const message=e.data?.error==='DIRECTOR_RECOVERY_ONLY'?st('الاسترجاع من هنا مخصص لحسابات مديري المدارس فقط.','Cette récupération est réservée aux comptes directeurs.'):st('تعذر إنشاء رمز الاسترجاع. أعد المحاولة.','Impossible de créer le code de récupération. Réessayez.');
+    toast(message);
+  }
 }
 qsa('[data-platform-nav]').forEach(b=>b.onclick=()=>platformSection(b.dataset.platformNav));
 $('accountLogout').onclick=logout;
