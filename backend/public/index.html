@@ -104,12 +104,15 @@
     <div class="family-section-heading"><strong>1. اختر القسم والفترة ونوع الرسالة</strong><button class="ghost compact" id="familyRefresh" type="button">تحديث</button></div>
     <div class="family-controls">
       <label>القسم<select id="familyClass"></select></label>
+      <label>المادة أو الترتيب العام<select id="familySubject"><option value="">ترتيب جميع مواد القسم</option></select></label>
       <label>الفترة<select id="familyTerm"><option value="T1">الفصل الأول</option><option value="T2">الفصل الثاني</option><option value="T3">الفصل الثالث</option><option value="ANNUAL">السنوي</option></select></label>
       <label>نوع الرسالة<select id="familyKind"><option value="results">📊 النتائج والترتيب</option><option value="award">🏅 شهادة تكريم وإعلان</option><option value="attendance">📅 متابعة الحضور</option><option value="notice">📣 إشعار للولي</option></select></label>
     </div>
     <div id="familyAwardOptions" class="hidden"><label>عنوان الشهادة<input id="familyAwardTitle" maxlength="110" placeholder="شهادة تميز وتقدير"></label></div>
     <label>سبب التكريم أو نص الإشعار<input id="familyNote" maxlength="700" placeholder="مثال: التفوق، المثابرة، موعد اجتماع أولياء الأمور…"></label>
     <p class="family-help" id="familyMessageHelp">الرسالة تفتح في واتساب ولا تُرسل تلقائيًا.</p>
+    <button class="family-secondary" id="familyGroupShare" type="button">📣 مشاركة إعلان عام في مجموعة واتساب</button>
+    <p class="family-help">المجموعة للإعلانات العامة فقط، وليست لنشر النتائج الفردية أو بيانات التلاميذ.</p>
   </div>
   <div class="family-panel panel">
     <div class="family-section-heading"><strong>2. اختر ولي الأمر</strong><span class="family-pill">واتساب فردي</span></div>
@@ -118,7 +121,7 @@
     <div id="familyList" class="family-list"></div>
   </div>
   <div class="family-panel panel">
-    <div class="family-section-heading"><strong>🏆 ترتيب التلاميذ</strong><span class="family-pill">النتائج المكتملة فقط</span></div>
+    <div class="family-section-heading"><strong>🏆 ترتيب التلاميذ</strong><span class="family-pill" id="familyRankScope">النتائج المكتملة فقط</span></div>
     <div id="familyRanks" class="family-ranks"></div>
     <p class="family-help">الترتيب يعتمد على النتائج المحفوظة والمكتملة؛ ولا تُمنح رتبة نهائية لمعدلات ناقصة.</p>
   </div>
@@ -249,6 +252,6 @@
 <script src="/academic-workflows.js?v=20261022-2319" defer></script>
 <script src="/attendance-workflows.js?v=20261022-2319" defer></script>
 <script src="/print-actions.js?v=20261022-2319" defer></script>
-<script src="/family-engagement.js?v=20261022-2345" defer></script>
+<script src="/family-engagement.js?v=20261022-2350" defer></script>
 </body>
 </html>
