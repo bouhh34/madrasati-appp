@@ -734,3 +734,25 @@
   #page-admin .structure-grid{gap:12px;margin-block:12px}
   #page-admin .structure-checks{max-height:240px;overflow-y:auto;overflow-x:clip}
 }
+
+
+/* Private-school branding: neutral school mark until an approved custom header is uploaded. */
+.school-identity-mark{
+  display:grid;place-items:center;flex:none;
+  width:76px;height:76px;margin-inline:auto;border-radius:22px;
+  border:2px solid #158574;
+  background:linear-gradient(140deg,#effaf6,#dcefe7);
+  color:#0a6b60;font-size:2rem;font-weight:900;
+}
+.private-school-preview{display:grid;justify-items:center;gap:8px}
+.private-school-preview p{margin:0;line-height:1.7;text-align:center;color:var(--muted)}
+.final-report-logo .school-identity-mark{width:84px;height:84px;border-radius:20px}
+@media screen and (max-width:700px){
+  .final-report-logo .school-identity-mark{width:62px;height:62px;border-radius:15px;font-size:1.5rem}
+  #page-exams input[type="date"],#page-exams input[type="time"]{
+    color-scheme:light;color:var(--ink);direction:ltr;text-align:left;
+    font-size:16px;min-height:52px;padding-inline:12px;
+  }
+  #page-exams .exam-field-help{display:block;font-size:.78rem;color:#59756d;font-weight:500;margin-top:5px}
+  #page-exams .content-grid,#page-exams .panel{min-width:0;max-width:100%}
+}
