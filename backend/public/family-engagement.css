@@ -1,0 +1,76 @@
+/* Madrasati family hub — compact, vivid, mobile first. */
+.family-hero{padding:24px;border-radius:24px;background:linear-gradient(135deg,#074f59 0%,#087d73 53%,#119782 100%);color:white;box-shadow:0 17px 38px rgba(5,96,91,.20);margin-bottom:14px}
+.family-hero h2{font-size:clamp(1.3rem,4.6vw,1.9rem);line-height:1.4;margin:13px 0 8px;color:white}
+.family-hero p{color:#e0f8f0;margin:0 0 15px;line-height:1.7;font-size:.92rem}
+.family-hero-badge{display:inline-flex;align-items:center;border:1px solid #e5d49a55;background:#ffffff21;padding:7px 13px;border-radius:99px;font-size:.82rem;font-weight:800;color:#ffdf8c}
+.family-counts{font-size:.82rem;font-weight:800;background:#ffffff21;border:1px solid #ffffff3b;border-radius:10px;padding:9px 12px;display:inline-block}
+.family-panel{padding:19px!important;overflow:hidden;min-width:0}
+.family-section-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;font-size:1.04rem;color:#0d5553}
+.family-section-heading button{width:auto!important}
+.family-pill{display:inline-block;background:#f9eed3;color:#875d14;padding:7px 12px;border-radius:99px;font-size:.76rem;font-weight:800}
+.family-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.family-panel label{min-width:0;margin:8px 0;font-size:.86rem;font-weight:750}
+.family-panel input,.family-panel select{width:100%;min-height:48px;font-size:16px;border-radius:14px;border:1px solid #bcd5d1;background:#fff}
+.family-panel input:focus,.family-panel select:focus{border-color:#10a38b;outline:2px solid #21a3933f;box-shadow:none}
+.family-help,.family-warning,.family-status{font-size:.8rem;line-height:1.7;margin:9px 0;color:#617e78}
+.family-warning{color:#866522}
+.family-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.family-student{min-width:0;background:linear-gradient(155deg,#ffffff,#f2f9f7);border:1px solid #cde4df;border-radius:18px;padding:14px;display:grid;gap:10px}
+.family-student-head{display:flex;justify-content:space-between;align-items:start;gap:9px;min-width:0}
+.family-student-head strong{color:#0d4747;font-size:1rem;overflow-wrap:anywhere}
+.family-student-head small{display:block;color:#627d79;margin-top:4px;font-size:.72rem;overflow-wrap:anywhere}
+.family-results-chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+.family-score,.family-rank{padding:4px 8px;border-radius:9px;background:#d7f4e8;color:#086348;font-weight:900;font-size:.82rem;white-space:nowrap}
+.family-rank{background:#f9e8bd;color:#845d0d}
+.family-actions{display:flex;flex-wrap:wrap;gap:7px}
+.family-actions button{min-height:44px;border-radius:12px;padding:9px 12px;font:inherit;font-size:.86rem;font-weight:850;flex:1;white-space:normal}
+.family-whatsapp{border:0;color:white;background:linear-gradient(130deg,#078a68,#1aaa7f)}
+.family-whatsapp:disabled{background:#c1d3ce;color:#667e76;cursor:not-allowed}
+.family-secondary{color:#096c63;border:1px solid #a8d8ca;background:#e9f6ef;border-radius:12px;padding:10px 14px;font-weight:750;min-height:43px;cursor:pointer}
+.family-contact-edit{border-top:1px solid #dcece7;padding-top:8px}
+.family-contact-edit summary{cursor:pointer;color:#0b7666;font-weight:800;font-size:.84rem;padding:8px 0}
+.family-contact-edit form{padding:8px 0}
+.family-optin{display:flex!important;align-items:center;gap:10px;line-height:1.6;padding:10px 12px;border-radius:12px;background:#f4faf6;color:#1c6354;font-size:.82rem}
+.family-optin input{width:20px!important;min-height:20px!important;height:20px;flex:none;accent-color:#0c8a70}
+.family-ranks{display:grid;gap:7px}
+.family-position{display:grid;grid-template-columns:35px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid #d6e9e4;border-radius:12px;background:#f9fcfa}
+.family-position span{overflow-wrap:anywhere}
+.family-position strong{font-weight:850;color:#06755f}
+.family-place{display:grid;place-items:center;background:#0d796d;color:white;border-radius:10px;width:32px;height:32px}
+.family-position:nth-child(1) .family-place{background:#c49724;color:#fff}
+.family-position:nth-child(2) .family-place{background:#71869d}
+.family-position:nth-child(3) .family-place{background:#af7046}
+.family-certificate{box-sizing:border-box;max-width:770px;width:100%;min-height:480px;margin:auto;padding:40px 28px;border:6px double #c39a39;outline:2px solid #087f70;outline-offset:-17px;background:#fffdf6;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:12px;text-align:center;color:#0f4543;font-family:Tahoma,Arial,sans-serif}
+.family-cert-top{color:#b28627;letter-spacing:11px;font-size:18px}
+.family-cert-icon{font-size:56px}
+.family-cert-label{letter-spacing:.03em;color:#0e8f73;font-weight:bold;font-size:.86rem}
+.family-certificate h2{color:#986713;font-size:clamp(22px,4vw,33px);margin:10px 0 8px}
+.family-certificate h3{font-size:clamp(24px,5vw,38px);color:#065b51;margin:10px 0;border-bottom:2px solid #c7a75f;padding:0 18px 7px}
+.family-certificate p{margin:3px 0;line-height:1.8}
+.family-cert-footer{width:100%;margin-top:30px;display:flex;justify-content:space-between;gap:10px;font-size:.83rem;font-weight:700}
+.family-certificate small{color:#657d6f;font-size:.68rem;margin-top:10px}
+.family-print-actions{display:grid;gap:8px;margin-top:16px;text-align:center}
+.family-print-actions p{color:#617d78;line-height:1.6;font-size:.8rem;margin:0}
+@media(max-width:900px){.family-list{grid-template-columns:1fr}}
+@media(max-width:680px){
+  #page-family{min-width:0}
+  .family-hero{border-radius:19px;padding:18px}
+  .family-controls{grid-template-columns:1fr}
+  .family-panel{padding:14px!important}
+  .family-student-head{flex-wrap:wrap}
+  .family-cert-footer{flex-direction:column;align-items:center}
+  #appShell .bottom-nav.school-navigation{gap:1px}
+  #appShell .bottom-nav.school-navigation button{padding-inline:2px;font-size:1rem;min-width:0}
+  #appShell .bottom-nav.school-navigation span{font-size:.61rem;white-space:normal}
+  #page-admin .admin-grid,#page-admin #structurePanel{min-width:0}
+  #page-admin .admin-grid .panel{box-shadow:0 7px 18px #126d6021}
+}
+@media print{
+  body:has(#familyCertificate) > :not(#modal){display:none!important}
+  body:has(#familyCertificate) #modal{position:static!important;display:block!important;background:white!important;padding:0!important;overflow:visible!important;visibility:visible!important}
+  body:has(#familyCertificate) #modal .modal-card{position:static!important;display:block!important;box-shadow:none!important;border:0!important;max-height:none!important;overflow:visible!important;width:100%!important;padding:0!important;visibility:visible!important}
+  body:has(#familyCertificate) #modal *,body:has(#familyCertificate) #modal .modal-card *{visibility:visible!important}
+  body:has(#familyCertificate) .family-certificate{break-inside:avoid!important;outline-offset:-14px!important;min-height:165mm!important}
+  body:has(#familyCertificate) .family-print-actions,body:has(#familyCertificate) .modal-close{display:none!important}
+  @page{size:A4 portrait;margin:14mm}
+}
