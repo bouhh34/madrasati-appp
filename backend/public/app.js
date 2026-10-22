@@ -1510,7 +1510,11 @@ if(
 
             <input
               id="examDate"
-              type="date">
+              type="date"
+              dir="ltr"
+              required
+              aria-label="تاريخ الامتحان">
+            <small class="exam-field-help">اضغط على الخانة لاختيار اليوم من التقويم.</small>
           </label>
                     <div class="two">
             <label>
@@ -1518,7 +1522,10 @@ if(
 
               <input
                 id="examStart"
-                type="time">
+                type="time"
+                dir="ltr"
+                aria-label="وقت بداية الامتحان">
+              <small class="exam-field-help">مثال: 08:00</small>
             </label>
 
             <label>
@@ -1526,7 +1533,10 @@ if(
 
               <input
                 id="examEnd"
-                type="time">
+                type="time"
+                dir="ltr"
+                aria-label="وقت نهاية الامتحان">
+              <small class="exam-field-help">مثال: 10:00</small>
             </label>
           </div>
 
