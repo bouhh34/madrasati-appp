@@ -17,12 +17,24 @@ async function loadFamilyPanel(){
     cls.innerHTML=familyClasses.map(c=>`<option value="${familyEsc(c.id)}">${familyEsc(c.name)} · ${familyEsc(c.academic_year||"")}</option>`).join("");
     if(familyClasses.some(c=>c.id===before))cls.value=before;
     if(!familyClasses.length){familyEl("familyList").textContent=familyAr("لا توجد أقسام متاحة.","Aucune classe disponible.");familyEl("familyRanks").textContent="";status.textContent="";return;}
-    await refreshFamilyPanel();
+    await loadFamilySubjects();
   }catch(e){status.textContent=familyAr("تعذّر تحميل الأقسام. أعد المحاولة.","Chargement impossible.");}
   finally{familyBusy=false;}
 }
+async function loadFamilySubjects(){
+  const id=familyEl("familyClass").value,subject=familyEl("familySubject");
+  subject.innerHTML='<option value="">ترتيب جميع مواد القسم</option>';
+  if(!id)return;
+  try{
+    const d=await api("/api/classes/"+encodeURIComponent(id)+"/subjects");
+    subject.innerHTML='<option value="">ترتيب جميع مواد القسم</option>'+
+      (d.subjects||[]).map(x=>`<option value="${familyEsc(x.id)}">${familyEsc(x.name)}</option>`).join("");
+    if(!(me.roles||[]).includes("DIRECTOR")&&d.subjects?.length)subject.value=d.subjects[0].id;
+  }catch{}
+  await refreshFamilyPanel();
+}
 async function refreshFamilyPanel(){
-  const id=familyEl("familyClass").value,term=familyEl("familyTerm").value;
+  const id=familyEl("familyClass").value,term=familyEl("familyTerm").value,subjectId=familyEl("familySubject").value;
   if(!id)return;
   const status=familyEl("familyStatus");
   status.textContent=familyAr("جارٍ إعداد رسائل أولياء الأمور…","Préparation des messages…");
@@ -35,8 +47,8 @@ async function refreshFamilyPanel(){
     familyEl("familyList").replaceChildren();familyEl("familyRanks").replaceChildren();return;
   }
   try{
-    const results=await api("/api/classes/"+encodeURIComponent(id)+"/results?"+new URLSearchParams({term}));
-    if(results.scope==="CLASS")familyResults=results;
+    const results=await api("/api/classes/"+encodeURIComponent(id)+"/results?"+new URLSearchParams({...{term},...(subjectId?{subjectId}:{})}));
+    familyResults=results;
   }catch{} // subject-scoped teachers may not have class-wide ranking access
   renderFamilyPanel();
   status.textContent=familyAr(`عدد التلاميذ: ${familyRoster.length} • فتح واتساب يدوي من هاتفك؛ لا يتم الإرسال تلقائيًا.`,`Élèves : ${familyRoster.length} • Ouverture manuelle de WhatsApp.`);
@@ -49,12 +61,16 @@ function familyText(student,kind){
   if(kind==="results"){
     const r=familyResultFor(student.id);
     if(!r||!r.complete||r.average==null)return null;
+    const selectedSubject=familyEl("familySubject");
+    const singleSubject=!!selectedSubject.value;
+    const subjectName=selectedSubject.selectedOptions[0]?.textContent||"المادة";
     const label=term==="ANNUAL"?"المعدل السنوي":`معدل الفصل ${term.slice(1)}`;
+    const scoreLabel=singleSubject?`نتيجة مادة ${subjectName}`:"النتائج الدراسية";
     const scores=(r.report?.subjects||[]).map(x=>{
       const value=term==="ANNUAL"?x.annual:x.terms?.[term];
       return value==null?null:`• ${x.name}: ${value}/20`;
     }).filter(Boolean);
-    return intro+`*إشعار بنتائج دراسية مكتملة*\n${label}: *${r.average}/20*\nالترتيب: *${r.rank??"—"}* من ${familyResults?.results?.length||"—"}\n`+scores.join("\n")+
+    return intro+`*إشعار بنتائج ${scoreLabel} مكتملة*\n${label}: *${r.average}/20*\n${singleSubject?"ترتيب المادة":"ترتيب القسم"}: *${r.rank??"—"}* من ${familyResults?.results?.length||"—"}\n`+scores.join("\n")+
       "\n\nللاطلاع على الكشف الموثق يرجى الدخول إلى حساب ولي الأمر في مدرستي.\nمع تحيات إدارة المدرسة.";
   }
   if(kind==="award"){
@@ -69,6 +85,7 @@ function familyText(student,kind){
 }
 function renderFamilyPanel(){
   const kind=familyEl("familyKind").value,teacher=!(me.roles||[]).includes("DIRECTOR");
+  familyEl("familyRankScope").textContent=familyEl("familySubject").value?"ترتيب المادة • المكتمل فقط":"ترتيب القسم • المكتمل فقط";
   familyEl("familyAwardOptions").classList.toggle("hidden",kind!=="award");
   familyEl("familyMessageHelp").textContent=kind==="results"
     ?familyAr("تُرسل فقط النتائج المكتملة مع الترتيب الصحيح؛ النتائج غير المكتملة لا تُرسل كمعدل نهائي.","Seuls les résultats complets peuvent être partagés.")
@@ -133,11 +150,19 @@ function familyContactSubmit(event){
 }
 (function(){
   const box=familyEl("page-family");if(!box)return;
-  familyEl("familyClass").addEventListener("change",refreshFamilyPanel);
+  familyEl("familyClass").addEventListener("change",loadFamilySubjects);
+  familyEl("familySubject").addEventListener("change",refreshFamilyPanel);
   familyEl("familyTerm").addEventListener("change",refreshFamilyPanel);
   familyEl("familyKind").addEventListener("change",renderFamilyPanel);
   familyEl("familySearch").addEventListener("input",renderFamilyPanel);
   familyEl("familyRefresh").addEventListener("click",loadFamilyPanel);
+  familyEl("familyGroupShare").addEventListener("click",()=>{
+    const note=familyEl("familyNote").value.trim();
+    if(!note){toast("اكتب نص الإعلان العام أولًا.");familyEl("familyNote").focus();return;}
+    const cls=familyClasses.find(c=>c.id===familyEl("familyClass").value);
+    const msg=`*إعلان عام من ${me?.school?.name||"مدرستي"}*\nالقسم: ${cls?.name||"—"}\n\n${note}\n\nمع تحيات الإدارة.`;
+    window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+  });
   familyEl("familyList").addEventListener("submit",familyContactSubmit);
   familyEl("familyList").addEventListener("click",event=>{
     const send=event.target.closest("[data-family-open]");
