@@ -12,6 +12,7 @@
   <title>مدرستي | Ma Madrassa</title>
 
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
+<link rel="stylesheet" href="/family-engagement.css?v=20261022-2345">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -66,6 +67,7 @@
       <button class="nav-item" data-page="academic">▦ <span>الأقسام والنتائج</span></button>
       <button class="nav-item guardian-only hidden" data-page="children">♡ <span>أبنائي</span></button>
       <button class="nav-item director-only hidden" data-page="admin">⚙ <span>إدارة المدرسة</span></button>
+        <button class="nav-item family-staff-only hidden" data-page="family">♡ <span>الأولياء والتكريم</span></button>
       <button class="nav-item director-only hidden" data-page="security">🛡 <span>الأمان والسجل</span></button>
       <button class="nav-item" data-page="settings">◉ <span>الإعدادات</span></button>
     </nav>
@@ -91,6 +93,36 @@
       <article id="classResultsPanel" class="panel"></article>
     </section>
 
+<section id="page-family" class="page">
+  <div class="family-hero">
+    <div class="family-hero-badge">🎓 مدرستي • التواصل المدرسي</div>
+    <h2>النتائج والتكريم وإشعارات أولياء الأمور</h2>
+    <p>من هاتف المدير أو المعلم، مع رقم الولي المحفوظ وموافقته. الإعلان والتكريم في رسالة واحدة.</p>
+    <div class="family-counts" id="familyCounts">—</div>
+  </div>
+  <div class="family-panel panel">
+    <div class="family-section-heading"><strong>1. اختر القسم والفترة ونوع الرسالة</strong><button class="ghost compact" id="familyRefresh" type="button">تحديث</button></div>
+    <div class="family-controls">
+      <label>القسم<select id="familyClass"></select></label>
+      <label>الفترة<select id="familyTerm"><option value="T1">الفصل الأول</option><option value="T2">الفصل الثاني</option><option value="T3">الفصل الثالث</option><option value="ANNUAL">السنوي</option></select></label>
+      <label>نوع الرسالة<select id="familyKind"><option value="results">📊 النتائج والترتيب</option><option value="award">🏅 شهادة تكريم وإعلان</option><option value="attendance">📅 متابعة الحضور</option><option value="notice">📣 إشعار للولي</option></select></label>
+    </div>
+    <div id="familyAwardOptions" class="hidden"><label>عنوان الشهادة<input id="familyAwardTitle" maxlength="110" placeholder="شهادة تميز وتقدير"></label></div>
+    <label>سبب التكريم أو نص الإشعار<input id="familyNote" maxlength="700" placeholder="مثال: التفوق، المثابرة، موعد اجتماع أولياء الأمور…"></label>
+    <p class="family-help" id="familyMessageHelp">الرسالة تفتح في واتساب ولا تُرسل تلقائيًا.</p>
+  </div>
+  <div class="family-panel panel">
+    <div class="family-section-heading"><strong>2. اختر ولي الأمر</strong><span class="family-pill">واتساب فردي</span></div>
+    <label>بحث سريع عن تلميذ<input id="familySearch" placeholder="اسم التلميذ أو رقمه" autocomplete="off"></label>
+    <p class="family-status" id="familyStatus" role="status">اختر قسمًا للبدء</p>
+    <div id="familyList" class="family-list"></div>
+  </div>
+  <div class="family-panel panel">
+    <div class="family-section-heading"><strong>🏆 ترتيب التلاميذ</strong><span class="family-pill">النتائج المكتملة فقط</span></div>
+    <div id="familyRanks" class="family-ranks"></div>
+    <p class="family-help">الترتيب يعتمد على النتائج المحفوظة والمكتملة؛ ولا تُمنح رتبة نهائية لمعدلات ناقصة.</p>
+  </div>
+</section>
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
 
     <section id="page-admin" class="page">
@@ -98,7 +130,10 @@
       <div class="admin-grid">
         <article class="panel"><div class="panel-head"><h3>إضافة قسم</h3></div><label>السنة الدراسية<select id="newClassYear"></select></label><label>اسم القسم<input id="newClassName"></label><div class="two"><label>المستوى<input id="newClassLevel"></label><label>الشعبة<input id="newClassSection"></label></div><button id="createClassBtn" class="primary">إنشاء القسم</button></article>
         <article class="panel"><div class="panel-head"><h3>إضافة مادة</h3></div><label>اسم المادة<input id="newSubjectName"></label><div class="two"><label>المعامل<input id="newSubjectCoeff" type="number" step="0.01" value="1"></label><label>الدرجة القصوى<input id="newSubjectMax" type="number" step="0.01" value="20"></label></div><button id="createSubjectBtn" class="primary">إضافة المادة</button></article>
-        <article class="panel"><div class="panel-head"><h3>إضافة تلميذ</h3></div><label>القسم<select id="studentClassSelect" required><option value="">اختر القسم</option></select></label><label>الاسم الكامل<input id="studentName" required minlength="2" maxlength="180" autocomplete="off" placeholder="اسم التلميذ الكامل"></label><div class="two"><label>رقم التلميذ <span class="field-hint">مطلوب وفريد</span><input id="studentUid" required maxlength="80" autocomplete="off" placeholder="مثال: 2026-001" inputmode="text"></label><label>الجنس<select id="studentGender"><option value="">—</option><option value="M">ولد</option><option value="F">بنت</option></select></label></div><button id="createStudentBtn" class="primary">إضافة التلميذ</button></article>
+        <article class="panel"><div class="panel-head"><h3>إضافة تلميذ</h3></div><label>القسم<select id="studentClassSelect" required><option value="">اختر القسم</option></select></label><label>الاسم الكامل<input id="studentName" required minlength="2" maxlength="180" autocomplete="off" placeholder="اسم التلميذ الكامل"></label><div class="two"><label>رقم التلميذ <span class="field-hint">اختياري — يُنشأ تلقائيًا</span><input id="studentUid" maxlength="80" autocomplete="off" placeholder="تلقائي عند تركه فارغًا" inputmode="text"></label><label>الجنس<select id="studentGender"><option value="">—</option><option value="M">ولد</option><option value="F">بنت</option></select></label></div><label>واتساب ولي الأمر (اختياري)<input id="studentGuardianPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="مثال: 22212345678 أو 12345678"></label>
+        <label class="family-optin"><input id="studentGuardianConsent" type="checkbox"> وافق ولي الأمر على تلقي إشعارات المدرسة عبر واتساب</label>
+        <button id="createStudentBtn" class="primary">+ حفظ التلميذ وإضافة التالي</button>
+        <p class="hint">لا تحتاج إلى إدخال رقم التلميذ يدويًا. يحتفظ التطبيق بالقسم المختار للتسجيل السريع.</p></article>
         <article class="panel"><div class="panel-head"><h3>دعوة آمنة</h3></div><label>الدور<select id="inviteRole"><option value="TEACHER">معلم</option>
 <option value="ADMIN">إداري</option>
 <option value="GUARDIAN">ولي تلميذ</option>
@@ -202,7 +237,7 @@
   </main>
 
   <nav class="bottom-nav platform-navigation"> <button data-platform-nav="overview">الإحصائيات</button><button data-platform-nav="schools">المدارس والمديرون</button><button data-platform-nav="accounts">الحسابات</button></nav>
-  <nav class="bottom-nav school-navigation"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">▦<span>النتائج</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
+  <nav class="bottom-nav school-navigation"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">▦<span>النتائج</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="family" class="family-staff-only hidden">♡<span>الأولياء</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
@@ -214,5 +249,6 @@
 <script src="/academic-workflows.js?v=20261022-2319" defer></script>
 <script src="/attendance-workflows.js?v=20261022-2319" defer></script>
 <script src="/print-actions.js?v=20261022-2319" defer></script>
+<script src="/family-engagement.js?v=20261022-2345" defer></script>
 </body>
 </html>
