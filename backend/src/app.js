@@ -17,6 +17,7 @@ import { tokenHash,safeEqualText,isMutation } from "./security.js";
 import { hasRole } from "./permissions.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerDirectorRoutes } from "./routes/director.js";
+import { registerFamilyWhatsappRoutes } from "./routes/familyWhatsapp.js";
 import { registerAcademicRoutes } from "./routes/academic.js";
 import { registerBrandingRoutes } from "./routes/branding.js";
 import { registerProductRoutes } from "./routes/product.js";
