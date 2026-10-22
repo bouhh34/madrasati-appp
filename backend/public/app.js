@@ -148,9 +148,9 @@ function renderPlatformProfile(){
   $('roleSwitcher')?.classList.add('hidden');
 }
 
-function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const pureGuardian=roles.includes("GUARDIAN")&&!roles.includes("DIRECTOR")&&!roles.includes("TEACHER");qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
+function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const isStaff=roles.includes("DIRECTOR")||roles.includes("TEACHER");qsa(".family-staff-only").forEach(x=>x.classList.toggle("hidden",!isStaff));const pureGuardian=roles.includes("GUARDIAN")&&!isStaff;qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
 function renderProfile(){const school=me.school||{};$("hello").textContent=me.fullName||me.login;$("avatar").textContent=(me.fullName||"م").trim().charAt(0);$("roleText").textContent=(me.roles||[]).map(r=>({DIRECTOR:"مدير",ADMIN:"إداري",TEACHER:"معلم",GUARDIAN:"ولي تلميذ"}[r]||r)).join(" • ");$("schoolNameSide").textContent=school.name||"—";$("schoolTypeBadge").textContent=school.school_type==="PRIVATE"?"مدرسة خصوصية":"مدرسة عمومية";$("profileName").textContent=me.fullName||"—";$("profileRoles").textContent=$("roleText").textContent;$("profileSchool").textContent=school.name||"—"}
-function navigate(page){if(!me)return;if(me.isSuperAdmin&&!schoolView)page="super-admin";else if(page==="super-admin")page="home";qsa(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));qsa("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const titles={"super-admin":locale==="fr"?"Administration de la plateforme":"إدارة منصة مدرستي",home:"الرئيسية",academic:"الأقسام والنتائج",children:"أبنائي",admin:"إدارة المدرسة",security:"الأمان والسجل",settings:"الإعدادات"};$("pageTitle").textContent=tr(titles[page]||"مدرستي");if(page==="admin"){loadUsers();loadStructure();}if(page==="security")loadAudit();if(page==="children")loadChildren();if(page==="settings")loadBranding()}
+function navigate(page){if(!me)return;if(me.isSuperAdmin&&!schoolView)page="super-admin";else if(page==="super-admin")page="home";qsa(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));qsa("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const titles={"super-admin":locale==="fr"?"Administration de la plateforme":"إدارة منصة مدرستي",home:"الرئيسية",academic:"الأقسام والنتائج",children:"أبنائي",admin:"إدارة المدرسة",security:"الأمان والسجل",family:"الأولياء والتكريم",settings:"الإعدادات"};$("pageTitle").textContent=tr(titles[page]||"مدرستي");if(page==="admin"){loadUsers();loadStructure();}if(page==="family"){loadFamilyPanel();}if(page==="security")loadAudit();if(page==="children")loadChildren();if(page==="settings")loadBranding()}
 async function loadDirectorHome(){try{const d=await api("/api/director/overview");$("metricClasses").textContent=d.classes;$("metricStudents").textContent=d.students;$("metricSubjects").textContent=d.subjects;$("metricUsers").textContent=d.users}catch{}}
 async function loadClasses(){try{const d=await api("/api/classes");currentClasses=d.classes||[];$("metricClasses").textContent=currentClasses.length;const opts='<option value="">'+tr("اختر قسمًا")+'</option>'+currentClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.academic_year||"")}</option>`).join("");$("classSelect").innerHTML=opts;$("studentClassSelect").innerHTML=opts;$("inviteClass").innerHTML='<option value="">'+tr("بدون قسم محدد")+'</option>'+currentClasses.map(c=>`<option value="${c.id}">${escapeHtml(c.name)} · ${escapeHtml(c.academic_year||"")}</option>`).join("");$("homeClasses").classList.toggle("empty",!currentClasses.length);$("homeClasses").innerHTML=currentClasses.length?currentClasses.slice(0,8).map(c=>`<div class="mini-card"><div><b>${escapeHtml(c.name)}</b><small>${escapeHtml(c.level||"")}</small></div><button data-open-class="${c.id}">فتح</button></div>`).join(""):tr("لا توجد أقسام متاحة بعد.");qsa("[data-open-class]").forEach(b=>b.onclick=()=>{$("classSelect").value=b.dataset.openClass;navigate("academic");loadAcademicScope()})}catch{}}
 async function loadSubjectsForClass(classId){if(!classId){currentSubjects=[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>';return}try{const d=await api(`/api/classes/${encodeURIComponent(classId)}/subjects`);currentSubjects=d.subjects||[];$("subjectSelect").innerHTML='<option value="">'+tr("اختر مادة")+'</option>'+currentSubjects.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}catch{currentSubjects=[]}}
@@ -165,25 +165,20 @@ async function createSubject(){try{await api("/api/director/subjects",{method:"P
 async function createStudent(){
   const classField=$("studentClassSelect"),nameField=$("studentName"),uidField=$("studentUid"),button=$("createStudentBtn");
   const classId=classField.value,fullName=nameField.value.trim(),studentUid=uidField.value.trim();
-  if(!classId){toast(st("اختر قسم التلميذ أولًا.","Choisissez d’abord une classe."));classField.focus();return;}
-  if([...fullName].length<2){toast(st("أدخل الاسم الكامل للتلميذ (حرفان على الأقل).","Saisissez le nom complet de l’élève."));nameField.focus();return;}
-  if(!studentUid){toast(st("رقم التلميذ مطلوب، ويجب أن يكون فريدًا. مثال: 2026-001.","Le numéro de l’élève est obligatoire et doit être unique."));uidField.focus();return;}
-  if(studentUid.length>80){toast(st("رقم التلميذ طويل جدًا.","Le numéro de l’élève est trop long."));uidField.focus();return;}
+  const guardianPhone=$("studentGuardianPhone").value.trim(),guardianConsent=$("studentGuardianConsent").checked;
+  if(!classId){toast(st("اختر القسم أولًا.","Choisissez d’abord une classe."));classField.focus();return;}
+  if([...fullName].length<2){toast(st("اكتب الاسم الكامل للتلميذ.","Saisissez le nom complet."));nameField.focus();return;}
+  if(guardianConsent&&!guardianPhone){toast(st("أدخل رقم ولي الأمر قبل تفعيل الموافقة.","Saisissez le numéro du tuteur."));return;}
   button.disabled=true;
   try{
-    await api("/api/director/students",{method:"POST",body:JSON.stringify({classId,fullName,studentUid,gender:$("studentGender").value||null})});
-    nameField.value="";uidField.value="";
-    toast(st("تمت إضافة التلميذ بنجاح.","Élève ajouté avec succès."));
-    await loadDirectorHome();
+    const d=await api("/api/director/students",{method:"POST",body:JSON.stringify({classId,fullName,studentUid,gender:$("studentGender").value||null,guardianPhone,guardianConsent})});
+    nameField.value="";uidField.value="";$("studentGuardianPhone").value="";$("studentGuardianConsent").checked=false;
+    toast(st("تم حفظ التلميذ. الرقم: ","Élève ajouté. Nº : ")+(d.student_uid||studentUid));
+    await Promise.allSettled([loadDirectorHome(),loadStructure()]);
+    nameField.focus();
   }catch(e){
-    const errors={
-      INVALID_STUDENT:st("تحقق من القسم والاسم ورقم التلميذ.","Vérifiez la classe, le nom et le numéro."),
-      STUDENT_EXISTS:st("رقم التلميذ موجود مسبقًا. استخدم رقمًا مختلفًا.","Ce numéro d’élève existe déjà."),
-      INVALID_CLASS:st("القسم غير صالح أو لم يعد متاحًا. اختر قسمًا نشطًا.","Cette classe n’est plus disponible."),
-      ACCESS_DENIED:st("ليست لديك صلاحية لإضافة تلميذ.","Vous n’avez pas le droit d’ajouter un élève."),
-      DIRECTOR_ONLY:st("إضافة التلاميذ متاحة لحساب المدير.","Seul un directeur peut ajouter un élève.")
-    };
-    toast(errors[e.data?.error]||(e.status===403?st("انتهت صلاحية العملية. حدّث الصفحة وأعد المحاولة.","Actualisez la page et réessayez."):st("لم تُضف بيانات التلميذ. تحقق من اتصالك ثم حاول مجددًا.","L’élève n’a pas été ajouté. Vérifiez votre connexion.")));
+    const errors={INVALID_STUDENT:"تحقق من الاسم ورقم الولي إن أُدخل.",STUDENT_EXISTS:"رقم التلميذ مستخدم مسبقًا.",INVALID_CLASS:"القسم غير صالح. حدّث الصفحة."};
+    toast(errors[e.data?.error]||(e.status===403?"ليست لديك صلاحية لإضافة تلميذ.":"تعذّر الحفظ. تحقق من البيانات واتصالك."));
   }finally{button.disabled=false;}
 }
 const permissionLabels={CLASS_READ:"قراءة القسم",STUDENT_READ:"قراءة التلاميذ",STUDENT_WRITE:"تعديل التلاميذ",SUBJECT_READ:"قراءة المادة",GRADE_READ:"قراءة الدرجات",GRADE_WRITE:"إدخال الدرجات",REPORT_READ:"قراءة التقارير",ATTENDANCE_READ:"قراءة الحضور",ATTENDANCE_WRITE:"تسجيل الحضور والغياب",EXAM_READ:"قراءة جدول الامتحانات",EXAM_WRITE:"إدارة جدول الامتحانات",DOCUMENT_READ:"قراءة الوثائق",DOCUMENT_WRITE:"إدارة الوثائق"};
