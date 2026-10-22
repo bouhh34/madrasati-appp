@@ -95,3 +95,7 @@ bdi{unicode-bidi:isolate;direction:ltr}
   body:not(.print-ready) #printContent{display:none!important}
   body:not(.print-ready)::after{content:"التقرير غير جاهز للطباعة. / Rapport non prêt."}
 }
+
+
+/* School identity used for private-school reports without an uploaded header. */
+.logo-row .school-identity-mark{display:inline-grid;place-items:center;box-sizing:border-box;width:17mm;height:17mm;border:0.4mm solid #177d6b;border-radius:4mm;background:#edf8f4;color:#126a5c;font:bold 18pt Tahoma,Arial,sans-serif;line-height:1}
