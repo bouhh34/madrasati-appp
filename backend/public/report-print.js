@@ -27,6 +27,11 @@ function studentName(student,lang){return localizedValue(student,'full_name',lan
 function schoolName(school,lang){return localizedValue(school,'name',lang);}
 function header(school,year,custom,lang,title){
   const wilaya=localizedValue(school,'wilaya',lang),moughataa=localizedValue(school,'moughataa',lang),inspection=localizedValue(school,'inspection',lang);
+  const privateSchool=school?.school_type==='PRIVATE';
+  const schoolSymbol=esc((schoolName(school,lang)||'م').trim().slice(0,1)||'م');
+  const emblem=privateSchool
+    ?(custom?`<img class="school-emblem" src="/api/branding/header" alt="${label(lang,'شعار المدرسة','Logo de l’école')}">`:`<span class="school-identity-mark" aria-label="${label(lang,'رمز المدرسة','Symbole de l’école')}">${schoolSymbol}</span>`)
+    :`<img src="/assets/official-logo.png" alt="${label(lang,'شعار الدولة','Emblème national')}">`;
   return `<table class="official-header"><tbody><tr>
     <td class="authority">
       <p><b>${label(lang,'الجمهورية الإسلامية الموريتانية','République Islamique de Mauritanie')}</b></p>
@@ -37,7 +42,7 @@ function header(school,year,custom,lang,title){
     </td>
     <td class="emblems">
       <div class="bismillah">${label(lang,'بسم الله الرحمن الرحيم','Au nom d’Allah, le Tout Miséricordieux, le Très Miséricordieux')}</div>
-      <div class="logo-row"><img src="/assets/official-logo.png" alt="${label(lang,'شعار الدولة','Emblème national')}">${custom?`<img class="school-emblem" src="/api/branding/header" alt="${label(lang,'شعار المدرسة','Logo de l’école')}">`:''}</div>
+      <div class="logo-row">${emblem}</div>
       <div class="header-title">${esc(title)}</div>
     </td>
     <td class="school-meta">
@@ -51,14 +56,15 @@ function studentCard(entry,school,{lang='ar',custom=false,period='T1',scope='CLA
   const {student,report,rank,totalStudents}=entry;
   const periodName=period==='ANNUAL'?label(lang,'السنوي','Annuel'):label(lang,`الفصل ${period.slice(1)}`,`Trimestre ${period.slice(1)}`);
   const complete=report.completeness?.[period]?.complete===true;
+  const annualComplete=report.completeness?.ANNUAL?.complete===true;
   const title=scope==='SUBJECT'?label(lang,'كشف نتائج المادة','Relevé de matière'):label(lang,'كشف الدرجات','Bulletin de notes');
   const className=localizedValue(student,'class_name',lang);
   return `<section class="half-report" data-student-id="${esc(student.id)}">${header(school,student.academic_year,custom,lang,title)}
     <div class="report-period">${periodName}</div>
     <div class="student-meta"><b>${label(lang,'الاسم','Nom')} : ${esc(studentName(student,lang))}</b><span>${label(lang,'القسم','Classe')} : ${esc(className||'—')}</span><span>${label(lang,'الرقم','Matricule')} : <bdi>${esc(student.student_uid)}</bdi></span></div>
     <table class="report-table"><thead><tr><th>${label(lang,'المادة','Matière')}</th><th>${label(lang,'المعامل','Coef.')}</th><th>T1</th><th>T2</th><th>T3</th><th>${label(lang,'السنوي','Annuel')}</th></tr></thead><tbody>
-    ${report.subjects.map(s=>`<tr><td>${esc(subjectName(s,lang))}</td><td>${esc(s.coefficient)}</td><td>${value(s.terms.T1)}</td><td>${value(s.terms.T2)}</td><td>${value(s.terms.T3)}</td><td>${value(s.annual)}</td></tr>`).join('')||`<tr><td colspan="6">${label(lang,'لا توجد مواد مرتبطة أو نتائج مسجلة','Aucune matière ou note enregistrée')}</td></tr>`}</tbody></table>
-    <div class="report-totals"><span>T1: ${value(report.termAverages.T1)} /20</span><span>T2: ${value(report.termAverages.T2)} /20</span><span>T3: ${value(report.termAverages.T3)} /20</span><span>${label(lang,'السنوي','Annuel')}: <bdi>${value(report.annualAverage)} /20</bdi></span><span>${label(lang,'الترتيب','Rang')}: <bdi>${rank??'—'} / ${totalStudents??'—'}</bdi></span></div>
+    ${report.subjects.map(s=>`<tr><td>${esc(subjectName(s,lang))}</td><td>${esc(s.coefficient)}</td><td>${value(s.terms.T1)}</td><td>${value(s.terms.T2)}</td><td>${value(s.terms.T3)}</td><td>${value(['T1','T2','T3'].every(t=>s.terms?.[t]!=null)?s.annual:null)}</td></tr>`).join('')||`<tr><td colspan="6">${label(lang,'لا توجد مواد مرتبطة أو نتائج مسجلة','Aucune matière ou note enregistrée')}</td></tr>`}</tbody></table>
+    <div class="report-totals"><span>T1: ${value(report.termAverages.T1)} /20</span><span>T2: ${value(report.termAverages.T2)} /20</span><span>T3: ${value(report.termAverages.T3)} /20</span><span>${label(lang,'السنوي','Annuel')}: <bdi>${value(annualComplete?report.annualAverage:null)} /20</bdi></span><span>${label(lang,'الترتيب','Rang')}: <bdi>${rank??'—'} / ${totalStudents??'—'}</bdi></span></div>
     <p class="completion-note">${complete?label(lang,'نتائج الفترة مكتملة.','Résultats complets pour la période.'):label(lang,'نتائج الفترة غير مكتملة؛ المعدلات المعروضة مؤقتة ولا يُعتمد ترتيب لها.','Résultats incomplets : moyennes provisoires, sans classement.')}${report.completeness?.ANNUAL?.complete?'':label(lang,' المعدل السنوي مؤقت حتى اكتمال الفصول الثلاثة.',' Moyenne annuelle provisoire jusqu’à la saisie des trois trimestres.')}</p>
     <footer class="signatures"><div class="signature">${label(lang,'توقيع المدير','Signature du directeur')}</div><div class="signature">${label(lang,'ختم المدرسة','Cachet de l’école')}</div></footer></section>`;
 }
