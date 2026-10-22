@@ -67,6 +67,7 @@ export async function buildApp(){
  await registerSuperAdminRoutes(app,{requireMutation});
   await registerPlatformRecoveryRoutes(app,{requireMutation});
   await registerDirectorRoutes(app,{requireDirector});
+  await registerFamilyWhatsappRoutes(app,{requireSession,requireMutation,requireDirector});
   await registerStructureRoutes(app,{requireSession,requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
   await registerAcademicWorkflows(app,{requireSession,requireMutation});
