@@ -162,7 +162,30 @@ async function loadChildren(){if(!(me.roles||[]).includes("GUARDIAN"))return;try
 async function openReport(studentId){try{const [d,b]=await Promise.all([api(`/api/students/${studentId}/report`),api("/api/branding")]);const s=d.student,r=d.report,school=me.school||{};const custom=b.branding?.mode==="CUSTOM";const logo=custom?"/api/branding/header":"/assets/official-logo.png";const rows=r.subjects.map(x=>`<tr><td>${escapeHtml(x.name)}</td><td>${x.terms.T1??"—"}</td><td>${x.terms.T2??"—"}</td><td>${x.terms.T3??"—"}</td><td>${x.annual??"—"}</td></tr>`).join("");showModal(`<div class="report-sheet"><div class="official-head"><div class="gov"><b>الجمهورية الإسلامية الموريتانية</b><br>وزارة التهذيب الوطني وإصلاح النظام التعليمي<br>${escapeHtml(school.wilaya?`الإدارة الجهوية بولاية ${school.wilaya}`:"")}<br>${escapeHtml(school.moughataa?`مفتشية مقاطعة ${school.moughataa} للتربية`:"")}</div><div class="center"><div class="bismillah">بسم الله الرحمن الرحيم</div><img src="${logo}" alt="الشعار"></div><div class="meta"><b>شرف - إخاء - عدالة</b><br>المدرسة: ${escapeHtml(school.name||"—")}<br>الفصل: ${escapeHtml(s.class_name||"—")}<br>العام الدراسي: ${escapeHtml(school.academic_year||"—")}</div></div><div class="report-title">كشف درجات التلميذ</div><div class="student-line">الاسم: ${escapeHtml(s.full_name)} · الرقم: ${escapeHtml(s.student_uid)}</div><table class="report-table"><thead><tr><th>المادة</th><th>الفصل 1</th><th>الفصل 2</th><th>الفصل 3</th><th>السنوي</th></tr></thead><tbody>${rows}</tbody></table><div class="report-summary"><span>معدل الفصل 1: <b>${r.termAverages.T1??"—"}</b></span><span>معدل الفصل 2: <b>${r.termAverages.T2??"—"}</b></span><span>معدل الفصل 3: <b>${r.termAverages.T3??"—"}</b></span><span>المعدل السنوي: <b>${r.annualAverage??"—"}</b></span></div><div class="no-print"><button id="printReportBtn" class="primary">طباعة / حفظ PDF</button></div></div>`);$("printReportBtn").onclick=()=>window.print()}catch{toast("تعذر فتح التقرير")}}
 async function createClass(){try{await api("/api/director/classes",{method:"POST",body:JSON.stringify({name:$("newClassName").value.trim(),academicYearId:$("newClassYear").value||undefined,level:$("newClassLevel").value.trim()||null,section:$("newClassSection").value.trim()||null})});$("newClassName").value="";toast("تم إنشاء القسم");await loadStructure();await loadClasses();await loadDirectorHome()}catch(e){toast(e.data?.error==="CLASS_EXISTS"?"القسم موجود مسبقًا":"تعذر إنشاء القسم")}}
 async function createSubject(){try{await api("/api/director/subjects",{method:"POST",body:JSON.stringify({name:$("newSubjectName").value.trim(),coefficient:Number($("newSubjectCoeff").value),maxScore:Number($("newSubjectMax").value)})});$("newSubjectName").value="";toast("تمت إضافة المادة");await loadStructure();await loadInviteSubjects();await loadDirectorHome()}catch{toast("تعذر إضافة المادة")}}
-async function createStudent(){try{await api("/api/director/students",{method:"POST",body:JSON.stringify({classId:$("studentClassSelect").value,fullName:$("studentName").value.trim(),studentUid:$("studentUid").value.trim(),gender:$("studentGender").value||null})});$("studentName").value="";$("studentUid").value="";toast("تمت إضافة التلميذ");await loadDirectorHome()}catch{toast("تعذر إضافة التلميذ")}}
+async function createStudent(){
+  const classField=$("studentClassSelect"),nameField=$("studentName"),uidField=$("studentUid"),button=$("createStudentBtn");
+  const classId=classField.value,fullName=nameField.value.trim(),studentUid=uidField.value.trim();
+  if(!classId){toast(st("اختر قسم التلميذ أولًا.","Choisissez d’abord une classe."));classField.focus();return;}
+  if([...fullName].length<2){toast(st("أدخل الاسم الكامل للتلميذ (حرفان على الأقل).","Saisissez le nom complet de l’élève."));nameField.focus();return;}
+  if(!studentUid){toast(st("رقم التلميذ مطلوب، ويجب أن يكون فريدًا. مثال: 2026-001.","Le numéro de l’élève est obligatoire et doit être unique."));uidField.focus();return;}
+  if(studentUid.length>80){toast(st("رقم التلميذ طويل جدًا.","Le numéro de l’élève est trop long."));uidField.focus();return;}
+  button.disabled=true;
+  try{
+    await api("/api/director/students",{method:"POST",body:JSON.stringify({classId,fullName,studentUid,gender:$("studentGender").value||null})});
+    nameField.value="";uidField.value="";
+    toast(st("تمت إضافة التلميذ بنجاح.","Élève ajouté avec succès."));
+    await loadDirectorHome();
+  }catch(e){
+    const errors={
+      INVALID_STUDENT:st("تحقق من القسم والاسم ورقم التلميذ.","Vérifiez la classe, le nom et le numéro."),
+      STUDENT_EXISTS:st("رقم التلميذ موجود مسبقًا. استخدم رقمًا مختلفًا.","Ce numéro d’élève existe déjà."),
+      INVALID_CLASS:st("القسم غير صالح أو لم يعد متاحًا. اختر قسمًا نشطًا.","Cette classe n’est plus disponible."),
+      ACCESS_DENIED:st("ليست لديك صلاحية لإضافة تلميذ.","Vous n’avez pas le droit d’ajouter un élève."),
+      DIRECTOR_ONLY:st("إضافة التلاميذ متاحة لحساب المدير.","Seul un directeur peut ajouter un élève.")
+    };
+    toast(errors[e.data?.error]||(e.status===403?st("انتهت صلاحية العملية. حدّث الصفحة وأعد المحاولة.","Actualisez la page et réessayez."):st("لم تُضف بيانات التلميذ. تحقق من اتصالك ثم حاول مجددًا.","L’élève n’a pas été ajouté. Vérifiez votre connexion.")));
+  }finally{button.disabled=false;}
+}
 const permissionLabels={CLASS_READ:"قراءة القسم",STUDENT_READ:"قراءة التلاميذ",STUDENT_WRITE:"تعديل التلاميذ",SUBJECT_READ:"قراءة المادة",GRADE_READ:"قراءة الدرجات",GRADE_WRITE:"إدخال الدرجات",REPORT_READ:"قراءة التقارير",ATTENDANCE_READ:"قراءة الحضور",ATTENDANCE_WRITE:"تسجيل الحضور والغياب",EXAM_READ:"قراءة جدول الامتحانات",EXAM_WRITE:"إدارة جدول الامتحانات",DOCUMENT_READ:"قراءة الوثائق",DOCUMENT_WRITE:"إدارة الوثائق"};
 function renderPermissionChecks(){
   const role=$("inviteRole").value;
