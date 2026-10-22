@@ -1,3 +1,12 @@
+import crypto from "node:crypto";
+function normalizeGuardianPhone(input){
+  if(input===undefined||input===null||String(input).trim()==="")return null;
+  const raw=String(input).trim().replace(/[\s\-().]/g,"");
+  if(!/^\+?\d{8,15}$/.test(raw))return undefined;
+  const digits=raw.replace(/^\+/,"");
+  const normalized=digits.length===8?"222"+digits:digits;
+  return /^[1-9]\d{7,14}$/.test(normalized)?normalized:undefined;
+}
 import {currentYear} from "./structure.js";
 import { pool,withContext } from "../db.js";
 import { audit } from "../audit.js";
@@ -28,8 +37,43 @@ export async function registerDirectorRoutes(app,{requireDirector}){
   app.post("/api/director/subjects",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const b=request.body||{},name=text(b.name,{min:1,max:120}),coefficient=num(b.coefficient??1,{min:.01,max:100}),maxScore=num(b.maxScore??20,{min:1,max:1000});if(!name||coefficient===null||maxScore===null)return reply.code(400).send({error:"INVALID_SUBJECT"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{try{const q=await c.query("INSERT INTO subjects(school_id,name,coefficient,max_score) VALUES($1,$2,$3,$4) RETURNING id,row_version",[request.auth.schoolId,name,coefficient,maxScore]);await audit(c,request.auth,"SUBJECT_CREATED","subject",q.rows[0].id,{name,coefficient,maxScore});return reply.code(201).send({ok:true,...q.rows[0]});}catch(e){if(e?.code==="23505")return reply.code(409).send({error:"SUBJECT_EXISTS"});throw e;}});});
   app.patch("/api/director/subjects/:id",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const id=String(request.params.id||""),b=request.body||{},version=num(b.version,{min:1,max:1e9}),name=text(b.name,{min:1,max:120}),coefficient=num(b.coefficient,{min:.01,max:100}),maxScore=num(b.maxScore,{min:1,max:1000});if(!isUuid(id)||version===null||!name||coefficient===null||maxScore===null)return reply.code(400).send({error:"INVALID_SUBJECT"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[`subject:${id}`]);const previous=(await c.query("SELECT coefficient,max_score FROM subjects WHERE id=$1 FOR UPDATE",[id])).rows[0];if(previous&&(Number(previous.coefficient)!==coefficient||Number(previous.max_score)!==maxScore)&&(await c.query("SELECT 1 FROM grades WHERE subject_id=$1 LIMIT 1",[id])).rowCount)return reply.code(409).send({error:"SUBJECT_HAS_GRADES"});const q=await c.query("UPDATE subjects SET name=$1,coefficient=$2,max_score=$3,active=COALESCE($4,active),row_version=row_version+1,updated_at=now() WHERE id=$5 AND row_version=$6 RETURNING row_version",[name,coefficient,maxScore,typeof b.active==="boolean"?b.active:null,id,version]);if(!q.rowCount)return reply.code(409).send({error:"VERSION_CONFLICT"});await audit(c,request.auth,"SUBJECT_UPDATED","subject",id,{newVersion:q.rows[0].row_version});return{ok:true,...q.rows[0]};});});
 
-  app.post("/api/director/students",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const b=request.body||{},classId=String(b.classId||""),uid=text(b.studentUid,{min:1,max:80}),fullName=text(b.fullName,{min:2,max:180}),gender=b.gender?oneOf(b.gender,["M","F"]):null;if(!isUuid(classId)||!uid||!fullName)return reply.code(400).send({error:"INVALID_STUDENT"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{try{const q=await c.query("INSERT INTO students(school_id,class_id,student_uid,full_name,gender,birth_date) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,row_version",[request.auth.schoolId,classId,uid,fullName,gender,b.birthDate||null]);await audit(c,request.auth,"STUDENT_CREATED","student",q.rows[0].id,{classId,uid});return reply.code(201).send({ok:true,...q.rows[0]});}catch(e){if(e?.code==="23505")return reply.code(409).send({error:"STUDENT_EXISTS"});if(e?.code==="23503")return reply.code(400).send({error:"INVALID_CLASS"});throw e;}});});
-  app.patch("/api/director/students/:id",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const id=String(request.params.id||""),b=request.body||{},version=num(b.version,{min:1,max:1e9}),classId=String(b.classId||""),uid=text(b.studentUid,{min:1,max:80}),fullName=text(b.fullName,{min:2,max:180}),gender=b.gender?oneOf(b.gender,["M","F"]):null,status=oneOf(b.status||"ACTIVE",["ACTIVE","INACTIVE","TRANSFERRED"]);if(!isUuid(id)||!isUuid(classId)||version===null||!uid||!fullName||!status)return reply.code(400).send({error:"INVALID_STUDENT"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{const q=await c.query("UPDATE students SET class_id=$1,student_uid=$2,full_name=$3,gender=$4,birth_date=$5,status=$6,row_version=row_version+1,updated_at=now() WHERE id=$7 AND row_version=$8 RETURNING row_version",[classId,uid,fullName,gender,b.birthDate||null,status,id,version]);if(!q.rowCount)return reply.code(409).send({error:"VERSION_CONFLICT"});await audit(c,request.auth,"STUDENT_UPDATED","student",id,{newVersion:q.rows[0].row_version});return{ok:true,...q.rows[0]};});});
+  app.post("/api/director/students",async(request,reply)=>{
+    if(!(await requireDirector(request,reply)))return;
+    const b=request.body||{},classId=String(b.classId||"");
+    const fullName=text(b.fullName,{min:2,max:180}),gender=b.gender?oneOf(b.gender,["M","F"]):null;
+    const studentUid=text(b.studentUid,{min:1,max:80})||"ST-"+crypto.randomUUID().replace(/-/g,"").slice(0,12).toUpperCase();
+    const phone=normalizeGuardianPhone(b.guardianPhone);
+    const consent=b.guardianConsent===true;
+    if(!isUuid(classId)||!fullName||phone===undefined||(consent&&!phone))return reply.code(400).send({error:"INVALID_STUDENT"});
+    return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{
+      try{
+        const q=await c.query("INSERT INTO students(school_id,class_id,student_uid,full_name,gender,birth_date,guardian_whatsapp_phone,guardian_whatsapp_consent) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,row_version,student_uid",[request.auth.schoolId,classId,studentUid,fullName,gender,b.birthDate||null,phone,consent]);
+        await audit(c,request.auth,"STUDENT_CREATED","student",q.rows[0].id,{classId,autoUid:!b.studentUid,whatsappOptIn:consent});
+        return reply.code(201).send({ok:true,...q.rows[0]});
+      }catch(e){if(e?.code==="23505")return reply.code(409).send({error:"STUDENT_EXISTS"});if(e?.code==="23503")return reply.code(400).send({error:"INVALID_CLASS"});throw e;}
+    });
+  });
+  app.patch("/api/director/students/:id",async(request,reply)=>{
+    if(!(await requireDirector(request,reply)))return;
+    const id=String(request.params.id||""),b=request.body||{},version=num(b.version,{min:1,max:1e9});
+    const classId=String(b.classId||""),uid=text(b.studentUid,{min:1,max:80}),fullName=text(b.fullName,{min:2,max:180});
+    const gender=b.gender?oneOf(b.gender,["M","F"]):null,status=oneOf(b.status||"ACTIVE",["ACTIVE","INACTIVE","TRANSFERRED"]);
+    const suppliedPhone=Object.prototype.hasOwnProperty.call(b,"guardianPhone");
+    const suppliedConsent=Object.prototype.hasOwnProperty.call(b,"guardianConsent");
+    const phone=suppliedPhone?normalizeGuardianPhone(b.guardianPhone):null;
+    if(!isUuid(id)||!isUuid(classId)||version===null||!uid||!fullName||!status||(suppliedPhone&&phone===undefined)||(suppliedConsent&&typeof b.guardianConsent!=="boolean")||(suppliedConsent&&b.guardianConsent&&!phone&&suppliedPhone))return reply.code(400).send({error:"INVALID_STUDENT"});
+    return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{
+      const q=await c.query(`UPDATE students SET class_id=$1,student_uid=$2,full_name=$3,gender=$4,birth_date=$5,status=$6,
+        guardian_whatsapp_phone=CASE WHEN $9::boolean THEN $10::text ELSE guardian_whatsapp_phone END,
+        guardian_whatsapp_consent=CASE WHEN $11::boolean THEN $12::boolean ELSE CASE WHEN $9::boolean THEN false ELSE guardian_whatsapp_consent END END,
+        row_version=row_version+1,updated_at=now()
+        WHERE id=$7 AND row_version=$8 RETURNING row_version`,
+        [classId,uid,fullName,gender,b.birthDate||null,status,id,version,suppliedPhone,phone,suppliedConsent,b.guardianConsent===true]);
+      if(!q.rowCount)return reply.code(409).send({error:"VERSION_CONFLICT"});
+      await audit(c,request.auth,"STUDENT_UPDATED","student",id,{newVersion:q.rows[0].row_version,contactChanged:suppliedPhone||suppliedConsent});
+      return{ok:true,...q.rows[0]};
+    });
+  });
 
   app.post("/api/director/permissions",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const b=request.body||{},userId=String(b.userId||""),permission=String(b.permission||"").toUpperCase(),classId=b.classId?String(b.classId):null,subjectId=b.subjectId?String(b.subjectId):null;if(!isUuid(userId)||!PERMISSIONS.includes(permission)||classId&&!isUuid(classId)||subjectId&&!isUuid(subjectId))return reply.code(400).send({error:"INVALID_PERMISSION"});const m=await pool.query("SELECT 1 FROM school_memberships WHERE school_id=$1 AND user_id=$2 AND status='ACTIVE'",[request.auth.schoolId,userId]);if(!m.rowCount)return reply.code(400).send({error:"USER_NOT_IN_SCHOOL"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{if(classId&&!(await c.query("SELECT 1 FROM classes WHERE id=$1",[classId])).rowCount)return reply.code(400).send({error:"INVALID_CLASS"});if(subjectId&&!(await c.query("SELECT 1 FROM subjects WHERE id=$1",[subjectId])).rowCount)return reply.code(400).send({error:"INVALID_SUBJECT"});if(classId&&subjectId&&!(await c.query("SELECT 1 FROM class_subjects WHERE class_id=$1 AND subject_id=$2",[classId,subjectId])).rowCount)return reply.code(400).send({error:"SUBJECT_NOT_IN_CLASS"});const q=await c.query("INSERT INTO permission_grants(school_id,user_id,permission,class_id,subject_id,granted_by,ends_at) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id",[request.auth.schoolId,userId,permission,classId,subjectId,request.auth.userId,b.endsAt||null]);await audit(c,request.auth,"PERMISSION_GRANTED","permission",q.rows[0].id,{userId,permission,classId,subjectId});return reply.code(201).send({ok:true,id:q.rows[0].id});});});
   app.delete("/api/director/permissions/:id",async(request,reply)=>{if(!(await requireDirector(request,reply)))return;const id=String(request.params.id||"");if(!isUuid(id))return reply.code(400).send({error:"INVALID_PERMISSION"});return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{const q=await c.query("UPDATE permission_grants SET revoked_at=now() WHERE id=$1 AND school_id=$2 AND revoked_at IS NULL RETURNING user_id,permission",[id,request.auth.schoolId]);if(!q.rowCount)return reply.code(404).send({error:"PERMISSION_NOT_FOUND"});await audit(c,request.auth,"PERMISSION_REVOKED","permission",id,q.rows[0]);return{ok:true};});});
