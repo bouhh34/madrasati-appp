@@ -685,27 +685,16 @@ async function loadBranding(){
 
     $("brandingInfo").innerHTML=
       custom
-        ?`
-          <img
-            src="/api/branding/header?ts=${Date.now()}"
-            alt="رأسية المدرسة">
-        `
-        :`
-          <div>
-            <img
-              src="/assets/official-logo.png"
-              alt="الشعار"
-              class="feature-style-1">
-
-            <p>
-              ${
-                isPrivate
-                  ?"لم تُرفع رأسية خاصة بعد"
-                  :"المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية"
-              }
-            </p>
-          </div>
-        `;
+        ?`<img src="/api/branding/header?ts=${Date.now()}" alt="رأسية المدرسة">`
+        :isPrivate
+          ?`<div class="private-school-preview">
+              <div class="school-identity-mark" aria-label="رمز المدرسة">${escapeHtml((d.school?.name||"م").trim().slice(0,1)||"م")}</div>
+              <p>لم تُرفع رأسية خاصة بعد. سيظهر اسم المدرسة ورمز تعليمي بدلاً من شعار الدولة.</p>
+            </div>`
+          :`<div>
+              <img src="/assets/official-logo.png" alt="الشعار الرسمي" class="feature-style-1">
+              <p>المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية</p>
+            </div>`;
 
     $("brandingControls")
       ?.classList
@@ -2950,16 +2939,13 @@ if(
     student,
     report
   ){
+    const annualComplete=report.completeness?.ANNUAL?.complete===true;
+    const annualText=annualComplete&&report.annualAverage!=null
+      ?`${report.annualAverage}/20`:"غير مكتمل";
     const text=
-      `كشف نتائج التلميذ: ${
-        student.full_name
-      }\n`+
-      `القسم: ${
-        student.class_name||"—"
-      }\n`+
-      `المعدل السنوي: ${
-        report.annualAverage??"—"
-      }/20`;
+      `كشف نتائج التلميذ: ${student.full_name}\n`+
+      `القسم: ${student.class_name||"—"}\n`+
+      `المعدل السنوي: ${annualText}`;
 
     try{
       if(
@@ -3045,12 +3031,11 @@ if(
           b.branding?.mode===
           "CUSTOM";
 
-        const logo=
-          custom
-            ?`/api/branding/header?ts=${
-              Date.now()
-            }`
-            :"/assets/official-logo.png";
+        const isPrivate=school.school_type==="PRIVATE";
+        const logo=isPrivate
+          ?(custom?`/api/branding/header?ts=${Date.now()}`:null)
+          :"/assets/official-logo.png";
+        const defaultEmblem=escapeHtml((school.name||"م").trim().slice(0,1)||"م");
 
         const rows=
           (report.subjects||[])
@@ -3089,7 +3074,7 @@ if(
 
                   <td>
                     ${reportValue(
-                      subject.annual
+                      (["T1","T2","T3"].every(t=>subject.terms?.[t]!=null)?subject.annual:null)
                     )}
                   </td>
                 </tr>
@@ -3098,7 +3083,8 @@ if(
             .join("");
 
         const annual=
-          report.annualAverage;
+          report.completeness?.ANNUAL?.complete===true
+            ?report.annualAverage:null;
 
         showModal(`
           <div class="final-report">
@@ -3161,9 +3147,7 @@ if(
                   بسم الله الرحمن الرحيم
                 </div>
 
-                <img
-                  src="${logo}"
-                  alt="الشعار">
+                ${logo?`<img src="${logo}" alt="الشعار">`:`<div class="school-identity-mark" aria-label="رمز المدرسة">${defaultEmblem}</div>`}
               </div>
 
               <div class="left">
@@ -3229,7 +3213,7 @@ if(
                   النتيجة العامة:
                 </b>
 
-                ${report.completeness?.ANNUAL?.complete===false?"نتائج غير مكتملة":reportDecision(annual)}
+                ${report.completeness?.ANNUAL?.complete!==true?"نتائج غير مكتملة":reportDecision(annual)}
               </div>
 
             </div>
@@ -3335,7 +3319,7 @@ if(
                   "final-average final-annual">
 
                 <small>
-                  المعدل السنوي
+                  ${report.completeness?.ANNUAL?.complete===true?"المعدل السنوي":"المعدل السنوي (غير مكتمل)"}
                 </small>
 
                 <b>
