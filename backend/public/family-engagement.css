@@ -74,3 +74,25 @@
   body:has(#familyCertificate) .family-print-actions,body:has(#familyCertificate) .modal-close{display:none!important}
   @page{size:A4 portrait;margin:14mm}
 }
+
+
+/* Schoolwide visual polish: richer, still lightweight, mobile-first. */
+#appShell .welcome-card{background:linear-gradient(126deg,#095665 0%,#07816f 66%,#1c9d82 100%);border:1px solid #36b4a66b;box-shadow:0 13px 30px #064d592b}
+#appShell .metrics article{border-top:3px solid #078a77;box-shadow:0 8px 20px #095c6412}
+#appShell .metrics article:nth-child(2){border-top-color:#d1a343}
+#appShell .metrics article:nth-child(3){border-top-color:#3c83a7}
+#appShell .metrics article:nth-child(4){border-top-color:#b77a80}
+#appShell .metrics b{font-weight:900;color:#0c7467}
+#appShell .page .panel{border-color:#d4e6df;box-shadow:0 7px 19px rgba(8,91,81,.055)}
+#appShell .page .panel-head h3{color:#104e4b}
+@media screen and (max-width:680px){
+  #appShell .workspace{padding-top:8px}
+  #appShell .topbar{position:relative;top:auto;z-index:2;padding:6px 0 11px;min-height:auto;margin-bottom:9px}
+  #appShell .topbar h2{font-size:1.15rem;margin:5px 0 0}
+  #appShell .top-actions{gap:5px;justify-content:flex-start}
+  #appShell .top-actions .ghost{padding:9px 11px;min-height:43px;font-size:.88rem}
+  #appShell .metrics{gap:10px}
+  #appShell .metrics article{padding:13px}
+  #page-admin .admin-grid{gap:11px}
+  #page-admin .admin-grid .panel label{margin-block:9px}
+}
