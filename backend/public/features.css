@@ -720,7 +720,7 @@
   #page-admin .structure-grid,#page-admin .admin-grid{grid-template-columns:minmax(0,1fr);gap:14px}
   #page-admin .structure-grid > *,#page-admin .admin-grid > *{box-sizing:border-box;max-width:100%;min-width:0}
   #page-admin .panel{max-width:100%;min-width:0;padding:16px}
-  #page-admin input,#page-admin select,#page-admin textarea{box-sizing:border-box;display:block;width:100%;max-width:100%;min-width:0;font-size:16px}
+  #page-admin input:not([type="checkbox"]):not([type="radio"]),#page-admin select,#page-admin textarea{box-sizing:border-box;display:block;width:100%;max-width:100%;min-width:0;font-size:16px}
   #page-admin .mini-card{max-width:100%;min-width:0;flex-wrap:wrap}
   #page-admin .structure-checks{max-width:100%;width:100%}
   #page-admin .structure-check{margin-block:7px}
