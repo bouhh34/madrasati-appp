@@ -37,7 +37,7 @@ function renderBulkGrades(){
   $('gradePermission').textContent=subject?`${subject.name} · /${subject.max_score}`:st('اختر القسم والمادة','Choisissez la classe et la matière');
   if(!scope.classId||!subject){root.textContent=st('اختر قسمًا ومادة لبدء العمل.','Choisissez une classe et une matière.');renderResultsControls();return;}
   root.classList.remove('empty');
-  root.innerHTML=`<div class="grade-toolbar"><label>${st('البحث عن تلميذ','Rechercher un élève')}<input id="gradeSearch" type="search" autocomplete="off"></label><p id="gradeFeedback" role="status" aria-live="polite"></p><button id="saveAllGrades" type="button" class="primary">${st('حفظ الدرجات المعدلة','Enregistrer les modifications')}</button></div>
+  root.innerHTML=`<div class="grade-toolbar"><label>${st('البحث عن تلميذ','Rechercher un élève')}<input id="gradeSearch" type="search" autocomplete="off"></label><div class="premium-grade-steps"><button id="premiumPreviousGrade" type="button">${st('← التلميذ السابق','Élève précédent')}</button><button id="premiumNextGrade" type="button">${st('التلميذ التالي →','Élève suivant')}</button></div><p id="gradeFeedback" role="status" aria-live="polite"></p><button id="saveAllGrades" type="button" class="primary">${st('حفظ الدرجات المعدلة','Enregistrer les modifications')}</button></div>
     ${currentStudents.length?currentStudents.map(student=>{
       const grade=currentGrades.find(x=>x.student_id===student.id&&x.subject_id===scope.subjectId&&x.term===scope.term&&x.assessment==='MAIN');
       return `<div class="grade-row" data-grade-row><div class="student-name"><b>${escapeHtml(student.full_name)}</b><small>${escapeHtml(student.student_uid)}</small><button type="button" class="linkbtn" data-student-report="${student.id}">${st('كشف التلميذ','Bulletin')}</button></div>
@@ -51,6 +51,18 @@ function renderBulkGrades(){
   });
   qsa('[data-save-grade]').forEach(button=>button.onclick=()=>saveBulkGrades([button.dataset.saveGrade]));
   qsa('[data-student-report]').forEach(button=>button.onclick=()=>openReport(button.dataset.studentReport));
+  // Navigate between visible pupils without saving implicitly or discarding unsaved marks.
+  const moveFocus=direction=>{
+    const visible=gradeFields().filter(f=>!f.closest('[data-grade-row]')?.hidden);
+    if(!visible.length)return;
+    const active=visible.indexOf(document.activeElement);
+    const next=active<0?(direction<0?visible.length-1:0):Math.max(0,Math.min(visible.length-1,active+direction));
+    visible[next].focus();visible[next].select();
+    visible[next].scrollIntoView({block:'nearest',behavior:'smooth'});
+  };
+  const previous=$('premiumPreviousGrade'),next=$('premiumNextGrade');
+  if(previous)previous.onclick=()=>moveFocus(-1);
+  if(next)next.onclick=()=>moveFocus(1);
   $('saveAllGrades').onclick=()=>saveBulkGrades();updateGradeFeedback();renderResultsControls();
 }
 function updateGradeFeedback(message){
