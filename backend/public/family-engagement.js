@@ -54,6 +54,15 @@ async function refreshFamilyPanel(){
   status.textContent=familyAr(`عدد التلاميذ: ${familyRoster.length} • فتح واتساب يدوي من هاتفك؛ لا يتم الإرسال تلقائيًا.`,`Élèves : ${familyRoster.length} • Ouverture manuelle de WhatsApp.`);
 }
 function familyResultFor(id){return familyResults?.results?.find(x=>x.id===id)||null;}
+function familyAvailableScores(result,period){
+  if(!result?.report?.subjects)return [];
+  const selectedTerms=period==="ANNUAL"?["T1","T2","T3"]:[period];
+  const termNames={T1:"الفصل الأول",T2:"الفصل الثاني",T3:"الفصل الثالث"};
+  return selectedTerms.flatMap(term=>(result.report.subjects||[]).flatMap(subject=>{
+    const score=subject.terms?.[term];
+    return score===null||score===undefined?[]:[`• ${subject.name} — ${termNames[term]}: ${score}/20`];
+  }));
+}
 function familyText(student,kind){
   const school=me?.school?.name||"مدرستي",cls=familyClasses.find(c=>c.id===familyEl("familyClass").value);
   const className=cls?.name||"",term=familyEl("familyTerm").value,year=cls?.academic_year||"";
@@ -73,6 +82,14 @@ function familyText(student,kind){
     return intro+`*إشعار بنتائج ${scoreLabel} مكتملة*\n${label}: *${r.average}/20*\n${singleSubject?"ترتيب المادة":"ترتيب القسم"}: *${r.rank??"—"}* من ${familyResults?.results?.length||"—"}\n`+scores.join("\n")+
       "\n\nللاطلاع على الكشف الموثق يرجى الدخول إلى حساب ولي الأمر في مدرستي.\nمع تحيات إدارة المدرسة.";
   }
+  if(kind==="progress"){
+    const available=familyAvailableScores(familyResultFor(student.id),term);
+    if(!available.length)return null;
+    return intro+"*إشعار بالدرجات المرحلية المسجلة حتى الآن*\n"+
+      "هذه درجات متاحة للمراجعة وليست نتيجة نهائية أو ترتيبًا رسميًا.\n"+
+      available.join("\n")+
+      "\n\nقد تبقى مواد أو فصول لم تُسجّل درجاتها بعد. للمعلومات النهائية يرجى الرجوع إلى المدرسة.\nمع تحيات الإدارة.";
+  }
   if(kind==="award"){
     const title=familyEl("familyAwardTitle").value.trim()||"شهادة تميز وتقدير";
     const reason=familyEl("familyNote").value.trim()||"الاجتهاد والمثابرة والتميز";
@@ -88,7 +105,9 @@ function renderFamilyPanel(){
   familyEl("familyRankScope").textContent=familyEl("familySubject").value?"ترتيب المادة • المكتمل فقط":"ترتيب القسم • المكتمل فقط";
   familyEl("familyAwardOptions").classList.toggle("hidden",kind!=="award");
   familyEl("familyMessageHelp").textContent=kind==="results"
-    ?familyAr("تُرسل فقط النتائج المكتملة مع الترتيب الصحيح؛ النتائج غير المكتملة لا تُرسل كمعدل نهائي.","Seuls les résultats complets peuvent être partagés.")
+    ?familyAr("النتائج النهائية والترتيب لا يُرسلان إلا بعد اكتمال الدرجات. للدرجات المسجلة اختر «الدرجات المرحلية».","Résultats finaux et classement uniquement lorsque les notes sont complètes.")
+    :kind==="progress"
+    ?familyAr("إشعار مرحلي بالدرجات المحفوظة فقط، دون معدل نهائي أو ترتيب. يصل إلى ولي الأمر من واتساب هاتفك.","Partage des notes disponibles, sans moyenne finale ni classement.")
     :kind==="award"
     ?familyAr("الإعلان ونص الشهادة في رسالة واحدة؛ يمكن طباعة الشهادة PDF وإرفاقها يدويًا في واتساب.","Annonce et texte du certificat en un message ; PDF à joindre manuellement.")
     :familyAr("اكتب رسالة موجزة وواضحة ومناسبة لولي الأمر.","Rédigez une notification concise.");
@@ -98,7 +117,12 @@ function renderFamilyPanel(){
     const result=familyResultFor(s.id),optIn=!!s.consent&&!!s.guardian_phone;
     const avg=result?.complete&&result.average!=null?`<span class="family-score">${familyEsc(result.average)}/20</span>`:"";
     const rank=result?.rank!=null&&result.complete?`<span class="family-rank">#${familyEsc(result.rank)}</span>`:"";
-    const canSend=optIn&&(kind!=="results"||(result?.complete&&result.average!=null));
+    const hasPartial=familyAvailableScores(result,familyEl("familyTerm").value).length>0;
+    const canSend=optIn&&(
+      kind==="results"?!!(result?.complete&&result.average!=null):
+      kind==="progress"?hasPartial:
+      kind==="notice"?!!familyEl("familyNote").value.trim():true
+    );
     const contact=optIn?familyAr("رقم الولي مرتبط","Contact autorisé"):familyAr("لم يُفعّل رقم واتساب الولي","Contact non autorisé");
     return `<article class="family-student" data-family-id="${familyEsc(s.id)}">
       <div class="family-student-head"><div><strong>${familyEsc(s.full_name)}</strong><small>${familyEsc(s.student_uid)} · ${contact}</small></div><div class="family-results-chips">${avg}${rank}</div></div>
@@ -106,7 +130,7 @@ function renderFamilyPanel(){
         <button class="family-whatsapp" type="button" data-family-open="${familyEsc(s.id)}" ${canSend?"":"disabled"}>◉ ${familyAr("فتح واتساب الولي","Ouvrir WhatsApp")}</button>
         ${kind==="award"?`<button class="family-secondary" type="button" data-family-certificate="${familyEsc(s.id)}">🎓 ${familyAr("معاينة الشهادة","Certificat")}</button>`:""}
       </div>
-      ${!canSend?`<p class="family-warning">${!optIn?"أضف رقم ولي الأمر ووافق على التواصل عبر واتساب قبل الإرسال.":kind==="results"?"النتائج غير مكتملة أو ليست لديك صلاحية الترتيب العام.":""}</p>`:""}
+      ${!canSend?`<p class="family-warning">${!optIn?"أضف رقم ولي الأمر ووافق على التواصل عبر واتساب قبل الإرسال.":kind==="results"?"النتائج غير مكتملة. يمكنك اختيار «الدرجات المرحلية» أو «التكريم» دون انتظار المعدل النهائي.":kind==="progress"?"لم تُحفظ أي درجة لهذه الفترة بعد.":kind==="notice"?"اكتب نص الإشعار أولًا.":""}</p>`:""}
       ${!teacher?`<details class="family-contact-edit"><summary>تعديل رقم واتساب الولي والموافقة</summary><form data-family-contact="${familyEsc(s.id)}"><label>رقم الولي (موريتانيا: 8 أرقام أو +رمز الدولة)<input name="phone" inputmode="tel" autocomplete="tel" maxlength="18" value="${familyEsc(s.guardian_phone||"")}" placeholder="مثال: 22212345678"></label><label class="family-optin"><input type="checkbox" name="consent" ${s.consent?"checked":""}> أكد الولي موافقته على إشعارات المدرسة عبر واتساب</label><button class="family-secondary" type="submit">حفظ الرقم والموافقة</button></form></details>`:""}
     </article>`;
   }).join("")||'<p class="empty">لا يوجد تلاميذ مطابقون للبحث.</p>';
@@ -155,6 +179,9 @@ function familyContactSubmit(event){
   familyEl("familyTerm").addEventListener("change",refreshFamilyPanel);
   familyEl("familyKind").addEventListener("change",renderFamilyPanel);
   familyEl("familySearch").addEventListener("input",renderFamilyPanel);
+  familyEl("familyNote").addEventListener("input",()=>{
+    if(familyEl("familyKind").value==="notice")renderFamilyPanel();
+  });
   familyEl("familyRefresh").addEventListener("click",loadFamilyPanel);
   familyEl("familyGroupShare").addEventListener("click",()=>{
     const note=familyEl("familyNote").value.trim();
