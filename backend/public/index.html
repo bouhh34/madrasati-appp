@@ -13,7 +13,7 @@
 
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
 <link rel="stylesheet" href="/family-engagement.css?v=20261023-1120">
-<link rel="stylesheet" href="/madrasati-premium.css?v=20261023-2330">
+<link rel="stylesheet" href="/madrasati-premium.css?v=20261023-2340">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -212,6 +212,7 @@
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
 
     <section id="page-admin" class="page">
+      <div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">التنظيم المدرسي</span><h3>إدارة المدرسة</h3></div></div>
       <div class="admin-quick-actions">
   <button id="quickAttendance" type="button">✓ <span>الحضور والغياب</span></button>
   <button id="quickExams" type="button">▣ <span>جدول الامتحانات</span></button>
@@ -241,7 +242,7 @@
 
     <section id="page-security" class="page"><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">Audit</span><h3>سجل العمليات</h3></div></div><div id="auditList" class="cards-list empty">—</div></article><article class="panel"><div class="panel-head"><div><span class="kicker">Security</span><h3>مبادئ الحماية</h3></div></div><ul class="security-list"><li>عزل كل مدرسة على مستوى الخادم وقاعدة البيانات.</li><li>رموز دعوة مؤقتة ومخزنة كـ Hash.</li><li>جلسات HttpOnly وCSRF وفحص Origin.</li><li>سجل تغييرات للدرجات وتعارض النسخ.</li><li>العمليات الحساسة تحتاج إعادة تحقق.</li></ul></article></div></section>
 
-    <section id="page-settings" class="page"><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><p class="hint">للخصوصية: الصور تُعاد معالجتها قبل اعتمادها. PDF وWord يدخلان منطقة عزل ولا يُعرضان مباشرة.</p><button id="uploadBrandingBtn" class="primary">رفع ومعالجة الرأسية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
+    <section id="page-settings" class="page"><div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">هوية المدرسة والحساب</span><h3>الإعدادات</h3></div></div><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><p class="hint">للخصوصية: الصور تُعاد معالجتها قبل اعتمادها. PDF وWord يدخلان منطقة عزل ولا يُعرضان مباشرة.</p><button id="uploadBrandingBtn" class="primary">رفع ومعالجة الرأسية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
 <section id="page-super-admin" class="page">
   <div class="panel">
     <div class="panel-head">
@@ -341,7 +342,7 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
 
   <div id="toast" class="toast hidden" role="status"></div>
-<script src="/app.js?v=20261023-2330" defer></script>
+<script src="/app.js?v=20261023-2340" defer></script>
 <script src="/structure.js?v=20261022-2319" defer></script>
 <script src="/platform-navigation.js?v=20261022-2319" defer></script>
 <script src="/academic-workflows.js?v=20261023-2330" defer></script>
