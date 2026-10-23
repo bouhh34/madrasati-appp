@@ -148,7 +148,7 @@ function renderPlatformProfile(){
   $('roleSwitcher')?.classList.add('hidden');
 }
 
-function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const isStaff=roles.includes("DIRECTOR")||roles.includes("TEACHER");qsa(".family-staff-only").forEach(x=>x.classList.toggle("hidden",!isStaff));const pureGuardian=roles.includes("GUARDIAN")&&!isStaff;qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
+function applyRoleVisibility(){const roles=me.roles||[];qsa(".director-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("DIRECTOR")));qsa(".guardian-only").forEach(x=>x.classList.toggle("hidden",!roles.includes("GUARDIAN")));const isStaff=roles.includes("DIRECTOR")||roles.includes("TEACHER");document.body.classList.toggle("director-school-view",roles.includes("DIRECTOR"));qsa(".family-staff-only").forEach(x=>x.classList.toggle("hidden",!isStaff));const pureGuardian=roles.includes("GUARDIAN")&&!isStaff;qsa('[data-page="academic"]').forEach(x=>x.classList.toggle("hidden",pureGuardian))}
 function renderProfile(){const school=me.school||{};$("hello").textContent=me.fullName||me.login;$("avatar").textContent=(me.fullName||"م").trim().charAt(0);$("roleText").textContent=(me.roles||[]).map(r=>({DIRECTOR:"مدير",ADMIN:"إداري",TEACHER:"معلم",GUARDIAN:"ولي تلميذ"}[r]||r)).join(" • ");$("schoolNameSide").textContent=school.name||"—";$("schoolTypeBadge").textContent=school.school_type==="PRIVATE"?"مدرسة خصوصية":"مدرسة عمومية";$("profileName").textContent=me.fullName||"—";$("profileRoles").textContent=$("roleText").textContent;$("profileSchool").textContent=school.name||"—"}
 function navigate(page){if(!me)return;if(me.isSuperAdmin&&!schoolView)page="super-admin";else if(page==="super-admin")page="home";qsa(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));qsa("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const titles={"super-admin":locale==="fr"?"Administration de la plateforme":"إدارة منصة مدرستي",home:"الرئيسية",academic:"الأقسام والنتائج",children:"أبنائي",admin:"إدارة المدرسة",security:"الأمان والسجل",family:"الأولياء والتكريم",settings:"الإعدادات"};$("pageTitle").textContent=tr(titles[page]||"مدرستي");if(page==="admin"){loadUsers();loadStructure();}if(page==="family"){loadFamilyPanel();}if(page==="security")loadAudit();if(page==="children")loadChildren();if(page==="settings")loadBranding()}
 async function loadDirectorHome(){try{const d=await api("/api/director/overview");$("metricClasses").textContent=d.classes;$("metricStudents").textContent=d.students;$("metricSubjects").textContent=d.subjects;$("metricUsers").textContent=d.users}catch{}}
@@ -200,6 +200,17 @@ function renderPermissionChecks(){
     ).join("")
     :"";
 
+  const disclosure=$("permissionDisclosure");
+  if(disclosure){
+    disclosure.hidden=!showPermissions;
+    const updateLabel=()=>{
+      const count=qsa("#permissionChecks input:checked").length;
+      $("permissionSummary").textContent=st("الصلاحيات المفعّلة ("+count+") — اضغط للمراجعة والتعديل",
+        "Permissions activées ("+count+") — voir ou modifier");
+    };
+    $("permissionChecks").onchange=updateLabel;
+    updateLabel();
+  }
   $("guardianStudentWrap").classList.toggle("hidden",role!=="GUARDIAN");
 }
 
@@ -1094,6 +1105,14 @@ $("reloadUsers").onclick=
 
 $("uploadBrandingBtn").onclick=
   uploadBranding;
+
+$("quickAttendance")?.addEventListener("click",()=>{
+  document.querySelector('[data-attendance-nav="bottom"]')?.click();
+});
+$("quickExams")?.addEventListener("click",()=>{
+  document.querySelector('[data-exams-nav="bottom"]')?.click();
+});
+$("quickFamily")?.addEventListener("click",()=>navigate("family"));
 
 captureText();
 
