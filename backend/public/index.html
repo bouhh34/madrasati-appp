@@ -13,6 +13,7 @@
 
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
 <link rel="stylesheet" href="/family-engagement.css?v=20261023-1120">
+<link rel="stylesheet" href="/madrasati-premium.css?v=20261023-2330">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -65,6 +66,9 @@
     <nav>
       <button class="nav-item active" data-page="home">⌂ <span>الرئيسية</span></button>
       <button class="nav-item" data-page="academic">▦ <span>الأقسام والنتائج</span></button>
+<button class="nav-item director-only hidden" data-page="students">♧ <span>التلاميذ</span></button>
+<button class="nav-item director-only hidden" data-page="reports">▤ <span>التقارير والطباعة</span></button>
+<button class="nav-item director-only hidden" data-page="more">▦ <span>المزيد</span></button>
       <button class="nav-item guardian-only hidden" data-page="children">♡ <span>أبنائي</span></button>
       <button class="nav-item director-only hidden" data-page="admin">⚙ <span>إدارة المدرسة</span></button>
         <button class="nav-item family-staff-only hidden" data-page="family">♡ <span>الأولياء والتكريم</span></button>
@@ -80,10 +84,36 @@
 
   <main class="workspace">
     <header class="topbar"><div><span id="schoolTypeBadge" class="status">—</span><h2 id="pageTitle">الرئيسية</h2></div><div class="top-actions"><button id="returnPlatform" class="ghost" type="button">العودة للمنصة</button><button id="accountLogout" data-logout class="ghost" type="button">تسجيل الخروج</button><button id="langToggle2" class="ghost compact" type="button">FR</button><button id="refreshBtn" class="icon-btn" type="button" aria-label="تحديث">↻</button><div class="avatar" id="avatar">م</div></div></header>
+<header id="premiumMobileHeader" class="premium-app-header director-only hidden" aria-label="التنقل المدرسي السريع">
+  <div class="premium-head-line">
+    <div class="premium-brand-label"><span id="premiumBrandMark" class="premium-brand-logo">م</span><div><strong id="premiumBrandName">مدرستي</strong><small>إدارة المدرسة • منصة مدرستي</small></div></div>
+    <div class="premium-person"><span id="premiumUserMark" class="premium-person-icon">م</span><span id="premiumUserName" class="premium-person-name">—</span></div>
+  </div>
+  <div class="premium-header-pickers">
+    <label><span class="visually-hidden">السنة الدراسية</span><select id="premiumHeaderYear" aria-label="السنة الدراسية"><option value="">السنة الدراسية</option></select></label>
+    <label><span class="visually-hidden">القسم</span><select id="premiumHeaderClass" aria-label="القسم"><option value="">اختر قسمًا</option></select></label>
+  </div>
+</header>
 
     <section id="page-home" class="page active">
-      <div class="welcome-card"><div><span class="kicker">مرحبًا</span><h3 id="hello">—</h3><p id="roleText">—</p></div><div class="save-state"><i></i><span id="saveState">متصل وآمن</span></div></div>
-      <div class="metrics" id="metrics"><article><span>الأقسام</span><b id="metricClasses">—</b></article><article><span>التلاميذ</span><b id="metricStudents">—</b></article><article><span>المواد</span><b id="metricSubjects">—</b></article><article><span>المستخدمون</span><b id="metricUsers">—</b></article></div>
+      <div class="premium-grid-hero">
+  <div><span class="premium-small">لوحة إدارة المدرسة • مدرستي</span><h3 id="hello">—</h3><p id="roleText">—</p>
+    <div class="premium-hero-actions"><button id="premiumStartGrades" class="premium-hero-btn" type="button">✎ إدخال النتائج</button><button id="premiumOpenStudents" class="premium-outline-btn" type="button">♧ التلاميذ</button></div>
+  </div>
+  <div class="premium-hero-art" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M50 78V28C34 18 20 22 12 27v45c13-5 26-1 38 6Zm0 0V28c16-10 30-6 38-1v45c-13-5-26-1-38 6ZM22 39c6-2 13-2 19 1m18 0c6-3 13-4 19-1M22 51c6-2 13-2 19 1m18 0c6-2 13-3 19-1"/></svg></div>
+  <span class="save-state" style="display:none"><i></i><span id="saveState">متصل وآمن</span></span>
+</div>
+<div class="metrics" id="metrics">
+  <article><span class="premium-stat-icon">▦</span><span>الأقسام</span><b id="metricClasses">—</b></article>
+  <article><span class="premium-stat-icon">♧</span><span>التلاميذ</span><b id="metricStudents">—</b></article>
+  <article><span class="premium-stat-icon">▤</span><span>المواد</span><b id="metricSubjects">—</b></article>
+  <article><span class="premium-stat-icon">✦</span><span>المستخدمون</span><b id="metricUsers">—</b></article>
+</div>
+<article class="panel premium-progress director-only hidden">
+  <div class="premium-section-line"><div><span class="premium-eyebrow">متابعة التقدم</span><h3>حالة إدخال الدرجات</h3></div><button id="premiumProgressRefresh" type="button" class="premium-pale-btn">تحديث</button></div>
+  <p id="premiumProgressDescription" class="premium-soft-text">نسبة الدرجات المسجلة في الفصل الأول لكل مادة؛ لا تعني اكتمال السنة.</p>
+  <div id="premiumSubjectProgress">اختر قسمًا لمشاهدة حالة إدخال النتائج.</div>
+</article>
       <div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الوصول السريع</span><h3>أقسامك</h3></div></div><div id="homeClasses" class="cards-list empty">لا توجد أقسام متاحة بعد.</div></article><article class="panel"><div class="panel-head"><div><span class="kicker">آخر النشاطات</span><h3>الإشعارات</h3></div></div><div id="notifications" class="cards-list empty">لا توجد إشعارات جديدة.</div></article></div>
     </section>
 
@@ -125,6 +155,58 @@
     <div id="familyRanks" class="family-ranks"></div>
     <p class="family-help">الترتيب يعتمد على النتائج المحفوظة والمكتملة؛ ولا تُمنح رتبة نهائية لمعدلات ناقصة.</p>
   </div>
+</section>
+<section id="page-students" class="page director-only hidden">
+ <div class="premium-page-banner"><span class="premium-eyebrow">الملفات المدرسية</span><h2>لائحة التلاميذ</h2><p>إضافة سريعة وبحث وكشف التلميذ، مع الاحتفاظ بالأرقام المدرسية والبيانات الموجودة.</p></div>
+ <div class="premium-card">
+   <div class="premium-section-line"><h3>إضافة تلميذ جديد</h3><span class="premium-pupil-tag">تسجيل سريع</span></div>
+   <div class="premium-form-row"><label>القسم<select id="premiumStudentsClass"><option value="">اختر قسمًا</option></select></label>
+     <label>الاسم الكامل<input id="premiumNewName" maxlength="180" autocomplete="off" placeholder="اسم التلميذ الكامل"></label></div>
+   <details class="premium-extra-fields"><summary>الجنس ورقم التلميذ وواتساب الولي (اختياري)</summary>
+     <div class="premium-form-row"><label>الجنس<select id="premiumNewGender"><option value="">غير محدد</option><option value="M">ولد</option><option value="F">بنت</option></select></label>
+       <label>رقم التلميذ<input id="premiumNewId" maxlength="80" autocomplete="off" placeholder="تلقائي إذا تركته فارغًا"></label></div>
+     <label>رقم واتساب ولي الأمر<input id="premiumGuardianPhone" type="tel" inputmode="tel" maxlength="18" autocomplete="tel" placeholder="222xxxxxxxx"></label>
+     <label class="family-optin"><input id="premiumGuardianConsent" type="checkbox"> وافق ولي الأمر على تلقي إشعارات المدرسة عبر واتساب</label>
+   </details>
+   <div class="premium-btn-row"><button id="premiumCreateStudent" class="premium-primary" type="button">+ حفظ وإضافة التلميذ التالي</button></div>
+   <p class="premium-soft-text">لا تحتاج إلى كتابة رقم التلميذ؛ يُنشأ تلقائيًا. وتبقى خانة القسم مختارة بعد الحفظ.</p>
+ </div>
+ <div class="premium-card">
+   <div class="premium-section-line"><div><h3>التلاميذ المسجلون</h3><span id="premiumStudentCount" class="premium-soft-text">—</span></div><button class="premium-pale-btn" id="premiumStudentsRefresh" type="button">تحديث</button></div>
+   <label>البحث عن تلميذ<input type="search" id="premiumStudentSearch" placeholder="الاسم أو رقم التلميذ" autocomplete="off"></label>
+   <div id="premiumStudentList" class="premium-list" aria-live="polite">اختر قسمًا لعرض التلاميذ.</div>
+ </div>
+</section>
+<section id="page-reports" class="page director-only hidden">
+ <div class="premium-page-banner"><span class="premium-eyebrow">الوثائق الرسمية</span><h2>التقارير والطباعة</h2><p>كشوف التلاميذ، الكشوف المجمعة، ولائحة النتائج بتنسيق A4 باستخدام محرك الطباعة الحالي.</p></div>
+ <div class="premium-card">
+   <h3>إعداد التقرير</h3>
+   <div class="premium-form-row"><label>القسم<select id="premiumReportsClass"><option value="">اختر قسمًا</option></select></label>
+   <label>الفصل<select id="premiumReportsTerm"><option value="T1">الفصل الأول</option><option value="T2">الفصل الثاني</option><option value="T3">الفصل الثالث</option><option value="ANNUAL">السنوي</option></select></label></div>
+   <label>نوع التقرير<select id="premiumReportsFormat"><option value="student">كشف تلميذ</option><option value="class">كشوف القسم (تلميذان في ورقة A4)</option><option value="roster">لائحة نتائج القسم</option></select></label>
+   <div id="premiumReportsStudentWrap"><label>التلميذ<select id="premiumReportsStudent"><option value="">اختر التلميذ</option></select></label></div>
+   <p id="premiumReportCount" class="premium-soft-text">اختر القسم لعرض التلاميذ.</p>
+   <div class="premium-btn-row"><button type="button" id="premiumReportPrint" class="premium-primary">▤ معاينة التقرير / حفظ PDF</button></div>
+   <p class="premium-soft-text">الطباعة تعتمد على صلاحيات حسابك؛ الدرجات غير المكتملة لا تُعرض على أنها معدل سنوي نهائي.</p>
+ </div>
+ <div class="premium-card">
+   <h3>النتائج والتكريم عبر واتساب</h3><p class="premium-soft-text">يتم فتح واتساب على هاتف المدير أو المعلم، ولا تُرسل الرسائل دون تأكيده.</p>
+   <button type="button" class="premium-secondary" data-premium-report-family>♡ الذهاب إلى الأولياء والتكريم</button>
+ </div>
+</section>
+<section id="page-more" class="page director-only hidden">
+ <div class="premium-page-banner"><span class="premium-eyebrow">أدوات وإعدادات</span><h2>المزيد</h2><p>كل ما تحتاجه لإدارة مدرستك في مكان واحد، دون ازدحام الصفحة الرئيسية.</p></div>
+ <h3 class="premium-group-title">التنظيم والتواصل</h3>
+ <button type="button" class="premium-more-row" data-premium-go="admin"><span class="premium-menu-icon">▦</span><span class="premium-menu-copy"><strong>الأقسام والمواد والتلاميذ</strong><small>السنوات الدراسية، الإضافة، تكليف المعلمين وصلاحياتهم</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="family" data-tone="gold"><span class="premium-menu-icon">🏅</span><span class="premium-menu-copy"><strong>الأولياء والتكريم</strong><small>واتساب، شهادات التميز، الإشعارات والترتيب</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="attendance" data-tone="blue"><span class="premium-menu-icon">✓</span><span class="premium-menu-copy"><strong>الحضور والغياب</strong><small>تسجيل ومتابعة الحضور والتقارير</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="exams" data-tone="blue"><span class="premium-menu-icon">▣</span><span class="premium-menu-copy"><strong>جدول الامتحانات</strong><small>المواعيد والنشر للتلاميذ والأولياء</small></span></button>
+ <h3 class="premium-group-title">الحساب والمدرسة</h3>
+ <button type="button" class="premium-more-row" data-premium-go="settings"><span class="premium-menu-icon">⚙</span><span class="premium-menu-copy"><strong>الإعدادات وهوية المدرسة</strong><small>رأسية المدرسة والملف الشخصي</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="security" data-tone="blue"><span class="premium-menu-icon">♙</span><span class="premium-menu-copy"><strong>الأمان وسجل العمليات</strong><small>التدقيق والخصوصية وإدارة الأمان</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="language"><span class="premium-menu-icon">FR</span><span class="premium-menu-copy"><strong>Français / العربية</strong><small>تبديل لغة الواجهة</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="platform" data-tone="gold"><span class="premium-menu-icon">◆</span><span class="premium-menu-copy"><strong>إدارة المنصة</strong><small>العودة إلى لوحة المالك إذا كان حسابك مخولًا</small></span></button>
+ <button type="button" class="premium-more-row" data-premium-go="logout"><span class="premium-menu-icon">↪</span><span class="premium-menu-copy"><strong>تسجيل الخروج</strong><small>إنهاء الجلسة الحالية بأمان</small></span></button>
 </section>
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
 
@@ -252,7 +334,7 @@
   </main>
 
   <nav class="bottom-nav platform-navigation"> <button data-platform-nav="overview">الإحصائيات</button><button data-platform-nav="schools">المدارس والمديرون</button><button data-platform-nav="accounts">الحسابات</button></nav>
-  <nav class="bottom-nav school-navigation"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">▦<span>النتائج</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="family" class="family-staff-only hidden">♡<span>الأولياء</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
+  <nav class="bottom-nav school-navigation"><button data-page="home" class="active">⌂<span>الرئيسية</span></button><button data-page="academic">✎<span>النتائج</span></button><button data-page="students" class="director-only hidden">♧<span>التلاميذ</span></button><button data-page="reports" class="director-only hidden">▤<span>التقارير</span></button><button data-page="more" class="director-only hidden">▦<span>المزيد</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="family" class="family-staff-only hidden">♡<span>الأولياء</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
 </div>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
@@ -265,5 +347,6 @@
 <script src="/attendance-workflows.js?v=20261022-2319" defer></script>
 <script src="/print-actions.js?v=20261022-2319" defer></script>
 <script src="/family-engagement.js?v=20261023-1048" defer></script>
+<script src="/madrasati-premium.js?v=20261023-2330" defer></script>
 </body>
 </html>
