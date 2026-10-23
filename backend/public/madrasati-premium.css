@@ -137,3 +137,10 @@
 @media print{
   .premium-app-header,.premium-page-banner,.premium-btn-row,.premium-grade-steps{display:none!important}
 }
+
+
+@media screen and (max-width:900px){
+  .director-school-view:not(.platform-mode) #appShell .bottom-nav.school-navigation button svg{width:24px;height:24px;display:block;stroke-width:1.8;transition:transform .15s ease}
+  .director-school-view:not(.platform-mode) #appShell .bottom-nav.school-navigation button.active svg{transform:translateY(-1px);stroke-width:2.3}
+  .director-school-view:not(.platform-mode) #appShell .bottom-nav.school-navigation button.active:after{content:"";width:15px;height:3px;background:#d5a739;border-radius:5px;margin-top:1px}
+}
