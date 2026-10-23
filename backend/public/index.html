@@ -12,7 +12,7 @@
   <title>مدرستي | Ma Madrassa</title>
 
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
-<link rel="stylesheet" href="/family-engagement.css?v=20261023-1020">
+<link rel="stylesheet" href="/family-engagement.css?v=20261023-1120">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -167,28 +167,29 @@
         <p>لوحة مالك المنصة — SUPER ADMIN</p><button id="chooseManagedSchool" type="button">الدخول إلى مدرسة مرتبطة بحسابي</button>
       </div>
       <button id="superAdminRefresh" type="button">تحديث</button>
+    <p id="saDashboardStatus" class="platform-load-state" role="status" aria-live="polite">جارٍ تحميل إحصائيات المنصة…</p>
     </div>
   </div>
 
   <div class="admin-grid" data-platform-area="overview">
     <article class="panel">
       <h3>المدارس</h3>
-      <strong id="saSchoolsCount">0</strong>
+      <strong id="saSchoolsCount" aria-busy="true">…</strong>
     </article>
 
     <article class="panel">
       <h3>المستخدمون</h3>
-      <strong id="saUsersCount">0</strong>
+      <strong id="saUsersCount" aria-busy="true">…</strong>
     </article>
 
     <article class="panel">
       <h3>التلاميذ</h3>
-      <strong id="saStudentsCount">0</strong>
+      <strong id="saStudentsCount" aria-busy="true">…</strong>
     </article>
 
     <article class="panel">
       <h3>الأقسام</h3>
-      <strong id="saClassesCount">0</strong>
+      <strong id="saClassesCount" aria-busy="true">…</strong>
     </article>
   </div>
 
@@ -257,7 +258,7 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
 
   <div id="toast" class="toast hidden" role="status"></div>
-<script src="/app.js?v=20261023-1020" defer></script>
+<script src="/app.js?v=20261023-1120" defer></script>
 <script src="/structure.js?v=20261022-2319" defer></script>
 <script src="/platform-navigation.js?v=20261022-2319" defer></script>
 <script src="/academic-workflows.js?v=20261022-2319" defer></script>
