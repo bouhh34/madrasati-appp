@@ -12,6 +12,8 @@ function premiumUpdateIdentity(){
   if(premium("premiumUserName"))premium("premiumUserName").textContent=me.fullName||me.login||"—";
   if(premium("premiumBrandMark"))premium("premiumBrandMark").textContent=(school.name||"م").trim().slice(0,1)||"م";
   if(premium("premiumUserMark"))premium("premiumUserMark").textContent=(me.fullName||"م").trim().slice(0,1)||"م";
+  const platformAction=document.querySelector('[data-premium-go="platform"]');
+  if(platformAction)platformAction.classList.toggle("hidden",!me.isSuperAdmin);
 }
 function premiumOnClasses(){
   if(!premiumDirector())return;
@@ -100,7 +102,7 @@ function premiumRenderStudents(){
   premium("premiumStudentCount").textContent=premiumFr(students.length+" تلميذ",students.length+" élèves");
   premium("premiumStudentList").innerHTML=students.length?students.map((s,i)=>`
     <article class="premium-pupil">
-      <div class="premium-pupil-top"><span class="premium-roll">${i+1}</span>
+      <div class="premium-pupil-top"><span class="premium-roll">${premiumStudents.indexOf(s)+1}</span>
         <div class="premium-pupil-name"><strong>${escapeHtml(s.full_name)}</strong><small>${escapeHtml(s.student_uid||"—")}</small></div>
         <span class="premium-pupil-tag">${s.gender==="F"?"بنت":s.gender==="M"?"ولد":"تلميذ"}</span>
       </div>
@@ -198,8 +200,23 @@ function premiumMoreRoute(route){
     premium("premiumReportsStudentWrap").classList.toggle("hidden",premium("premiumReportsFormat").value!=="student");
   };
   premium("premiumReportPrint").onclick=premiumPrintReport;
+  document.querySelector("[data-premium-report-family]")?.addEventListener("click",()=>navigate("family"));
   premium("page-more").addEventListener("click",e=>{
     const card=e.target.closest("[data-premium-go]");if(card)premiumMoreRoute(card.dataset.premiumGo);
   });
+
+  // Keep the header section in sync with the page's chosen class, without overwriting unsaved grades.
+  const headerClass=premium("premiumHeaderClass");
+  const gradeClass=premium("classSelect");
+  if(headerClass&&gradeClass){
+    gradeClass.addEventListener("change",()=>{
+      const value=gradeClass.value;
+      if(value&&[...headerClass.options].some(o=>o.value===value)){
+        headerClass.value=value;
+        if(premium("premiumStudentsClass"))premium("premiumStudentsClass").value=value;
+        if(premium("premiumReportsClass"))premium("premiumReportsClass").value=value;
+      }
+    });
+  }
   if(premiumDirector())premiumOnClasses();
 })();
