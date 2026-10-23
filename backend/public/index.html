@@ -8,11 +8,11 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/official-logo.png">
   <link rel="stylesheet" href="/app.css?v=20261022-2319">
-  <link rel="stylesheet" href="/features.css?v=20261022-2319">
+  <link rel="stylesheet" href="/features.css?v=20261023-1020">
   <title>مدرستي | Ma Madrassa</title>
 
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
-<link rel="stylesheet" href="/family-engagement.css?v=20261022-2345">
+<link rel="stylesheet" href="/family-engagement.css?v=20261023-1020">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -129,18 +129,29 @@
     <section id="page-children" class="page"><div class="panel"><div class="panel-head"><div><span class="kicker">ولي التلميذ</span><h3>أبنائي</h3></div></div><div id="childrenList" class="children-grid empty">لا توجد روابط تلاميذ بعد.</div></div></section>
 
     <section id="page-admin" class="page">
-      <article id="structurePanel" class="panel director-only"></article>
+      <div class="admin-quick-actions">
+  <button id="quickAttendance" type="button">✓ <span>الحضور والغياب</span></button>
+  <button id="quickExams" type="button">▣ <span>جدول الامتحانات</span></button>
+  <button id="quickFamily" type="button">♡ <span>الأولياء والتكريم</span></button>
+</div>
+<details class="admin-fold structure-disclosure">
+  <summary>⚙ السنوات الدراسية ومواد الأقسام وتكليف المعلمين</summary>
+  <article id="structurePanel" class="panel director-only"></article>
+</details>
       <div class="admin-grid">
-        <article class="panel"><div class="panel-head"><h3>إضافة قسم</h3></div><label>السنة الدراسية<select id="newClassYear"></select></label><label>اسم القسم<input id="newClassName"></label><div class="two"><label>المستوى<input id="newClassLevel"></label><label>الشعبة<input id="newClassSection"></label></div><button id="createClassBtn" class="primary">إنشاء القسم</button></article>
-        <article class="panel"><div class="panel-head"><h3>إضافة مادة</h3></div><label>اسم المادة<input id="newSubjectName"></label><div class="two"><label>المعامل<input id="newSubjectCoeff" type="number" step="0.01" value="1"></label><label>الدرجة القصوى<input id="newSubjectMax" type="number" step="0.01" value="20"></label></div><button id="createSubjectBtn" class="primary">إضافة المادة</button></article>
+        <article class="panel admin-fold"><details><summary>➕ إضافة قسم</summary><div class="admin-fold-body"><label>السنة الدراسية<select id="newClassYear"></select></label><label>اسم القسم<input id="newClassName"></label><div class="two"><label>المستوى<input id="newClassLevel"></label><label>الشعبة<input id="newClassSection"></label></div><button id="createClassBtn" class="primary">إنشاء القسم</button></div></details></article>
+        <article class="panel admin-fold"><details><summary>✚ إضافة مادة</summary><div class="admin-fold-body"><label>اسم المادة<input id="newSubjectName"></label><div class="two"><label>المعامل<input id="newSubjectCoeff" type="number" step="0.01" value="1"></label><label>الدرجة القصوى<input id="newSubjectMax" type="number" step="0.01" value="20"></label></div><button id="createSubjectBtn" class="primary">إضافة المادة</button></div></details></article>
         <article class="panel"><div class="panel-head"><h3>إضافة تلميذ</h3></div><label>القسم<select id="studentClassSelect" required><option value="">اختر القسم</option></select></label><label>الاسم الكامل<input id="studentName" required minlength="2" maxlength="180" autocomplete="off" placeholder="اسم التلميذ الكامل"></label><div class="two"><label>رقم التلميذ <span class="field-hint">اختياري — يُنشأ تلقائيًا</span><input id="studentUid" maxlength="80" autocomplete="off" placeholder="تلقائي عند تركه فارغًا" inputmode="text"></label><label>الجنس<select id="studentGender"><option value="">—</option><option value="M">ولد</option><option value="F">بنت</option></select></label></div><label>واتساب ولي الأمر (اختياري)<input id="studentGuardianPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="18" placeholder="مثال: 22212345678 أو 12345678"></label>
         <label class="family-optin"><input id="studentGuardianConsent" type="checkbox"> وافق ولي الأمر على تلقي إشعارات المدرسة عبر واتساب</label>
         <button id="createStudentBtn" class="primary">+ حفظ التلميذ وإضافة التالي</button>
         <p class="hint">لا تحتاج إلى إدخال رقم التلميذ يدويًا. يحتفظ التطبيق بالقسم المختار للتسجيل السريع.</p></article>
-        <article class="panel"><div class="panel-head"><h3>دعوة آمنة</h3></div><label>الدور<select id="inviteRole"><option value="TEACHER">معلم</option>
+        <article class="panel admin-fold"><details><summary>♧ دعوة آمنة</summary><div class="admin-fold-body"><label>الدور<select id="inviteRole"><option value="TEACHER">معلم</option>
 <option value="ADMIN">إداري</option>
 <option value="GUARDIAN">ولي تلميذ</option>
-<option value="DIRECTOR">مدير إضافي</option></select></label><label>اسم المستخدم المستهدف<input id="inviteTarget"></label><label>القسم<select id="inviteClass"><option value="">بدون قسم محدد</option></select></label><label>المادة<select id="inviteSubject"><option value="">بدون مادة محددة</option></select></label><label id="guardianStudentWrap" class="hidden">التلميذ<select id="inviteStudent"><option value="">اختر تلميذًا</option></select></label><div id="permissionChecks" class="checks"></div><button id="createInviteBtn" class="primary">إنشاء رمز لمرة واحدة</button><div id="inviteResult" class="secret-result hidden"></div></article>
+<option value="DIRECTOR">مدير إضافي</option></select></label><label>اسم المستخدم المستهدف<input id="inviteTarget"></label><label>القسم<select id="inviteClass"><option value="">بدون قسم محدد</option></select></label><label>المادة<select id="inviteSubject"><option value="">بدون مادة محددة</option></select></label><label id="guardianStudentWrap" class="hidden">التلميذ<select id="inviteStudent"><option value="">اختر تلميذًا</option></select></label><details id="permissionDisclosure" class="permission-disclosure">
+  <summary id="permissionSummary">الصلاحيات — اضغط للعرض أو التعديل</summary>
+  <div id="permissionChecks" class="checks"></div>
+</details><button id="createInviteBtn" class="primary">إنشاء رمز لمرة واحدة</button><div id="inviteResult" class="secret-result hidden"></div></div></details></article>
         <article class="panel wide"><div class="panel-head"><div><span class="kicker">المستخدمون</span><h3>حسابات المدرسة</h3></div><button id="reloadUsers" class="ghost compact">تحديث</button></div><div id="usersTable" class="table-wrap empty">لا توجد بيانات.</div></article>
       </div>
     </section>
@@ -246,12 +257,12 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
 
   <div id="toast" class="toast hidden" role="status"></div>
-<script src="/app.js?v=20261022-2319" defer></script>
+<script src="/app.js?v=20261023-1020" defer></script>
 <script src="/structure.js?v=20261022-2319" defer></script>
 <script src="/platform-navigation.js?v=20261022-2319" defer></script>
 <script src="/academic-workflows.js?v=20261022-2319" defer></script>
 <script src="/attendance-workflows.js?v=20261022-2319" defer></script>
 <script src="/print-actions.js?v=20261022-2319" defer></script>
-<script src="/family-engagement.js?v=20261022-2350" defer></script>
+<script src="/family-engagement.js?v=20261023-1020" defer></script>
 </body>
 </html>
