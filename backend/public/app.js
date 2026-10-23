@@ -17,8 +17,16 @@ async function authApi(url,options={},timeoutMs=60000){
 }
 async function boot(){
   const generation=authGeneration;
-  try{const account=await authApi("/api/auth/me",{},20000);if(generation!==authGeneration)return;me=account;await refreshCsrf();if(generation!==authGeneration)return;await openForMe();}
-  catch{if(generation===authGeneration)showAuth();}
+  try{
+    // Both reads use the existing session; don't serialize them during cold starts.
+    const [account,csrfResult]=await Promise.all([
+      authApi("/api/auth/me",{},20000),
+      authApi("/api/auth/csrf",{},20000).catch(()=>null)
+    ]);
+    if(generation!==authGeneration)return;
+    me=account;csrf=csrfResult?.csrf||csrf;
+    await openForMe();
+  }catch{if(generation===authGeneration)showAuth();}
 }
 
 async function openForMe(){
@@ -51,22 +59,16 @@ async function openForMe(){
   applyRoleVisibility();
   renderProfile();
 
-  await Promise.all([
-    loadClasses(),
-    loadNotifications(),
-    loadBranding()
-  ]);
-
-  if((me.roles||[]).includes("DIRECTOR")){
-    await loadDirectorHome();
-    await loadInviteSubjects();
-  }
-
-  if((me.roles||[]).includes("GUARDIAN")){
-    await loadChildren();
-  }
-
+  // Paint the navigation and home screen first; don't block on branding,
+  // notifications, invite options or other auxiliary calls.
   navigate("home");
+  const essential=[loadClasses()];
+  if((me.roles||[]).includes("DIRECTOR"))essential.push(loadDirectorHome());
+  if((me.roles||[]).includes("GUARDIAN"))essential.push(loadChildren());
+  await Promise.allSettled(essential);
+  void loadNotifications();
+  void loadBranding();
+  if((me.roles||[]).includes("DIRECTOR"))void loadInviteSubjects();
 }
 function showSchoolChooser(schools){hideAll();$("schoolChooser").classList.remove("hidden");$("schoolChoices").innerHTML=schools.map(s=>`<button type="button" data-school="${s.id}"><b>${escapeHtml(s.name)}</b><br><small>${escapeHtml((s.roles||[]).join(" • "))}</small></button>`).join("");qsa("[data-school]").forEach(b=>b.onclick=()=>selectSchool(b.dataset.school))}
 async function selectSchool(id){try{const d=await api("/api/auth/select-school",{method:"POST",body:JSON.stringify({schoolId:id})});csrf=d.csrf||csrf;me=await api("/api/auth/me");schoolView=!!me.isSuperAdmin;await openForMe()}catch{toast("تعذر اختيار المدرسة")}}
@@ -3520,66 +3522,54 @@ if(
     }
   }
 
+  let platformDashboardLoading=null;
   window.loadSuperAdminDashboard = async function loadSuperAdminDashboard(){
-    try{
-      const [
-        overviewData,
-        schoolsData
-      ]=
-        await Promise.all([
-          api(
-            "/api/platform/overview"
-          ),
-          api(
-            "/api/platform/schools"
-          )
-        ]);
-
-      const overview=
-        overviewData.overview||{};
-
-      if(
-        $("saSchoolsCount")
-      ){
-        $("saSchoolsCount")
-          .textContent=
-          overview.schools??0;
-      }
-
-      if(
-        $("saUsersCount")
-      ){
-        $("saUsersCount")
-          .textContent=
-          overview.users??0;
-      }
-
-      if(
-        $("saStudentsCount")
-      ){
-        $("saStudentsCount")
-          .textContent=
-          overview.students??0;
-      }
-
-      if(
-        $("saClassesCount")
-      ){
-        $("saClassesCount")
-          .textContent=
-          overview.classes??0;
-      }
-
-      renderSuperAdminSchools(
-        schoolsData.schools||[]
-      );
-
-    }catch(e){
-      toast(
-        "تعذر تحميل لوحة مالك المنصة"
-      );
+    if(platformDashboardLoading)return platformDashboardLoading;
+    const status=$("saDashboardStatus");
+    const counts=["saSchoolsCount","saUsersCount","saStudentsCount","saClassesCount"];
+    const hasCachedNumbers=counts.every(id=>$(id)?.dataset.loaded==="true");
+    if(status){status.textContent="جارٍ تحديث إحصائيات المنصة…";status.dataset.state="loading";}
+    if(!hasCachedNumbers){
+      counts.forEach(id=>{const node=$(id);if(node){node.textContent="…";node.setAttribute("aria-busy","true");}});
     }
-  }
+    platformDashboardLoading=(async()=>{
+      // Independent requests: slow/failing school list must not blank out statistics.
+      const [overviewResult,schoolsResult]=await Promise.allSettled([
+        api("/api/platform/overview"),
+        api("/api/platform/schools")
+      ]);
+      if(overviewResult.status==="fulfilled"){
+        const overview=overviewResult.value?.overview||{};
+        const fields={saSchoolsCount:overview.schools,saUsersCount:overview.users,
+          saStudentsCount:overview.students,saClassesCount:overview.classes};
+        for(const [id,value] of Object.entries(fields)){
+          const node=$(id);if(!node)continue;
+          if(typeof value==="number"&&Number.isFinite(value)){
+            node.textContent=String(value);node.dataset.loaded="true";
+          }else{
+            node.textContent="—";node.dataset.loaded="false";
+          }
+          node.removeAttribute("aria-busy");
+        }
+      }else if(!hasCachedNumbers){
+        counts.forEach(id=>{const node=$(id);if(node){node.textContent="—";node.removeAttribute("aria-busy");}});
+      }
+      if(schoolsResult.status==="fulfilled"){
+        renderSuperAdminSchools(schoolsResult.value.schools||[]);
+      }else if(!$("saSchoolsList")?.dataset.loaded){
+        const list=$("saSchoolsList");
+        if(list)list.textContent="تعذّر تحميل قائمة المدارس. اضغط تحديث لإعادة المحاولة.";
+      }
+      if(status){
+        const failed=[overviewResult,schoolsResult].some(x=>x.status==="rejected");
+        status.dataset.state=failed?"error":"ready";
+        status.textContent=failed
+          ?"بعض البيانات لم تُحمّل. لا تعني العلامة (—) عدم وجود مدارس؛ اضغط تحديث."
+          :"تم تحديث الإحصائيات بنجاح.";
+      }
+    })().finally(()=>{platformDashboardLoading=null;});
+    return platformDashboardLoading;
+  };
 
   function renderSuperAdminSchools(
     schools
