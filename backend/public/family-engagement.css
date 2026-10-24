@@ -133,3 +133,18 @@
 #appShell .bottom-nav.school-navigation button{min-width:0;padding-inline:2px;line-height:1.2}
 #appShell .bottom-nav.school-navigation button span{font-size:.66rem}
 }
+
+
+.family-school-letterhead{width:100%;max-width:680px;height:91px;margin:0 auto 3px;display:flex;align-items:center;justify-content:center}
+.family-school-letterhead img{display:block;width:100%;height:100%;max-height:91px;object-fit:contain;object-position:center top}
+.family-certificate.with-school-letterhead{justify-content:flex-start;padding-top:23px;gap:8px}
+@media print{
+  html:has(#familyCertificate),body:has(#familyCertificate){margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}
+  body:has(#familyCertificate) #modal{margin:0!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important}
+  body:has(#familyCertificate) #modal .modal-card{margin:0 auto!important;padding:0!important;max-width:none!important;max-height:none!important;height:auto!important;min-height:0!important}
+  body:has(#familyCertificate) .family-certificate{width:188mm!important;max-width:188mm!important;min-height:245mm!important;max-height:265mm!important;margin:0 auto!important;box-sizing:border-box!important;break-before:avoid!important;break-after:avoid!important;page-break-inside:avoid!important;overflow:hidden!important}
+  body:has(#familyCertificate) .family-print-actions{display:none!important}
+  body:has(#familyCertificate) .family-school-letterhead{height:29mm;max-height:29mm}
+  body:has(#familyCertificate) .family-school-letterhead img{max-height:29mm}
+  @page{size:A4 portrait;margin:10mm}
+}
