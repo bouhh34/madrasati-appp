@@ -53,50 +53,11 @@ export async function registerDirectorRoutes(app,{requireDirector}){
       }catch(e){if(e?.code==="23505")return reply.code(409).send({error:"STUDENT_EXISTS"});if(e?.code==="23503")return reply.code(400).send({error:"INVALID_CLASS"});throw e;}
     });
   });
-  // Preview is performed in the browser; the server validates each row again before
-  // inserting. Existing pupils and grades are never overwritten by an import.
-  app.post("/api/director/students/import",async(request,reply)=>{
-    if(!(await requireDirector(request,reply)))return;
-    const b=request.body||{},classId=String(b.classId||""),rows=b.rows;
-    if(!isUuid(classId)||!Array.isArray(rows)||rows.length<1||rows.length>150)
-      return reply.code(400).send({error:"INVALID_IMPORT"});
-    const prepared=rows.map((r,i)=>{
-      const fullName=text(r?.fullName,{min:2,max:180}),uid=r?.studentUid?text(r.studentUid,{min:1,max:80}):null;
-      const gender=r?.gender?oneOf(r.gender,["M","F"]):null;
-      const phone=normalizeGuardianPhone(r?.guardianPhone);
-      const consent=r?.guardianConsent===true;
-      return {i,fullName,uid,gender,phone,consent,valid:!!fullName&&phone!==undefined&&(!r?.gender||!!gender)&&(!r?.studentUid||!!uid)&&(!consent||!!phone)};
-    });
-    return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{
-      if(!(await c.query("SELECT 1 FROM classes WHERE id=$1 AND school_id=$2",[classId,request.auth.schoolId])).rowCount)
-        return reply.code(404).send({error:"CLASS_NOT_FOUND"});
-      // Lock this class during batch import to prevent duplicate-name parallel requests.
-      await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",["student-import:"+classId]);
-      const existing=(await c.query("SELECT lower(trim(full_name)) name,student_uid FROM students WHERE school_id=$1 AND class_id=$2",[request.auth.schoolId,classId])).rows;
-      const names=new Set(existing.map(x=>x.name)),uids=new Set(existing.map(x=>x.student_uid));
-      let imported=0;const skipped=[];
-      for(const r of prepared){
-        if(!r.valid){skipped.push({line:r.i+1,reason:"INVALID_ROW"});continue;}
-        const key=r.fullName.trim().toLowerCase();
-        if(names.has(key)||(r.uid&&uids.has(r.uid))){skipped.push({line:r.i+1,reason:"DUPLICATE"});continue;}
-        const uid=r.uid||"ST-"+crypto.randomUUID().replace(/-/g,"").slice(0,12).toUpperCase();
-        try{
-          await c.query(`INSERT INTO students(school_id,class_id,student_uid,full_name,gender,guardian_whatsapp_phone,guardian_whatsapp_consent)
-            VALUES($1,$2,$3,$4,$5,$6,$7)`,[request.auth.schoolId,classId,uid,r.fullName,r.gender,r.phone,r.consent]);
-          imported++;names.add(key);uids.add(uid);
-        }catch(e){if(e.code==="23505"){skipped.push({line:r.i+1,reason:"DUPLICATE"});}else throw e;}
-      }
-      await audit(c,request.auth,"STUDENTS_IMPORTED","class",classId,{imported,skipped:skipped.length,received:rows.length});
-      return {ok:true,imported,skipped};
-    });
-  });
-
-
   // Reviewed roster import: no OCR guesses, preserves all existing pupils/grades.
   // Every row is isolated in a savepoint and duplicate names/IDs require manual review.
   app.post("/api/director/students/import",async(request,reply)=>{
     if(!(await requireDirector(request,reply)))return;
-    const b=request.body||{},classId=String(b.classId||""),rows=b.students;
+    const b=request.body||{},classId=String(b.classId||""),rows=Array.isArray(b.rows)?b.rows:b.students;
     if(!isUuid(classId)||!Array.isArray(rows)||!rows.length||rows.length>150)return reply.code(400).send({error:"INVALID_IMPORT"});
     return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{
       const permitted=await c.query("SELECT id FROM classes WHERE id=$1 AND school_id=$2 AND active=true",[classId,request.auth.schoolId]);
