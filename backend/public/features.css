@@ -756,3 +756,47 @@
   #page-exams .exam-field-help{display:block;font-size:.78rem;color:#59756d;font-weight:500;margin-top:5px}
   #page-exams .content-grid,#page-exams .panel{min-width:0;max-width:100%}
 }
+
+
+/* 2026-10-24: legible scrolling bulletin preview on narrow Android screens. */
+#modal .modal-card:has(.final-report),
+#modal .modal-card:has(.report-sheet){
+  width:min(900px,100%);max-width:calc(100vw - 12px);
+  max-height:94dvh;overflow-y:auto;overscroll-behavior:contain;
+  padding:16px 11px;border-radius:18px;
+}
+#modal .final-report,
+#modal .report-sheet{width:100%;min-width:0;max-width:100%;padding:10px}
+#modal .final-report-table-frame{
+  width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;
+  border:1px solid #dce6e4;border-radius:10px;
+}
+#modal .final-report-table{min-width:480px;margin:0}
+#modal .final-report-table th,
+#modal .final-report-table td{white-space:normal;overflow-wrap:anywhere}
+#modal .final-report-logo .school-identity-mark svg{width:68%;height:68%}
+@media(max-width:520px){
+  #modal{padding:6px}
+  #modal .final-report-head{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:9px;align-items:start
+  }
+  #modal .final-report-logo{grid-column:1/-1;grid-row:1}
+  #modal .final-report-head .right{grid-column:1;grid-row:2;text-align:right}
+  #modal .final-report-head .left{grid-column:2;grid-row:2;text-align:left}
+  #modal .final-report-logo .bismillah{font-size:12px}
+  #modal .final-report-title{font-size:19px;margin:12px 0}
+  #modal .final-student-info{padding:9px;gap:7px}
+  #modal .final-report-averages{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  #modal .final-average{padding:7px}
+  #modal .report-sheet .official-head{grid-template-columns:minmax(0,1fr) 85px minmax(0,1fr);gap:4px}
+  #modal .report-sheet .report-table{font-size:11px;table-layout:fixed}
+  #modal .report-sheet .report-table th,
+  #modal .report-sheet .report-table td{font-size:10px;padding:5px 2px;overflow-wrap:anywhere}
+}
+@media print{
+  #modal .modal-card:has(.final-report),
+  #modal .modal-card:has(.report-sheet){max-height:none!important;overflow:visible!important}
+  #modal .final-report-table-frame{overflow:visible!important;border:0!important}
+  #modal .final-report-table{min-width:0!important;width:100%!important}
+}
