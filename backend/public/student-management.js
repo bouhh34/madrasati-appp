@@ -174,12 +174,61 @@
     }
     return rows.map(row=>row.join("\t")).join("\n");
   }
+  async function decodeXlsxRows(file){
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    if(bytes.length>8_000_000)throw Error("FILE_TOO_LARGE");
+    const view=new DataView(bytes.buffer);
+    let end=-1;for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--){if(view.getUint32(i,true)===0x06054b50){end=i;break;}}
+    if(end<0)throw Error("INVALID_XLSX");
+    const count=view.getUint16(end+10,true),central=view.getUint32(end+16,true);
+    if(count>1200)throw Error("XLSX_TOO_COMPLEX");
+    let p=central;const entries=new Map();
+    for(let j=0;j<count;j++){
+      if(view.getUint32(p,true)!==0x02014b50)throw Error("INVALID_XLSX");
+      const method=view.getUint16(p+10,true),comp=view.getUint32(p+20,true),size=view.getUint32(p+24,true);
+      const nameLength=view.getUint16(p+28,true),extra=view.getUint16(p+30,true),comment=view.getUint16(p+32,true),offset=view.getUint32(p+42,true);
+      const name=new TextDecoder().decode(bytes.slice(p+46,p+46+nameLength));
+      entries.set(name,{method,comp,size,offset});p+=46+nameLength+extra+comment;
+    }
+    async function read(name){
+      const e=entries.get(name);if(!e)return null;if(e.size>6_000_000||e.comp>8_000_000)throw Error("XLSX_TOO_LARGE");
+      const base=e.offset;if(view.getUint32(base,true)!==0x04034b50)throw Error("INVALID_XLSX");
+      const start=base+30+view.getUint16(base+26,true)+view.getUint16(base+28,true),part=bytes.slice(start,start+e.comp);
+      let result;
+      if(e.method===0)result=part;
+      else if(e.method===8&&typeof DecompressionStream!=="undefined"){
+        const stream=new Blob([part]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        result=new Uint8Array(await new Response(stream).arrayBuffer());
+      }else throw Error("XLSX_UNSUPPORTED_COMPRESSION");
+      return new TextDecoder().decode(result);
+    }
+    const shared=await read("xl/sharedStrings.xml");
+    const strings=[];
+    if(shared){const doc=new DOMParser().parseFromString(shared,"application/xml");for(const si of doc.getElementsByTagName("si"))strings.push([...si.getElementsByTagName("t")].map(t=>t.textContent||"").join(""));}
+    const worksheet=[...entries.keys()].filter(s=>/^xl\/worksheets\/sheet\d+\.xml$/.test(s)).sort((a,b)=>Number(a.match(/\d+/)?.[0])-Number(b.match(/\d+/)?.[0]))[0];
+    const xml=worksheet?await read(worksheet):null;if(!xml)throw Error("EMPTY_WORKBOOK");
+    const doc=new DOMParser().parseFromString(xml,"application/xml");
+    if(doc.getElementsByTagName("parsererror").length)throw Error("INVALID_XLSX");
+    const rows=[];
+    for(const row of [...doc.getElementsByTagName("row")].slice(0,501)){
+      const data=[];for(const c of row.getElementsByTagName("c")){
+        const ref=c.getAttribute("r")||"",letters=ref.match(/^[A-Z]+/)?.[0];let col=0;
+        if(letters){for(const letter of letters)col=col*26+letter.charCodeAt(0)-64;col--;}else col=data.length;
+        if(col>28)continue;
+        const raw=c.getElementsByTagName("v")[0]?.textContent||"";
+        data[col]=c.getAttribute("t")==="s"?strings[Number(raw)]||"":c.getAttribute("t")==="inlineStr"?[...c.getElementsByTagName("t")].map(t=>t.textContent||"").join(""):raw;
+      }
+      if(data.some(v=>String(v||"").trim()))rows.push(data);
+    }
+    return rows;
+  }
   async function sourceText(){
     const input=byId("premiumImportText").value.trim();
     const file=byId("premiumImportFile").files?.[0];
     if(input)return input;
     if(!file)return "";
-    if(file.size>2*1024*1024)throw new Error("FILE_TOO_LARGE");
+    if(file.size>(/\.xlsx$/i.test(file.name)?8:2)*1024*1024)throw new Error("FILE_TOO_LARGE");
+    if(/\.xlsx$/i.test(file.name))return (await decodeXlsxRows(file)).map(row=>row.map(v=>String(v??"").replace(/[\t\r\n]+/g," ")).join("\t")).join("\n");
     if(file.type.startsWith("image/")||/\.(png|jpe?g|webp)$/i.test(file.name)){
       if(typeof window.TextDetector!=="function")throw new Error("OCR_UNSUPPORTED");
       const bitmap=await createImageBitmap(file);
@@ -207,7 +256,7 @@
         '</tbody></table></div>'+(pending.length>60?'<p class="premium-soft-text">أول 60 تلميذًا في المعاينة. جميع الأسماء ستُفحص عند الحفظ.</p>':"");
       byId("premiumImportSave").disabled=false;
     }catch(e){
-      out.textContent=e.message==="OCR_UNSUPPORTED"?"المتصفح لا يدعم قراءة الكتابة من الصور تلقائيًا. استخدم CSV أو انسخ النص من الصورة والصقه هنا.":e.message==="FILE_TOO_LARGE"?"الملف أكبر من الحد المسموح.":e.message==="XLSX_UNSUPPORTED"?"الجهاز لا يدعم فك ضغط Excel. احفظ الملف CSV وأعد المحاولة.":"تنسيق الملف غير مدعوم؛ جرّب Excel أو CSV أو TXT.";
+      out.textContent=e.message==="XLSX_UNSUPPORTED_COMPRESSION"?"هذا المتصفح لا يدعم ملف Excel بهذه الصيغة. احفظه بصيغة CSV ثم أعد الاستيراد.":e.message==="OCR_UNSUPPORTED"?"المتصفح لا يدعم قراءة الكتابة من الصور تلقائيًا. استخدم CSV أو انسخ النص من الصورة والصقه هنا.":e.message==="FILE_TOO_LARGE"?"الملف أكبر من الحد المسموح.":e.message==="XLSX_UNSUPPORTED"?"الجهاز لا يدعم فك ضغط Excel. احفظ الملف CSV وأعد المحاولة.":"تنسيق الملف غير مدعوم؛ جرّب Excel أو CSV أو TXT.";
     }
   }
   async function commitImport(){
