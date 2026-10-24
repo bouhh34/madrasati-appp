@@ -171,3 +171,34 @@ bdi{unicode-bidi:isolate;direction:ltr}
   #printContent .paper{zoom:1!important;box-shadow:none!important;width:194mm!important;margin:0!important}
   .paper.single-report{height:281mm!important}
 }
+
+
+/* Android/Chrome A4 pagination safety: stay inside printable area with 10 mm
+   vertical allowance for browser rounding and printer engines. */
+@page{size:A4 portrait;margin:8mm}
+.paper{width:190mm;height:271mm}
+.half-report{width:190mm;height:134mm;max-height:134mm}
+.cut-line{height:2mm;line-height:2mm}
+.paper.single-report .half-report{height:271mm;max-height:271mm}
+@media screen{
+  #printContent{padding:12px 6px}
+  #printContent .paper{width:190mm;height:271mm;transform:none}
+  #printContent .paper.single-report{height:271mm}
+}
+@media print{
+  html,body{padding:0!important;margin:0!important;overflow:visible!important}
+  #printContent{display:block!important;margin:0!important;padding:0!important;overflow:visible!important}
+  .paper,.paper.single-report{
+    width:190mm!important;height:271mm!important;min-height:0!important;
+    max-height:271mm!important;box-sizing:border-box!important;
+    padding:0!important;margin:0 auto!important;
+    overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important;
+    break-after:page;page-break-after:always;
+  }
+  .paper:last-child{break-after:auto!important;page-break-after:auto!important}
+  .half-report{box-sizing:border-box!important;width:190mm!important;height:134mm!important;max-height:134mm!important}
+  .paper.single-report .half-report{height:271mm!important;max-height:271mm!important}
+  .cut-line{height:2mm!important;line-height:2mm!important}
+  .print-tools{display:none!important}
+  .roster-paper{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
+}
