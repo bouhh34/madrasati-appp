@@ -1147,6 +1147,7 @@ $("reloadUsers").onclick=
 
 $("uploadBrandingBtn").onclick=
   uploadBranding;
+$("resetBrandingBtn").onclick=resetBranding;
 
 $("quickAttendance")?.addEventListener("click",()=>{
   document.querySelector('[data-attendance-nav="bottom"]')?.click();
