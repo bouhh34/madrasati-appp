@@ -144,3 +144,75 @@
   .director-school-view:not(.platform-mode) #appShell .bottom-nav.school-navigation button.active svg{transform:translateY(-1px);stroke-width:2.3}
   .director-school-view:not(.platform-mode) #appShell .bottom-nav.school-navigation button.active:after{content:"";width:15px;height:3px;background:#d5a739;border-radius:5px;margin-top:1px}
 }
+
+
+/* 2026-10-24 touch-input fixes from real Android screenshots */
+#page-academic .grade-toolbar{
+  display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+  align-items:stretch!important;justify-content:stretch!important;gap:10px!important
+}
+#page-academic .grade-toolbar > label,#page-academic .grade-toolbar > p,
+#page-academic .grade-toolbar > #saveAllGrades,#page-academic .grade-toolbar > .premium-grade-steps{
+  width:100%;min-width:0;grid-column:1/-1!important;margin:0!important
+}
+#page-academic .grade-toolbar .premium-grade-steps{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important
+}
+#page-academic .grade-toolbar .premium-grade-steps button{
+  display:block;width:100%;max-width:none;min-width:0;
+  min-height:45px;padding:7px 5px;font-size:.87rem;white-space:normal;
+}
+#page-academic .grade-row .score-wrap{
+  display:flex!important;align-items:center!important;flex-direction:row!important;
+  justify-content:flex-end;gap:5px!important;min-width:0;width:100%;margin:0!important
+}
+#page-academic .grade-row .score-wrap input{
+  position:static!important;min-width:0;flex:1 1 0!important;
+  width:0!important;max-width:none!important;text-align:center!important;
+  padding:8px 3px!important;font-size:1.03rem;font-weight:900;
+  height:44px;min-height:44px;border-radius:11px
+}
+#page-academic .grade-row .score-wrap .score-maximum{
+  position:static!important;inset:auto!important;
+  display:inline-block!important;transform:none!important;
+  flex:0 0 auto!important;min-width:29px;text-align:center;
+  color:#617d85;font-size:.75rem!important;white-space:nowrap;
+  padding:0!important;margin:0!important
+}
+#page-academic .grade-row .student-name{min-width:0}
+#page-academic .grade-row .student-name b{overflow-wrap:anywhere}
+#page-academic .grade-row .student-name small{overflow-wrap:anywhere;word-break:break-all;direction:ltr;unicode-bidi:isolate}
+#page-academic .grade-row [data-score][aria-invalid="true"]{border:2px solid #bd4149!important}
+#page-students .premium-card .premium-form-row{align-items:start!important;row-gap:10px!important}
+#page-students .premium-card label{display:flex!important;flex-direction:column!important;gap:6px!important;margin:7px 0!important}
+#page-students .premium-card .family-optin{flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important}
+#page-students .premium-card .family-optin input{width:19px!important;height:19px!important;min-height:19px;flex:0 0 19px}
+#page-students .premium-card input,#page-students .premium-card select{min-height:48px;padding:11px 13px!important}
+#page-students .premium-card .premium-extra-fields{margin:9px 0;padding:10px 0 0;border-top:1px solid #edf2f3}
+#page-students .premium-extra-fields summary{font-size:.87rem;color:#176c6b;cursor:pointer;font-weight:800;padding:7px 0;line-height:1.55}
+#page-students .premium-card .premium-btn-row{margin-top:12px}
+@media(max-width:900px){
+ #page-academic .grade-row{
+   grid-template-columns:30px minmax(0,1fr) minmax(106px,120px)!important;
+   align-items:center!important;gap:6px!important;
+   padding:10px 8px!important
+ }
+ #page-academic .grade-row:before{width:29px;height:29px}
+ #page-academic .grade-row .student-name{grid-column:auto!important}
+ #page-academic .grade-row .save-grade{
+   grid-column:2/4!important;width:100%;justify-self:stretch;
+   margin-top:1px;min-height:38px
+ }
+ #page-academic .grade-row .score-wrap{max-width:120px}
+ #page-academic .grade-row .score-wrap input{min-width:0!important}
+ #page-academic .grade-row .score-wrap .score-maximum{min-width:30px;font-size:.7rem!important}
+ #page-academic .grade-toolbar .premium-grade-steps button{font-size:.8rem}
+}
+@media(max-width:375px){
+ #page-academic .grade-row{
+   grid-template-columns:28px minmax(0,1fr) 104px!important;
+   gap:4px!important;padding:8px 6px!important
+ }
+ #page-academic .grade-row .score-wrap{gap:2px!important}
+ #page-academic .grade-row .score-wrap .score-maximum{font-size:.68rem!important;min-width:27px}
+}
