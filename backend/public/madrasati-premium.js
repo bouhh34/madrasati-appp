@@ -92,7 +92,7 @@ async function premiumLoadStudents(){
   try{
     const d=await api("/api/classes/"+encodeURIComponent(id)+"/students");
     if(n!==premiumStudentsGeneration||!me)return;
-    premiumStudents=(d.students||[]).filter(x=>x.status==="ACTIVE");
+    premiumStudents=d.students||[];
     premiumRenderStudents();
   }catch(e){if(n===premiumStudentsGeneration)premium("premiumStudentList").innerHTML='<p class="premium-empty">تعذر تحميل التلاميذ، حاول تحديث اللائحة.</p>';}
 }
