@@ -26,6 +26,7 @@ function subjectName(subject,lang){return localizedValue(subject,'name',lang);}
 function studentName(student,lang){return localizedValue(student,'full_name',lang);}
 function schoolName(school,lang){return localizedValue(school,'name',lang);}
 function header(school,year,custom,lang,title){
+  if(custom)return `<div class="uploaded-letterhead"><img src="/api/branding/header" alt="${label(lang,'الرأسية الرسمية للمدرسة','En-tête officiel de l’école')}"></div><div class="uploaded-letterhead-title">${esc(title)}</div>`;
   const wilaya=localizedValue(school,'wilaya',lang),moughataa=localizedValue(school,'moughataa',lang),inspection=localizedValue(school,'inspection',lang);
   const privateSchool=school?.school_type==='PRIVATE';
   const schoolSymbol=esc((schoolName(school,lang)||'مدرسة').trim());
@@ -116,12 +117,12 @@ async function initialisePrint(){
       const query=new URLSearchParams({term:period});if(params.get('subjectId'))query.set('subjectId',params.get('subjectId'));
       const [data,branding]=await Promise.all([get(`/api/classes/${encodeURIComponent(classId)}/results?${query}`),get('/api/branding')]);
       if(!data.results.length)throw new Error('NO_STUDENTS');
-      root.innerHTML=params.get('format')==='roster'?renderRoster(data,school,lang,school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM'):renderReportPages(data.results.map(s=>({student:{...s,class_name:data.classroom.name,academic_year:data.classroom.academic_year},report:s.report,rank:s.rank,totalStudents:data.stats.total})),school,{lang,period,scope:data.scope,custom:school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM'});
+      root.innerHTML=params.get('format')==='roster'?renderRoster(data,school,lang,branding.branding?.mode==='CUSTOM'):renderReportPages(data.results.map(s=>({student:{...s,class_name:data.classroom.name,academic_year:data.classroom.academic_year},report:s.report,rank:s.rank,totalStudents:data.stats.total})),school,{lang,period,scope:data.scope,custom:branding.branding?.mode==='CUSTOM'});
     }else if(studentId){
       const [data,branding]=await Promise.all([get(`/api/students/${encodeURIComponent(studentId)}/report`),get('/api/branding')]);
       let rank=null,totalStudents=null;
       if(identity.roles?.includes('DIRECTOR')){const results=await get(`/api/classes/${data.student.class_id}/results?${new URLSearchParams({term:period})}`);rank=results.results.find(s=>s.id===studentId)?.rank;totalStudents=results.stats.total;}
-      root.innerHTML=renderReportPages([{...data,rank,totalStudents}],school,{lang,period,scope:identity.roles?.includes('DIRECTOR')?'CLASS':'SUBJECT',custom:school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM',fullPage:true});
+      root.innerHTML=renderReportPages([{...data,rank,totalStudents}],school,{lang,period,scope:identity.roles?.includes('DIRECTOR')?'CLASS':'SUBJECT',custom:branding.branding?.mode==='CUSTOM',fullPage:true});
     }else throw new Error('INVALID_REPORT');
     await document.fonts.ready;
     await Promise.all([...root.querySelectorAll('img')].map(img=>img.decode?.().catch(()=>{})||Promise.resolve()));
