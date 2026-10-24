@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/workflows.css?v=20261022-2319">
 <link rel="stylesheet" href="/family-engagement.css?v=20261024-1630">
 <link rel="stylesheet" href="/madrasati-premium.css?v=20261024-1630">
+<link rel="stylesheet" href="/gemini-import.css?v=20261024-1700">
 </head>
 <body>
 <div id="authShell" class="auth-shell">
@@ -188,6 +189,20 @@
      <div id="premiumImportStatus" role="status" aria-live="polite" class="premium-soft-text"></div>
      <div id="premiumImportTable" class="premium-import-table"></div>
    </details>
+ </div>
+ <div class="premium-card">
+  <details class="premium-ai-details" id="premiumGeminiDetails">
+   <summary>✦ قراءة الخط اليدوي والصور وPDF بواسطة Gemini</summary>
+   <p id="geminiAvailability" class="premium-soft-text">جارٍ التحقق من إعداد الخدمة…</p>
+   <p class="premium-soft-text">اقرأ قائمة تلاميذ أو كشف درجات مصورًا، ثم صحّح البيانات يدويًا قبل حفظها. لا يتم الحفظ بمجرد القراءة.</p>
+   <label>نوع الوثيقة<select id="geminiMode"><option value="students">لائحة التلاميذ وأرقام أولياء الأمور</option><option value="grades">كشف درجات بخط اليد</option></select></label>
+   <label>صورة أو PDF <input id="geminiFile" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf" /></label>
+   <label class="family-optin gemini-consent"><input type="checkbox" id="geminiConsent"> أُقر بأنني مخوّل لإرسال هذه الوثيقة إلى Google Gemini لمعالجة البيانات، وأن المشروع يستخدم خدمة مناسبة لحماية البيانات الشخصية. لن تُحفظ الصورة في «مدرستي».</label>
+   <button id="geminiStart" type="button" class="premium-primary" disabled>✦ استخراج النص والبيانات</button>
+   <p id="geminiStatus" role="status" aria-live="polite" class="premium-soft-text"></p>
+   <div id="geminiResults"></div>
+   <button id="geminiSave" type="button" class="premium-primary" disabled>✓ اعتماد الأسطر المراجعة وحفظها</button>
+  </details>
  </div>
  <div class="premium-card">
    <div class="premium-section-line"><div><h3>التلاميذ المسجلون</h3><span id="premiumStudentCount" class="premium-soft-text">—</span></div><button class="premium-pale-btn" id="premiumStudentsRefresh" type="button">تحديث</button></div>
@@ -369,5 +384,6 @@
 <script src="/family-engagement.js?v=20261024-1630" defer></script>
 <script src="/madrasati-premium.js?v=20261024-1540" defer></script>
 <script src="/student-management.js?v=20261024-1645" defer></script>
+<script src="/gemini-import.js?v=20261024-1700" defer></script>
 </body>
 </html>
