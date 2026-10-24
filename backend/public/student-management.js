@@ -118,6 +118,62 @@
     }
     return rows;
   }
+
+  /* Browser-side XLSX: first worksheet, bounded ZIP + deflate, no third-party server upload. */
+  async function xlsxAsText(file){
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    if(bytes.length>5_000_000)throw new Error("FILE_TOO_LARGE");
+    const dv=new DataView(bytes.buffer);
+    let eocd=-1;
+    for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)
+      if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+    if(eocd<0)throw new Error("INVALID_XLSX");
+    let p=dv.getUint32(eocd+16,true),count=dv.getUint16(eocd+10,true),entries=new Map();
+    if(count>1300)throw new Error("INVALID_XLSX");
+    for(let k=0;k<count;k++){
+      if(dv.getUint32(p,true)!==0x02014b50)throw new Error("INVALID_XLSX");
+      const method=dv.getUint16(p+10,true),compressed=dv.getUint32(p+20,true),size=dv.getUint32(p+24,true),n=dv.getUint16(p+28,true),extra=dv.getUint16(p+30,true),comment=dv.getUint16(p+32,true),offset=dv.getUint32(p+42,true);
+      const name=new TextDecoder().decode(bytes.slice(p+46,p+46+n));
+      entries.set(name,{method,compressed,size,offset});p+=46+n+extra+comment;
+    }
+    async function read(path){
+      const a=entries.get(path);if(!a)return "";
+      if(a.size>8_000_000||a.compressed>6_000_000)throw new Error("FILE_TOO_LARGE");
+      const offset=a.offset;
+      if(dv.getUint32(offset,true)!==0x04034b50)throw new Error("INVALID_XLSX");
+      const start=offset+30+dv.getUint16(offset+26,true)+dv.getUint16(offset+28,true);
+      const part=bytes.slice(start,start+a.compressed);
+      let result;
+      if(a.method===0)result=part;
+      else if(a.method===8&&typeof DecompressionStream!=="undefined"){
+        const stream=new Blob([part]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        result=new Uint8Array(await new Response(stream).arrayBuffer());
+      }else throw new Error("XLSX_UNSUPPORTED");
+      return new TextDecoder().decode(result);
+    }
+    const strings=[],shared=await read("xl/sharedStrings.xml");
+    if(shared){const xml=new DOMParser().parseFromString(shared,"application/xml");
+      for(const item of xml.getElementsByTagName("si"))strings.push([...item.getElementsByTagName("t")].map(t=>t.textContent||"").join(""));
+    }
+    const sheet=[...entries.keys()].filter(x=>/^xl\/worksheets\/sheet\d+\.xml$/.test(x)).sort()[0];
+    if(!sheet)throw new Error("INVALID_XLSX");
+    const doc=new DOMParser().parseFromString(await read(sheet),"application/xml");
+    if(doc.getElementsByTagName("parsererror").length)throw new Error("INVALID_XLSX");
+    const rows=[];
+    for(const row of [...doc.getElementsByTagName("row")].slice(0,601)){
+      const cells=[];
+      for(const c of row.getElementsByTagName("c")){
+        const ref=c.getAttribute("r")||"",letters=ref.match(/^[A-Z]+/)?.[0];let col=0;
+        if(letters){for(const ch of letters)col=col*26+ch.charCodeAt(0)-64;col--;}else col=cells.length;
+        if(col<0||col>24)continue;
+        const raw=c.getElementsByTagName("v")[0]?.textContent||"";
+        const value=c.getAttribute("t")==="s"?(strings[Number(raw)]||""):c.getAttribute("t")==="inlineStr"?[...c.getElementsByTagName("t")].map(t=>t.textContent||"").join(""):raw;
+        cells[col]=String(value||"").replace(/[\t\r\n]+/g," ");
+      }
+      if(cells.some(v=>v?.trim()))rows.push(cells);
+    }
+    return rows.map(row=>row.join("\t")).join("\n");
+  }
   async function sourceText(){
     const input=byId("premiumImportText").value.trim();
     const file=byId("premiumImportFile").files?.[0];
@@ -132,6 +188,7 @@
         return recognized.map(x=>x.rawValue).join("\n");
       }finally{bitmap.close();}
     }
+    if(/\.xlsx$/i.test(file.name))return xlsxAsText(file);
     if(!/\.(csv|txt|tsv)$/i.test(file.name)&&!/^text\//.test(file.type))throw new Error("UNSUPPORTED_FORMAT");
     return file.text();
   }
@@ -150,7 +207,7 @@
         '</tbody></table></div>'+(pending.length>60?'<p class="premium-soft-text">أول 60 تلميذًا في المعاينة. جميع الأسماء ستُفحص عند الحفظ.</p>':"");
       byId("premiumImportSave").disabled=false;
     }catch(e){
-      out.textContent=e.message==="OCR_UNSUPPORTED"?"المتصفح لا يدعم قراءة الكتابة من الصور تلقائيًا. استخدم CSV أو انسخ النص من الصورة والصقه هنا.":e.message==="FILE_TOO_LARGE"?"الملف أكبر من 2MB.":"تنسيق الملف غير مدعوم؛ جرّب CSV أو TXT.";
+      out.textContent=e.message==="OCR_UNSUPPORTED"?"المتصفح لا يدعم قراءة الكتابة من الصور تلقائيًا. استخدم CSV أو انسخ النص من الصورة والصقه هنا.":e.message==="FILE_TOO_LARGE"?"الملف أكبر من الحد المسموح.":e.message==="XLSX_UNSUPPORTED"?"الجهاز لا يدعم فك ضغط Excel. احفظ الملف CSV وأعد المحاولة.":"تنسيق الملف غير مدعوم؛ جرّب Excel أو CSV أو TXT.";
     }
   }
   async function commitImport(){
