@@ -8,7 +8,6 @@
   const selectedClass=()=>byId("premiumStudentsClass")?.value||"";
   const editorOptions=(choices,value)=>choices.map(x=>'<option value="'+enc(x[0])+'" '+(x[0]===value?'selected':'')+'>'+enc(x[1])+'</option>').join("");
   function installEditors(){
-    if(!premiumDirector())return;
     const old=premiumRenderStudents;
     premiumRenderStudents=function(){
       old();
@@ -18,10 +17,12 @@
         if(!s)return;
         const card=btn.closest(".premium-pupil"),actions=card?.querySelector(".premium-pupil-actions");
         if(!actions)return;
+        if(!actions.querySelector("[data-premium-edit]")){
         const edit=document.createElement("button");
         edit.type="button";edit.className="premium-student-edit";edit.dataset.studentEdit=id;
         edit.textContent=locale==="fr"?"✎ Modifier":"✎ تعديل بيانات التلميذ";
         actions.prepend(edit);
+        }
         const note=document.createElement("p");
         note.className="premium-guardian-note";
         note.textContent=s.guardian_whatsapp_phone
@@ -164,7 +165,7 @@
     try{
       for(let i=0;i<rows.length;i+=150){
         const result=await api("/api/director/students/import",{method:"POST",body:JSON.stringify({classId,rows:rows.slice(i,i+150)})});
-        added+=result.imported||0;skipped+=(result.skipped||[]).length;
+        added+=result.created||0;skipped+=Number(result.skipped)||0;
         status.textContent="تم حفظ "+added+" · متجاوز/مكرر "+skipped+" · تم فحص "+Math.min(rows.length,i+150)+"/"+rows.length;
       }
       status.textContent="اكتمل الاستيراد: "+added+" تلميذًا جديدًا، "+skipped+" متجاوزًا أو مكررًا. بقيت السجلات والدرجات السابقة محفوظة.";
@@ -176,6 +177,7 @@
       toast(e.data?.error==="INVALID_IMPORT"?"القائمة فيها بيانات غير مقبولة.":"تعذر استكمال الاستيراد");
     }finally{busy=false;if(pending.length)btn.disabled=false;}
   }
+  window.schoolStudentTools={openEdit:editStudent};
   const ready=()=>{
     if(!byId("premiumStudentList")||!byId("premiumImportPreview"))return;
     installEditors();
