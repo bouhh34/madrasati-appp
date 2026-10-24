@@ -77,9 +77,9 @@ export function renderReportPages(entries,school,options={}){
   }
   return pages.join('');
 }
-export function renderRoster(data,school,lang='ar'){
+export function renderRoster(data,school,lang='ar',custom=false){
   const className=localizedValue(data.classroom,'name',lang);
-  return `<article class="paper roster-paper">${header(school,data.classroom.academic_year,false,lang,label(lang,'لائحة النتائج','Résultats de la classe'))}<h1>${esc(className)}</h1><p>${esc(data.period)} · ${label(lang,'عدد التلاميذ','Effectif')}: ${data.stats.total}</p><table><thead><tr><th>${label(lang,'التلميذ','Élève')}</th><th>${label(lang,'المعدل /20','Moyenne /20')}</th><th>${label(lang,'الترتيب','Rang')}</th></tr></thead><tbody>${data.results.map(s=>`<tr><td>${esc(studentName(s,lang))}</td><td>${value(s.average)}${s.complete?'':` (${label(lang,'مؤقت','provisoire')})`}</td><td>${s.rank??'—'}</td></tr>`).join('')}</tbody></table></article>`;
+  return `<article class="paper roster-paper">${header(school,data.classroom.academic_year,custom,lang,label(lang,'لائحة النتائج','Résultats de la classe'))}<h1>${esc(className)}</h1><p>${esc(data.period)} · ${label(lang,'عدد التلاميذ','Effectif')}: ${data.stats.total}</p><table><thead><tr><th>${label(lang,'التلميذ','Élève')}</th><th>${label(lang,'المعدل /20','Moyenne /20')}</th><th>${label(lang,'الترتيب','Rang')}</th></tr></thead><tbody>${data.results.map(s=>`<tr><td>${esc(studentName(s,lang))}</td><td>${value(s.average)}${s.complete?'':` (${label(lang,'مؤقت','provisoire')})`}</td><td>${s.rank??'—'}</td></tr>`).join('')}</tbody></table></article>`;
 }
 export function renderAttendanceReport(data,school,lang='ar'){
   const names=[label(lang,'حاضر','Présent'),label(lang,'غائب','Absent'),label(lang,'متأخر','Retard'),label(lang,'معذور','Excusé')];
@@ -115,7 +115,7 @@ async function initialisePrint(){
       const query=new URLSearchParams({term:period});if(params.get('subjectId'))query.set('subjectId',params.get('subjectId'));
       const [data,branding]=await Promise.all([get(`/api/classes/${encodeURIComponent(classId)}/results?${query}`),get('/api/branding')]);
       if(!data.results.length)throw new Error('NO_STUDENTS');
-      root.innerHTML=params.get('format')==='roster'?renderRoster(data,school,lang):renderReportPages(data.results.map(s=>({student:{...s,class_name:data.classroom.name,academic_year:data.classroom.academic_year},report:s.report,rank:s.rank,totalStudents:data.stats.total})),school,{lang,period,scope:data.scope,custom:school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM'});
+      root.innerHTML=params.get('format')==='roster'?renderRoster(data,school,lang,school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM'):renderReportPages(data.results.map(s=>({student:{...s,class_name:data.classroom.name,academic_year:data.classroom.academic_year},report:s.report,rank:s.rank,totalStudents:data.stats.total})),school,{lang,period,scope:data.scope,custom:school.school_type==='PRIVATE'&&branding.branding?.mode==='CUSTOM'});
     }else if(studentId){
       const [data,branding]=await Promise.all([get(`/api/students/${encodeURIComponent(studentId)}/report`),get('/api/branding')]);
       let rank=null,totalStudents=null;
@@ -136,7 +136,9 @@ async function initialisePrint(){
     document.body.classList.add('print-ready');button.disabled=false;
     fitPrintPreview(root);
     window.addEventListener('resize',()=>fitPrintPreview(root),{passive:true});
-    status.textContent=label(lang,'تم تجهيز الكشوف: تلميذان في كل ورقة A4. اختر الحجم الأصلي 100% وأوقف ترويسة المتصفح وتذييله.','Bulletins prêts : deux élèves par feuille A4. Choisissez la taille réelle 100 % et désactivez les en-têtes et pieds de page du navigateur.');
+    status.textContent=studentId
+      ?label(lang,'تم تجهيز كشف التلميذ على صفحة A4 كاملة. للطباعة اختر A4 والحجم الأصلي 100% وأوقف ترويسة المتصفح وتذييله.','Bulletin individuel prêt sur une page A4. Choisissez A4, une échelle de 100 % et désactivez les en-têtes et pieds de page.')
+      :label(lang,'تم تجهيز التقرير. الكشوف الجماعية: تلميذان في كل ورقة A4. اختر الحجم الأصلي 100% وأوقف ترويسة المتصفح وتذييله.','Rapport prêt. Bulletins collectifs : deux élèves par feuille A4. Choisissez la taille réelle 100 % et désactivez les en-têtes et pieds de page.');
     button.onclick=async()=>{
       button.disabled=true;
       try{const current=await get('/api/auth/me');if(current.id!==reportIdentity.id||current.schoolId!==reportIdentity.schoolId){clearReport();return;}button.disabled=false;window.print();}
