@@ -731,17 +731,11 @@ async function loadBranding(){
             </div>`
           :`<div>
               <img src="/assets/official-logo.png" alt="الشعار الرسمي" class="feature-style-1">
-              <p>المدرسة العمومية تستخدم الرأسية الرسمية الموريتانية</p>
+              <p>يمكن للمدرسة اعتماد رأسيتها الخاصة، أو الإبقاء على الرأسية الرسمية الافتراضية</p>
             </div>`;
 
-    $("brandingControls")
-      ?.classList
-      .toggle(
-        "hidden",
-        !isPrivate ||
-        !(me.roles||[])
-          .includes("DIRECTOR")
-      );
+    $("brandingControls")?.classList.toggle("hidden",!(me.roles||[]).includes("DIRECTOR"));
+    $("resetBrandingBtn")?.classList.toggle("hidden",!custom);
   }catch{}
 }
 
@@ -822,10 +816,26 @@ async function uploadBranding(){
 
       await loadBranding();
     }
-  }catch{
-    toast(
-      "تعذر معالجة الملف أو نوعه غير مدعوم"
-    );
+  }catch(e){
+    toast(e.data?.error==="HEADER_CONVERSION_FAILED"?"تعذر تحويل PDF هنا؛ استخدم صورة PNG/JPG للرأسية.":"تعذر معالجة الملف أو نوعه غير مدعوم");
+  }
+}
+async function resetBranding(){
+  if(!confirm("العودة إلى الرأسية الافتراضية للمدرسة؟"))return;
+  try{
+    await api("/api/director/branding",{method:"DELETE"});
+    toast("تمت استعادة الرأسية الافتراضية");
+    await loadBranding();
+  }catch(e){
+    if(e.data?.error==="STEP_UP_REQUIRED"){
+      const password=prompt("أدخل كلمة مرور المدير لتأكيد التغيير");
+      if(!password)return;
+      try{
+        await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password})});
+        await api("/api/director/branding",{method:"DELETE"});
+        await loadBranding();toast("تمت استعادة الرأسية الافتراضية");
+      }catch{toast("تعذر تغيير الرأسية");}
+    }else toast("تعذر تغيير الرأسية");
   }
 }
 
@@ -3088,9 +3098,7 @@ if(
           "CUSTOM";
 
         const isPrivate=school.school_type==="PRIVATE";
-        const logo=isPrivate
-          ?(custom?`/api/branding/header?ts=${Date.now()}`:null)
-          :"/assets/official-logo.png";
+        const logo=custom?null:(isPrivate?null:"/assets/official-logo.png");
         const defaultEmblem=escapeHtml((school.name||"مدرسة").trim());
 
         const rows=
