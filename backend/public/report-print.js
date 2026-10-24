@@ -72,8 +72,9 @@ export function renderReportPages(entries,school,options={}){
   const pages=[];
   for(let i=0;i<entries.length;i+=2){
     const pair=entries.slice(i,i+2),count=Math.max(...pair.map(e=>e.report.subjects.length));
+    const singleReport=options.fullPage===true||pair.length===1;
     const density=count>13?' density-ultra':count>10?' density-tight':count>7?' density-compact':'';
-    pages.push(`<article class="paper${density}${options.fullPage?' single-report':''}" data-page="${Math.floor(i/2)+1}">${studentCard(pair[0],school,options)}${pair[1]?`<div class="cut-line"><span>${label(options.lang,'خط القص','Ligne de coupe')}</span></div>${studentCard(pair[1],school,options)}`:''}</article>`);
+    pages.push(`<article class="paper${density}${singleReport?' single-report':''}" data-page="${Math.floor(i/2)+1}">${studentCard(pair[0],school,options)}${pair[1]?`<div class="cut-line"><span>${label(options.lang,'خط القص','Ligne de coupe')}</span></div>${studentCard(pair[1],school,options)}`:''}</article>`);
   }
   return pages.join('');
 }
@@ -144,6 +145,6 @@ async function initialisePrint(){
       try{const current=await get('/api/auth/me');if(current.id!==reportIdentity.id||current.schoolId!==reportIdentity.schoolId){clearReport();return;}button.disabled=false;window.print();}
       catch{clearReport();}
     };
-  }catch(e){root.replaceChildren();button.disabled=true;document.body.classList.remove('print-ready');status.textContent=e.status===401?label(lang,'انتهت الجلسة. عُد للتطبيق وسجّل الدخول.','Session expirée. Revenez à l’application pour vous connecter.'):e.message==='REPORT_TOO_LONG'?label(lang,'التقرير أطول من نصف صفحة A4. قلّل عدد المواد أو اختصر أسماء المواد قبل الطباعة.','Le bulletin dépasse une demi-page A4. Réduisez le nombre de matières ou raccourcissez leurs intitulés avant l’impression.'):e.message==='NO_STUDENTS'?label(lang,'لا يوجد تلاميذ نشطون في هذا القسم.','Aucun élève actif dans cette classe.'):label(lang,'تعذر تحميل التقرير كاملًا. تحقق من الجلسة والصلاحيات واتصال الإنترنت ثم أعد المحاولة.','Chargement incomplet. Vérifiez votre session, vos droits et votre connexion, puis réessayez.');}
+  }catch(e){root.replaceChildren();button.disabled=true;document.body.classList.remove('print-ready');status.textContent=e.status===401?label(lang,'انتهت الجلسة. عُد للتطبيق وسجّل الدخول.','Session expirée. Revenez à l’application pour vous connecter.'):e.message==='REPORT_TOO_LONG'?label(lang,'تجاوز محتوى الكشف مساحة ورقة A4. اختصر أسماء المواد أو راجع إعدادات الكشف، دون حذف درجات التلاميذ.','Le bulletin dépasse la zone imprimable A4. Vérifiez les matières et la mise en page, sans supprimer les notes.'):e.message==='NO_STUDENTS'?label(lang,'لا يوجد تلاميذ نشطون في هذا القسم.','Aucun élève actif dans cette classe.'):label(lang,'تعذر تحميل التقرير كاملًا. تحقق من الجلسة والصلاحيات واتصال الإنترنت ثم أعد المحاولة.','Chargement incomplet. Vérifiez votre session, vos droits et votre connexion, puis réessayez.');}
 }
 if(typeof document!=='undefined')initialisePrint();
