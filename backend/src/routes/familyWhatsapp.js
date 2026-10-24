@@ -23,7 +23,7 @@ export async function registerFamilyWhatsappRoutes(app,{requireSession,requireMu
       const x=await c.query("SELECT id,name FROM classes WHERE id=$1 AND school_id=$2",[classId,request.auth.schoolId]);
       if(!x.rowCount)return reply.code(404).send({error:"CLASS_NOT_FOUND"});
       const q=await c.query(`SELECT s.id,s.student_uid,s.full_name,s.class_id,s.status,
-        CASE WHEN s.guardian_whatsapp_consent THEN s.guardian_whatsapp_phone ELSE NULL END AS guardian_phone,
+        CASE WHEN app.has_role('DIRECTOR') OR s.guardian_whatsapp_consent THEN s.guardian_whatsapp_phone ELSE NULL END AS guardian_phone,
         s.guardian_whatsapp_consent AS consent
         FROM students s WHERE s.class_id=$1 AND s.school_id=$2 AND s.status='ACTIVE'
         ORDER BY s.full_name,s.id LIMIT 800`,[classId,request.auth.schoolId]);
