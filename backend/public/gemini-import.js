@@ -3,7 +3,7 @@
   "use strict";
   const $=id=>document.getElementById(id);
   const esc=x=>escapeHtml(String(x??""));
-  let rows=[],busy=false;
+  let rows=[],busy=false,sourceClassId="";
   const mode=()=> $("geminiMode").value;
   const cls=()=> $("premiumStudentsClass")?.value||"";
   const status=(v)=>{$("geminiStatus").textContent=v;};
@@ -35,7 +35,7 @@
       const tip=r.note?'<small>'+esc(r.note)+'</small>':'';
       const choice='<td><input type="checkbox" data-i="'+i+'" data-key="include" '+(r.include?"checked":"")+' aria-label="تحديد السطر"></td>';
       const reviewCell='<td>'+review+tip+'<label class="gemini-check"><input type="checkbox" data-i="'+i+'" data-key="reviewed" '+(r.reviewed?"checked":"")+'> راجعت</label></td>';
-      if(isGrade)return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+'<small>'+esc(r.studentUid||"")+'</small></td><td>'+inputCell(i,"subject",r.subject, "text",90)+'</td><td>'+inputCell(i,"score",r.score,"number",75)+'</td><td>'+inputCell(i,"maxScore",r.maxScore,"number",75)+'</td>'+reviewCell+'</tr>';
+      if(isGrade)return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+inputCell(i,"studentUid",r.studentUid,"text",90)+'</td><td>'+inputCell(i,"subject",r.subject, "text",90)+'</td><td>'+inputCell(i,"score",r.score,"number",75)+'</td><td>'+inputCell(i,"maxScore",r.maxScore,"number",75)+'</td>'+reviewCell+'</tr>';
       return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+'</td><td>'+inputCell(i,"studentUid",r.studentUid,"text",95)+'</td><td>'+inputCell(i,"guardianPhone",r.guardianPhone,"text",95)+'</td><td><select data-i="'+i+'" data-key="gender"><option value="" '+(!r.gender?"selected":"")+'>—</option><option value="M" '+(r.gender==="M"?"selected":"")+'>ولد</option><option value="F" '+(r.gender==="F"?"selected":"")+'>بنت</option></select></td>'+reviewCell+'</tr>';
     }).join("");
     $("geminiResults").innerHTML='<p class="premium-soft-text">نتائج مقترحة من الذكاء الاصطناعي، وليست سجلات معتمدة. صحّح كل خانة وحدد «راجعت» قبل الحفظ. أزل اختيار السطر إن كان غير صحيح.</p>'+
@@ -59,7 +59,7 @@
     if(!file){status("اختر صورة أو PDF.");return;}
     if(!$("geminiConsent").checked){status("يلزم الإقرار بالسماح بإرسال هذه النسخة إلى Google قبل القراءة.");return;}
     if(file.size>5*1024*1024){status("الملف أكبر من 5MB.");return;}
-    invalidate();busy=true;$("geminiStart").disabled=true;status("جارٍ استخراج البيانات بواسطة Gemini…");
+    invalidate();sourceClassId=cls();busy=true;$("geminiStart").disabled=true;$("geminiMode").disabled=true;$("geminiFile").disabled=true;status("جارٍ استخراج البيانات بواسطة Gemini…");
     const data=new FormData();data.append("file",file,file.name);
     try{
       const out=await api("/api/director/ocr/gemini?kind="+mode(),{method:"POST",body:data,headers:{"x-ocr-consent":"true"}});
@@ -70,7 +70,7 @@
     }catch(e){
       const msg={GEMINI_NOT_CONFIGURED:"لم يُضبط مفتاح Gemini أو إعداد حماية البيانات في Render.",GEMINI_RATE_LIMIT:"وصلت إلى حد الطلبات مؤقتًا. أعد المحاولة لاحقًا.",GEMINI_CONNECTION_FAILED:"انقطع الاتصال بخدمة Gemini.",GEMINI_REQUEST_FAILED:"رفضت Google الطلب؛ راجع صلاحية المفتاح والحصة.",GEMINI_INVALID_RESPONSE:"تعذر قراءة النتيجة. جرّب صورة أوضح.",FILE_TOO_LARGE:"الملف كبير جدًا.",UNSUPPORTED_FILE_TYPE:"استخدم PNG أو JPG أو WEBP أو PDF."};
       status(msg[e.data?.error]||"فشل الاستخراج. تحقق من الملف وإعدادات الخدمة.");
-    }finally{busy=false;await updateAvailability();}
+    }finally{busy=false;$("geminiMode").disabled=false;$("geminiFile").disabled=false;await updateAvailability();}
   }
   function selected(){
     return rows.filter(r=>r.include);
@@ -143,6 +143,7 @@
   async function save(){
     if(busy)return;
     if(!cls()){status("اختر القسم أولًا.");return;}
+    if(sourceClassId!==cls()){invalidate();status("تغير القسم. أعد استخراج الملف حتى لا تُحفظ البيانات في قسم خاطئ.");return;}
     const chosen=validated();if(!chosen)return;
     busy=true;$("geminiSave").disabled=true;
     try{if(mode()==="grades")await saveGrades(chosen);else await saveStudents(chosen);}
@@ -154,12 +155,14 @@
     $("premiumGeminiDetails").addEventListener("toggle",()=>{if($("premiumGeminiDetails").open)updateAvailability();});
     $("geminiMode").addEventListener("change",()=>{invalidate();$("geminiFile").value="";});
     $("geminiFile").addEventListener("change",invalidate);
+    $("premiumStudentsClass").addEventListener("change",()=>{if(rows.length){invalidate();status("تغير القسم؛ أعد معاينة الوثيقة قبل الحفظ.");}});
     $("geminiStart").addEventListener("click",transcribe);
     $("geminiSave").addEventListener("click",save);
     $("geminiResults").addEventListener("input",e=>{
       const el=e.target,i=Number(el.dataset.i),key=el.dataset.key;
       if(!Number.isInteger(i)||!rows[i]||!key)return;
       rows[i][key]=el.type==="checkbox"?el.checked:el.type==="number"?(el.value===""?null:Number(el.value)):el.value;
+      if(key!=="reviewed"&&key!=="include"){rows[i].reviewed=false;const check=$("geminiResults").querySelector('[data-i="'+i+'"][data-key="reviewed"]');if(check)check.checked=false;}
     });
     $("geminiResults").addEventListener("change",e=>{
       const el=e.target,i=Number(el.dataset.i),key=el.dataset.key;
