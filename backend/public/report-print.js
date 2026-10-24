@@ -29,6 +29,7 @@ function header(school,year,custom,lang,title){
   if(custom)return `<div class="uploaded-letterhead"><img src="/api/branding/header" alt="${label(lang,'الرأسية الرسمية للمدرسة','En-tête officiel de l’école')}"></div><div class="uploaded-letterhead-title">${esc(title)}</div>`;
   const wilaya=localizedValue(school,'wilaya',lang),moughataa=localizedValue(school,'moughataa',lang),inspection=localizedValue(school,'inspection',lang);
   const privateSchool=school?.school_type==='PRIVATE';
+  if(custom)return `<div class="custom-school-letterhead"><img src="/api/branding/header" alt="${label(lang,'الرأسية الرسمية للمدرسة','En-tête officiel de l’école')}"></div><div class="custom-report-heading">${esc(title)}</div>`;
   const schoolSymbol=esc((schoolName(school,lang)||'مدرسة').trim());
   const emblem=privateSchool
     ?(custom?`<img class="school-emblem" src="/api/branding/header" alt="${label(lang,'شعار المدرسة','Logo de l’école')}">`:`<span class="school-identity-mark" role="img" aria-label="${label(lang,'رمز المدرسة','Symbole de l’école')} : ${schoolSymbol}"><svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M32 44c-9-7-17-8-24-6V19c7-2 15-1 24 6v19Zm0 0c9-7 17-8 24-6V19c-7-2-15-1-24 6v19Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 25v19M12 26c5-.7 10 1 15 4m10 0c5-3 10-4.7 15-4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="m32 5 2.4 5.6 6 .5-4.6 4 1.5 6-5.3-3.1-5.3 3.1 1.5-6-4.6-4 6-.5Z" fill="currentColor"/></svg></span>`)
@@ -83,10 +84,10 @@ export function renderRoster(data,school,lang='ar',custom=false){
   const className=localizedValue(data.classroom,'name',lang);
   return `<article class="paper roster-paper">${header(school,data.classroom.academic_year,custom,lang,label(lang,'لائحة النتائج','Résultats de la classe'))}<h1>${esc(className)}</h1><p>${esc(data.period)} · ${label(lang,'عدد التلاميذ','Effectif')}: ${data.stats.total}</p><table><thead><tr><th>${label(lang,'التلميذ','Élève')}</th><th>${label(lang,'المعدل /20','Moyenne /20')}</th><th>${label(lang,'الترتيب','Rang')}</th></tr></thead><tbody>${data.results.map(s=>`<tr><td>${esc(studentName(s,lang))}</td><td>${value(s.average)}${s.complete?'':` (${label(lang,'مؤقت','provisoire')})`}</td><td>${s.rank??'—'}</td></tr>`).join('')}</tbody></table></article>`;
 }
-export function renderAttendanceReport(data,school,lang='ar'){
+export function renderAttendanceReport(data,school,lang='ar',custom=false){
   const names=[label(lang,'حاضر','Présent'),label(lang,'غائب','Absent'),label(lang,'متأخر','Retard'),label(lang,'معذور','Excusé')];
   const className=localizedValue(data.classroom,'name',lang);
-  return `<article class="paper roster-paper">${header(school,null,false,lang,label(lang,'تقرير الحضور','Rapport de présence'))}<h1>${esc(className)}</h1><p><bdi>${esc(data.from)}</bdi> / <bdi>${esc(data.to)}</bdi></p><p>${label(lang,'السجلات المحفوظة فقط؛ الأيام غير المسجلة لا تُحسب غيابًا.','Enregistrements sauvegardés uniquement. Les jours non saisis ne sont pas des absences.')}</p><table><thead><tr><th>${label(lang,'التلميذ','Élève')}</th>${names.map(n=>`<th>${n}</th>`).join('')}</tr></thead><tbody>${data.students.map(s=>`<tr><td>${esc(studentName(s,lang))} · <bdi>${esc(s.student_uid)}</bdi></td>${['PRESENT','ABSENT','LATE','EXCUSED'].map(k=>`<td>${s[k]}</td>`).join('')}</tr>`).join('')}<tr><th>${label(lang,'المجموع','Total')}</th>${['PRESENT','ABSENT','LATE','EXCUSED'].map(k=>`<th>${data.totals[k]}</th>`).join('')}</tr></tbody></table></article>`;
+  return `<article class="paper roster-paper">${header(school,null,custom,lang,label(lang,'تقرير الحضور','Rapport de présence'))}<h1>${esc(className)}</h1><p><bdi>${esc(data.from)}</bdi> / <bdi>${esc(data.to)}</bdi></p><p>${label(lang,'السجلات المحفوظة فقط؛ الأيام غير المسجلة لا تُحسب غيابًا.','Enregistrements sauvegardés uniquement. Les jours non saisis ne sont pas des absences.')}</p><table><thead><tr><th>${label(lang,'التلميذ','Élève')}</th>${names.map(n=>`<th>${n}</th>`).join('')}</tr></thead><tbody>${data.students.map(s=>`<tr><td>${esc(studentName(s,lang))} · <bdi>${esc(s.student_uid)}</bdi></td>${['PRESENT','ABSENT','LATE','EXCUSED'].map(k=>`<td>${s[k]}</td>`).join('')}</tr>`).join('')}<tr><th>${label(lang,'المجموع','Total')}</th>${['PRESENT','ABSENT','LATE','EXCUSED'].map(k=>`<th>${data.totals[k]}</th>`).join('')}</tr></tbody></table></article>`;
 }
 async function get(url){const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Object.assign(new Error('REPORT_UNAVAILABLE'),{status:response.status});return response.json();}
 // Screen-only, responsive A4 preview. The printed sheet keeps exact millimetre dimensions.
@@ -112,7 +113,7 @@ async function initialisePrint(){
     reportIdentity={id:identity.id,schoolId:identity.schoolId};
     if(!school)throw new Error('SCHOOL_REQUIRED');
     const period=params.get('term')||'T1',classId=params.get('classId'),studentId=params.get('studentId'),attendance=params.get('attendance');
-    if(attendance){const data=await get(`/api/classes/${encodeURIComponent(attendance)}/attendance/report?${new URLSearchParams({from:params.get('from')||'',to:params.get('to')||''})}`);root.innerHTML=renderAttendanceReport(data,school,lang);}
+    if(attendance){const [data,branding]=await Promise.all([get(`/api/classes/${encodeURIComponent(attendance)}/attendance/report?${new URLSearchParams({from:params.get('from')||'',to:params.get('to')||''})}`),get('/api/branding')]);root.innerHTML=renderAttendanceReport(data,school,lang,branding.branding?.mode==='CUSTOM');}
     else if(classId){
       const query=new URLSearchParams({term:period});if(params.get('subjectId'))query.set('subjectId',params.get('subjectId'));
       const [data,branding]=await Promise.all([get(`/api/classes/${encodeURIComponent(classId)}/results?${query}`),get('/api/branding')]);
