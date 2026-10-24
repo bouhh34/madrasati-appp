@@ -739,86 +739,105 @@ async function loadBranding(){
   }catch{}
 }
 
+let brandingUploadBusy=false,brandingSelectedPreviewUrl=null;
+function brandingSetStatus(message,kind="info"){
+  const node=$("brandingUploadStatus");
+  if(node){node.textContent=message;node.dataset.state=kind;}
+}
+function brandingFileChanged(){
+  const file=$("brandingFile")?.files?.[0],preview=$("brandingSelectedPreview"),step=$("brandingStepUp");
+  if(brandingSelectedPreviewUrl){URL.revokeObjectURL(brandingSelectedPreviewUrl);brandingSelectedPreviewUrl=null;}
+  if(preview)preview.replaceChildren();
+  step?.classList.add("hidden");
+  if($("brandingConfirmPassword"))$("brandingConfirmPassword").value="";
+  if(!file){brandingSetStatus("اختر صورة أو PDF للرأسية، ثم اضغط «رفع واعتماد».");return;}
+  if(file.size>5*1024*1024){brandingSetStatus("الملف يتجاوز 5 ميغابايت. صغّر حجمه ثم أعد الاختيار.","error");return;}
+  if(!/(\.png|\.jpe?g|\.webp|\.pdf)$/i.test(file.name)&&!["image/png","image/jpeg","image/webp","application/pdf"].includes(file.type)){
+    brandingSetStatus("الصيغ المقبولة: PNG وJPG وWEBP وPDF فقط.","error");return;
+  }
+  brandingSetStatus("الملف جاهز: "+file.name+" ("+(file.size/1024).toFixed(0)+" كيلوبايت). اضغط «رفع واعتماد رأسية المدرسة».","ready");
+  if(preview&&file.type.startsWith("image/")){
+    brandingSelectedPreviewUrl=URL.createObjectURL(file);
+    const img=document.createElement("img");
+    img.src=brandingSelectedPreviewUrl;img.alt="معاينة الصورة المختارة قبل اعتمادها";img.loading="lazy";
+    preview.appendChild(img);
+  }
+}
+function brandingErrorText(e){
+  const error=e?.data?.error||"",status=e?.status;
+  const map={
+    "REAUTH_FAILED":"كلمة مرور المدير غير صحيحة. أعد إدخالها.",
+    "CSRF_REJECTED":"انتهت صلاحية الحماية. حدّث الصفحة وسجل الدخول مجددًا.",
+    "ORIGIN_REJECTED":"تعذّر التحقق من مصدر الطلب. افتح مدرستي في المتصفح الأساسي وأعد المحاولة.",
+    "AUTH_REQUIRED":"انتهت جلسة الدخول. سجّل الدخول من جديد.",
+    "DIRECTOR_ONLY":"يُسمح فقط لمدير المدرسة المعنية برفع رأسيتها.",
+    "STEP_UP_REQUIRED":"يلزم تأكيد كلمة مرور المدير لإتمام رفع الرأسية.",
+    "UNSUPPORTED_FILE_TYPE":"صيغة الملف غير مدعومة؛ استخدم PNG أو JPG أو PDF.",
+    "FILE_TOO_LARGE":"الملف كبير جدًا. الحد الحالي 5 ميغابايت.",
+    "INVALID_PDF":"ملف PDF غير صالح. جرّب تصديره مجددًا أو رفع صورة PNG.",
+    "HEADER_CONVERSION_FAILED":"تعذّر تحويل الملف. جرّب صورة PNG أو JPG واضحة بدل PDF.",
+    "FST_REQ_FILE_TOO_LARGE":"الملف كبير جدًا؛ اختر ملفًا أصغر.",
+    "SCHOOL_NOT_FOUND":"لا توجد مدرسة نشطة مرتبطة بهذا الحساب."
+  };
+  return map[error]||(status===413?"الملف كبير؛ اختر نسخة أصغر.":status===415?"صيغة الملف غير مدعومة.":status===401?"انتهت جلسة الدخول.":status===403?"غير مسموح بالرفع حاليًا. تحقق من صلاحيات المدير.":"تعذر حفظ الرأسية. تأكد من الإنترنت وحاول مجددًا ("+(error||status||"اتصال")+").");
+}
 async function uploadBranding(){
-  const file=
-    $("brandingFile").files?.[0];
-
-  if(!file){
-    return toast(
-      "اختر ملفًا أولًا"
-    );
-  }
-
-  const fd=new FormData();
-
-  fd.append(
-    "file",
-    file
-  );
-
+  if(brandingUploadBusy)return;
+  const file=$("brandingFile")?.files?.[0],button=$("uploadBrandingBtn");
+  if(!file){brandingSetStatus("اختر صورة أو PDF للرأسية أولًا.","error");return;}
+  if(file.size>5*1024*1024){brandingSetStatus("الملف أكبر من 5 ميغابايت؛ اختر ملفًا أصغر.","error");return;}
+  brandingUploadBusy=true;if(button){button.disabled=true;button.textContent="جارٍ رفع الرأسية وحفظها…";}
+  brandingSetStatus("جارٍ إرسال الملف إلى مدرستك. لا تغلق الصفحة حتى تظهر نتيجة العملية.","busy");
   try{
-    let d;
-
+    const fd=new FormData();fd.append("file",file,file.name);
+    let response;
     try{
-      d=await api(
-        "/api/director/branding/upload",
-        {
-          method:"POST",
-          body:fd
-        }
-      );
+      response=await api("/api/director/branding/upload",{method:"POST",body:fd});
     }catch(e){
-      if(
-        e.data?.error===
-        "STEP_UP_REQUIRED"
-      ){
-        const p=prompt(
-          "أعد إدخال كلمة مرور المدير لتأكيد رفع الرأسية"
-        );
-
-        if(!p){
-          return;
-        }
-
-        await api(
-          "/api/auth/step-up",
-          {
-            method:"POST",
-            body:JSON.stringify({
-              password:p
-            })
-          }
-        );
-
-        d=await api(
-          "/api/director/branding/upload",
-          {
-            method:"POST",
-            body:fd
-          }
-        );
-      }else{
-        throw e;
+      if(e.data?.error==="STEP_UP_REQUIRED"){
+        $("brandingStepUp")?.classList.remove("hidden");
+        brandingSetStatus("لأمان وثائق المدرسة، أدخل كلمة مرور المدير في الخانة التي ظهرت ثم اضغط «تأكيد الرفع».","ready");
+        $("brandingConfirmPassword")?.focus();
+        return;
       }
+      throw e;
     }
-
-    if(
-      d.message===
-      "SECURE_CONVERSION_REQUIRED"
-    ){
-      toast(
-        "تم عزل الملف بأمان ويحتاج مرحلة التحويل المعقمة"
-      );
-    }else{
-      toast(
-        "تم اعتماد الرأسية المعقمة"
-      );
-
-      await loadBranding();
+    if(response.message==="SECURE_CONVERSION_REQUIRED"){
+      brandingSetStatus("استُلم الملف لكنه يحتاج تحويلًا إضافيًا ولم يُعتمد كرأسية بعد. اختر صورة PNG أو JPG.","error");
+      return;
     }
+    const saved=await api("/api/branding");
+    if(saved.branding?.mode!=="CUSTOM"){
+      brandingSetStatus("استُلم الملف، لكن تعذر التحقق من اعتماده. حدّث الصفحة وراجع حالة الرأسية.","error");
+      return;
+    }
+    await loadBranding();
+    $("brandingStepUp")?.classList.add("hidden");
+    if($("brandingConfirmPassword"))$("brandingConfirmPassword").value="";
+    brandingSetStatus("تم حفظ رأسية المدرسة بنجاح. ستظهر في الكشوف الرسمية عند الطباعة.","success");
+    toast("تم اعتماد رأسية المدرسة بنجاح");
+    if(brandingSelectedPreviewUrl){URL.revokeObjectURL(brandingSelectedPreviewUrl);brandingSelectedPreviewUrl=null;}
+    $("brandingSelectedPreview")?.replaceChildren();
   }catch(e){
-    toast(e.data?.error==="HEADER_CONVERSION_FAILED"?"تعذر تحويل PDF هنا؛ استخدم صورة PNG/JPG للرأسية.":"تعذر معالجة الملف أو نوعه غير مدعوم");
+    brandingSetStatus(brandingErrorText(e),"error");
+  }finally{
+    brandingUploadBusy=false;if(button){button.disabled=false;button.textContent="رفع واعتماد رأسية المدرسة";}
   }
+}
+async function confirmBrandingUpload(){
+  if(brandingUploadBusy)return;
+  const password=$("brandingConfirmPassword")?.value||"";
+  if(!password){brandingSetStatus("أدخل كلمة مرور المدير لتأكيد الرفع.","error");return;}
+  const button=$("brandingConfirmUpload");
+  if(button)button.disabled=true;
+  brandingSetStatus("جارٍ تأكيد كلمة مرور المدير…","busy");
+  try{
+    await api("/api/auth/step-up",{method:"POST",body:JSON.stringify({password})});
+    if($("brandingConfirmPassword"))$("brandingConfirmPassword").value="";
+    $("brandingStepUp")?.classList.add("hidden");
+    await uploadBranding();
+  }catch(e){brandingSetStatus(brandingErrorText(e),"error");}
+  finally{if(button)button.disabled=false;}
 }
 async function resetBranding(){
   if(!confirm("العودة إلى الرأسية الافتراضية للمدرسة؟"))return;
@@ -1145,8 +1164,9 @@ $("createInviteBtn").onclick=
 $("reloadUsers").onclick=
   loadUsers;
 
-$("uploadBrandingBtn").onclick=
-  uploadBranding;
+$("uploadBrandingBtn").onclick=uploadBranding;
+$("brandingFile").addEventListener("change",brandingFileChanged);
+$("brandingConfirmUpload").onclick=confirmBrandingUpload;
 $("resetBrandingBtn").onclick=resetBranding;
 
 $("quickAttendance")?.addEventListener("click",()=>{
