@@ -141,11 +141,13 @@ function renderFamilyPanel(){
   const available=familyRoster.filter(s=>s.consent&&s.guardian_phone).length;
   familyEl("familyCounts").textContent=`${available} / ${familyRoster.length} ${familyAr("أولياء لديهم رقم وموافقة","contacts autorisés")}`;
 }
-function familyAwardPreview(student){
+async function familyAwardPreview(student){
   const cls=familyClasses.find(c=>c.id===familyEl("familyClass").value);
   const school=me?.school?.name||"مدرستي",title=familyEl("familyAwardTitle").value.trim()||"شهادة تميز وتقدير";
   const reason=familyEl("familyNote").value.trim()||"التفوق والاجتهاد والمثابرة";
-  const html=`<section class="family-certificate" id="familyCertificate">
+  let customHeader=false;try{const branding=await api("/api/branding");customHeader=branding.branding?.mode==="CUSTOM";}catch{}
+  const html=`<section class="family-certificate${customHeader?" with-school-letterhead":""}" id="familyCertificate">
+    ${customHeader?'<div class="family-school-letterhead"><img src="/api/branding/header" alt="رأسية المدرسة الرسمية"></div>':""}
     <div class="family-cert-top">✦ ✦ ✦</div>
     <div class="family-cert-icon">🎓</div>
     <div class="family-cert-label">مدرستي • شهادة تكريم</div>
