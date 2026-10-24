@@ -28,14 +28,14 @@
   }
   function preview(){
     const isGrade=mode()==="grades";
-    const header=isGrade?'<th>اختيار</th><th>الاسم / الرقم المدرسي</th><th>المادة</th><th>الدرجة</th><th>الحد الأعلى</th><th>مراجعة</th>':
+    const header=isGrade?'<th>اختيار</th><th>الاسم / الرقم المدرسي</th><th>المادة</th><th>الدرجة</th><th>الحد الأعلى</th><th>غائب</th><th>مراجعة</th>':
       '<th>اختيار</th><th>الاسم</th><th>رقم التلميذ</th><th>رقم الولي</th><th>الجنس</th><th>مراجعة</th>';
     const body=rows.map((r,i)=>{
       const review=r.uncertain?'<span class="gemini-unclear">⚠ غير واضح</span>':'';
       const tip=r.note?'<small>'+esc(r.note)+'</small>':'';
       const choice='<td><input type="checkbox" data-i="'+i+'" data-key="include" '+(r.include?"checked":"")+' aria-label="تحديد السطر"></td>';
       const reviewCell='<td>'+review+tip+'<label class="gemini-check"><input type="checkbox" data-i="'+i+'" data-key="reviewed" '+(r.reviewed?"checked":"")+'> راجعت</label></td>';
-      if(isGrade)return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+inputCell(i,"studentUid",r.studentUid,"text",90)+'</td><td>'+inputCell(i,"subject",r.subject, "text",90)+'</td><td>'+inputCell(i,"score",r.score,"number",75)+'</td><td>'+inputCell(i,"maxScore",r.maxScore,"number",75)+'</td>'+reviewCell+'</tr>';
+      if(isGrade)return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+inputCell(i,"studentUid",r.studentUid,"text",90)+'</td><td>'+inputCell(i,"subject",r.subject, "text",90)+'</td><td>'+inputCell(i,"score",r.score,"number",75)+'</td><td>'+inputCell(i,"maxScore",r.maxScore,"number",75)+'</td><td><input type="checkbox" data-i="'+i+'" data-key="absent" '+(r.absent?'checked':'')+' aria-label="غائب"></td>'+reviewCell+'</tr>';
       return '<tr>'+choice+'<td>'+inputCell(i,"fullName",r.fullName)+'</td><td>'+inputCell(i,"studentUid",r.studentUid,"text",95)+'</td><td>'+inputCell(i,"guardianPhone",r.guardianPhone,"text",95)+'</td><td><select data-i="'+i+'" data-key="gender"><option value="" '+(!r.gender?"selected":"")+'>—</option><option value="M" '+(r.gender==="M"?"selected":"")+'>ولد</option><option value="F" '+(r.gender==="F"?"selected":"")+'>بنت</option></select></td>'+reviewCell+'</tr>';
     }).join("");
     $("geminiResults").innerHTML='<p class="premium-soft-text">نتائج مقترحة من الذكاء الاصطناعي، وليست سجلات معتمدة. صحّح كل خانة وحدد «راجعت» قبل الحفظ. أزل اختيار السطر إن كان غير صحيح.</p>'+
@@ -114,6 +114,7 @@
       const matches=uid?students.filter(s=>s.student_uid===uid):students.filter(s=>normal(s.full_name)===name);
       if(matches.length!==1){problems.push(row.fullName+": الاسم/الرقم غير مطابق لتلميذ واحد");continue;}
       const pupil=matches[0];
+      if(name&&normal(pupil.full_name)!==name){problems.push(row.fullName+": الاسم لا يطابق صاحب الرقم المدرسي");continue;}
       const val=Number(row.score);
       if(row.absent||row.score===null||row.score===""||!Number.isFinite(val)||val<0||val>max){
         problems.push(row.fullName+": الدرجة غائبة أو غير صالحة");continue;
