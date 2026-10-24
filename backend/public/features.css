@@ -808,3 +808,21 @@
 #brandingInfo img{display:block;max-width:100%;max-height:220px;width:100%;height:auto;object-fit:contain}
 #brandingControls input[type=file]{display:block;width:100%;padding:11px 6px;margin-block:8px;border:1px dashed #bfd6d1;border-radius:11px}
 @media(max-width:480px){#modal .custom-letterhead-preview{height:78px!important}#brandingControls{line-height:1.6}}
+
+
+/* Mobile school-header upload visibility and confirmation */
+.school-header-upload-status{margin:10px 0 14px;padding:12px 13px;background:#f1f8f7;color:#155e59;line-height:1.65;border-radius:13px;font-size:.94rem;border:1px solid #d5e7e4;overflow-wrap:anywhere}
+.school-header-upload-status[data-state="busy"]{background:#fff8e8;color:#7b4d00;border-color:#f2d797}
+.school-header-upload-status[data-state="error"]{background:#fff0ef;color:#9e272b;border-color:#efc2c1;font-weight:700}
+.school-header-upload-status[data-state="success"]{background:#eaf7ef;color:#12643b;border-color:#b5ddc9;font-weight:700}
+.school-header-upload-status[data-state="ready"]{background:#eef9f5;color:#126b60}
+.school-header-selected-preview{width:100%;max-width:100%;max-height:190px;overflow:hidden;margin:9px 0}
+.school-header-selected-preview img{display:block;max-width:100%;max-height:175px;object-fit:contain;border:1px solid #d8e8e6;border-radius:11px;margin:0 auto}
+.school-header-stepup{margin:15px 0;padding:13px;background:#f4f8fa;border:1px solid #bfd5d7;border-radius:15px}
+.school-header-stepup.hidden{display:none!important}
+.school-header-stepup p{line-height:1.65;color:#284b54;margin:0 0 12px}
+.school-header-stepup input{font:inherit;width:100%;min-height:48px;border-radius:10px;border:1px solid #b7d2d0;padding:10px 12px;box-sizing:border-box}
+.school-header-stepup button{width:100%;min-height:49px;margin-top:12px}
+#brandingControls #uploadBrandingBtn{width:100%;min-height:52px;white-space:normal;margin-top:4px}
+#brandingControls #uploadBrandingBtn:disabled{opacity:.7;cursor:progress}
+#brandingControls #brandingFile{display:block;max-width:100%;width:100%;box-sizing:border-box;padding:12px 9px;border:1px dashed #98c4be;border-radius:11px;background:#fcfffe;margin:12px 0}
