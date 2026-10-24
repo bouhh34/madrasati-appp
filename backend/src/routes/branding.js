@@ -38,7 +38,7 @@ async function cleanHeader(source,{fromPage=false}={}){
   const metadata=await input.metadata();
   if(!metadata.width||!metadata.height)throw new Error("INVALID_IMAGE");
   // Portrait scans or full-page letterhead PDFs: only the upper part is the header.
-  const crop=fromPage||(metadata.height/metadata.width>0.55);
+  const crop=metadata.height/metadata.width>0.55;
   const image=crop?input.extract({left:0,top:0,width:metadata.width,height:Math.max(1,Math.min(metadata.height,Math.round(metadata.height*0.29)))}):input;
   return image.resize({width:2400,height:750,fit:"inside",withoutEnlargement:true})
     .flatten({background:"#ffffff"}).png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
