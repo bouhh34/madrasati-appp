@@ -17,6 +17,7 @@ import { tokenHash,safeEqualText,isMutation } from "./security.js";
 import { hasRole } from "./permissions.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerDirectorRoutes } from "./routes/director.js";
+import { registerGeminiOcrRoutes } from "./routes/geminiOcr.js";
 import { registerFamilyWhatsappRoutes } from "./routes/familyWhatsapp.js";
 import { registerAcademicRoutes } from "./routes/academic.js";
 import { registerBrandingRoutes } from "./routes/branding.js";
@@ -68,6 +69,7 @@ export async function buildApp(){
  await registerSuperAdminRoutes(app,{requireMutation});
   await registerPlatformRecoveryRoutes(app,{requireMutation});
   await registerDirectorRoutes(app,{requireDirector});
+  await registerGeminiOcrRoutes(app,{requireDirector});
   await registerFamilyWhatsappRoutes(app,{requireSession,requireMutation,requireDirector});
   await registerStructureRoutes(app,{requireSession,requireDirector});
   await registerAcademicRoutes(app,{requireSession,requireMutation});
