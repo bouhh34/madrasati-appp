@@ -134,12 +134,16 @@
     if(problems.length){status("لم يُحفظ شيء. صحح هذه الأسطر أو استبعدها: "+problems.slice(0,8).join("؛ ")+(problems.length>8?"…":""));return;}
     if(!planned.length){status("لا توجد درجات جديدة صالحة للحفظ.");return;}
     if(!confirm("تأكيد إضافة "+planned.length+" درجة في "+subjectName+"، "+term+"؟ لا تُستبدل الدرجات الموجودة."))return;
-    let done=0;
-    for(const grade of planned){
-      try{await api("/api/grades",{method:"POST",body:JSON.stringify(grade)});done++;}
-      catch(e){status("تم حفظ "+done+" درجات ثم توقف الإرسال. لم تُستبدل أي درجة سابقة. "+(e.data?.error||""));return;}
+    // Atomic bulk route validates all students and versions before writing; never partially save a handwritten sheet.
+    try{
+      await api("/api/classes/"+encodeURIComponent(classId)+"/grades/bulk",{
+        method:"PUT",body:JSON.stringify({subjectId,term,assessment:"MAIN",grades:planned.map(g=>({studentId:g.studentId,score:g.score,version:0}))})
+      });
+    }catch(e){
+      status(e.data?.error==="VERSION_CONFLICT"?"أضيفت درجات لأحد التلاميذ من مكان آخر؛ لم تُحفظ أي درجة من القائمة. حدّث البيانات وأعد المراجعة.":"تعذّر اعتماد الدرجات. لم تُحفظ أي درجة من القائمة، تحقق من صلاحياتك وصحة البيانات.");
+      return;
     }
-    invalidate();status("تم حفظ "+done+" درجة بعد المطابقة والمراجعة، دون تعديل أي درجة سابقة.");
+    invalidate();status("تم حفظ "+planned.length+" درجة دفعة واحدة بعد المطابقة والمراجعة، دون استبدال أي درجة سابقة.");
   }
   async function save(){
     if(busy)return;
