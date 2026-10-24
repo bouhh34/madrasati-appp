@@ -109,6 +109,7 @@ function premiumRenderStudents(){
       <div class="premium-pupil-actions">
         <button type="button" data-premium-report="${escapeHtml(s.id)}">▤ ${premiumFr("كشف التلميذ","Bulletin")}</button>
         <button type="button" data-premium-family="${escapeHtml(s.id)}">♡ ${premiumFr("ولي الأمر","Tuteur")}</button>
+         <button type="button" data-premium-edit="${escapeHtml(s.id)}">✎ ${premiumFr("تعديل","Modifier")}</button>
       </div>
     </article>`).join(""):'<p class="premium-empty">لا يوجد تلاميذ مطابقون. يمكنك إضافة تلميذ من النموذج أعلاه.</p>';
 }
@@ -187,7 +188,8 @@ function premiumMoreRoute(route){
   premium("premiumCreateStudent").onclick=premiumCreatePupil;
   premium("premiumNewName").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();premiumCreatePupil();}};
   premium("premiumStudentList").onclick=event=>{
-    const report=event.target.closest("[data-premium-report]"),family=event.target.closest("[data-premium-family]");
+    const report=event.target.closest("[data-premium-report]"),family=event.target.closest("[data-premium-family]"),edit=event.target.closest("[data-premium-edit]");
+    if(edit){window.schoolStudentTools?.openEdit(edit.dataset.premiumEdit);return;}
     if(report){openReport(report.dataset.premiumReport);return;}
     if(family){const chosen=premiumStudents.find(x=>x.id===family.dataset.premiumFamily);
       navigate("family");
