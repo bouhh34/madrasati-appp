@@ -193,6 +193,12 @@
    <div class="premium-section-line"><div><h3>التلاميذ المسجلون</h3><span id="premiumStudentCount" class="premium-soft-text">—</span></div><button class="premium-pale-btn" id="premiumStudentsRefresh" type="button">تحديث</button></div>
    <label>البحث عن تلميذ<input type="search" id="premiumStudentSearch" placeholder="الاسم أو رقم التلميذ" autocomplete="off"></label>
    <div id="premiumStudentList" class="premium-list" aria-live="polite">اختر قسمًا لعرض التلاميذ.</div>
+  <div class="premium-roster-tools"><h3>استيراد لائحة جاهزة</h3><p class="premium-soft-text">ارفع CSV أو Excel (XLSX) أو نصًّا يتضمن الاسم ورقم التلميذ ورقم واتساب ولي الأمر. راجع المعاينة قبل الحفظ؛ تُترك الموافقة على الرسائل غير مفعلة حتى التأكد منها.</p>
+  <input id="schoolRosterFile" type="file" accept=".csv,.tsv,.txt,.xlsx,image/png,image/jpeg,application/pdf">
+  <div id="schoolRosterStatus" class="premium-soft-text" role="status"></div>
+  <div id="schoolRosterPreview" class="school-roster-preview"></div>
+  <button type="button" id="schoolRosterImport" class="premium-primary" disabled>استيراد التلاميذ بعد المراجعة</button>
+  <p class="premium-soft-text">يمكن عرض الصور وملفات PDF كمرجع بصري، لكن الاستيراد التلقائي منها غير متاح دون تحويل النص أولًا إلى Excel أو CSV.</p></div>
  </div>
 </section>
 <section id="page-reports" class="page director-only hidden">
@@ -356,6 +362,17 @@
   <nav class="bottom-nav school-navigation"><button data-page="home" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-7h6v7"/></svg><span>الرئيسية</span></button><button data-page="academic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 17 10-10 4 4-10 10H4v-4Z"/><path d="m12 9 4 4M15 4l5 5"/></svg><span>النتائج</span></button><button data-page="students" class="director-only hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>التلاميذ</span></button><button data-page="reports" class="director-only hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2h8l5 5v15H7z"/><path d="M15 2v6h5M10 13h7M10 17h7"/></svg><span>التقارير</span></button><button data-page="more" class="director-only hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>المزيد</span></button><button data-page="children" class="guardian-only hidden">♡<span>أبنائي</span></button><button data-page="admin" class="director-only hidden">⚙<span>الإدارة</span></button><button data-page="family" class="family-staff-only hidden">♡<span>الأولياء</span></button><button data-page="settings">◉<span>الإعدادات</span></button></nav>
 </div>
 
+<dialog id="schoolStudentEditor" class="school-editor-dialog"><form id="schoolStudentEditForm" class="school-editor-form">
+<div class="premium-section-line"><h3>تعديل بيانات التلميذ</h3><button id="schoolStudentEditClose" type="button" class="premium-pale-btn">إغلاق</button></div>
+<input id="schoolEditId" type="hidden">
+<label>الاسم الكامل<input id="schoolEditName" required minlength="2" maxlength="180"></label>
+<label>رقم التلميذ<input id="schoolEditUid" required maxlength="80"></label>
+<div class="premium-form-row"><label>القسم<select id="schoolEditClass"></select></label><label>الجنس<select id="schoolEditGender"><option value="">غير محدد</option><option value="M">ولد</option><option value="F">بنت</option></select></label></div>
+<label>واتساب ولي الأمر<input id="schoolEditPhone" type="tel" inputmode="tel" maxlength="18" placeholder="222xxxxxxxx"></label>
+<label class="family-optin"><input type="checkbox" id="schoolEditConsent"> وافق ولي الأمر على تلقي إشعارات المدرسة عبر واتساب</label>
+<p class="premium-soft-text">حفظ رقم الولي لا يعني موافقته على تلقي الرسائل. فعّل الموافقة فقط بعد الحصول عليها.</p>
+<button class="premium-primary" type="submit" id="schoolEditSave">حفظ التعديلات</button>
+</form></dialog>
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
 
   <div id="toast" class="toast hidden" role="status"></div>
@@ -366,6 +383,7 @@
 <script src="/attendance-workflows.js?v=20261022-2319" defer></script>
 <script src="/print-actions.js?v=20261022-2319" defer></script>
 <script src="/family-engagement.js?v=20261023-1048" defer></script>
-<script src="/madrasati-premium.js?v=20261023-2335" defer></script>
+<script src="/madrasati-premium.js?v=20261024-1455" defer></script>
+<script src="/school-students-tools.js?v=20261024-1455" defer></script>
 </body>
 </html>
