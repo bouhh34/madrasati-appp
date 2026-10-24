@@ -99,3 +99,75 @@ bdi{unicode-bidi:isolate;direction:ltr}
 
 /* School identity used for private-school reports without an uploaded header. */
 .logo-row .school-identity-mark{display:inline-grid;place-items:center;box-sizing:border-box;width:17mm;height:17mm;border:0.4mm solid #177d6b;border-radius:4mm;background:#edf8f4;color:#126a5c;font:bold 18pt Tahoma,Arial,sans-serif;line-height:1}
+
+
+/* 2026-10-24: clearer official reports, responsive phone preview and balanced A4 halves.
+   Page dimensions still honour two pupils per printed A4 (194mm × 281mm). */
+@media screen{
+  #printContent{overflow-x:hidden;max-width:100vw;padding:14px 8px}
+  #printContent .paper{zoom:var(--print-preview-scale,1);box-shadow:0 8px 25px rgba(20,52,56,.11);margin-inline:auto}
+  .print-tools{box-sizing:border-box;max-width:100%;padding:12px}
+  .print-tools p{line-height:1.65}
+}
+.half-report{display:flex;flex-direction:column;align-items:stretch;line-height:1.3;font-size:9.2pt;padding:4mm;border-color:#84979c}
+.half-report>*{flex-shrink:0}
+.half-report .official-header{font-size:8pt;line-height:1.22;border-bottom:.5mm solid #0e6570;margin-bottom:2.2mm}
+.half-report .official-header td{vertical-align:top}
+.half-report .official-header p{margin-bottom:1mm}
+.half-report .official-header .authority,
+.half-report .official-header .school-meta{width:39.5%}
+.half-report .official-header .emblems{width:21%}
+.half-report .logo-row{min-height:15mm}
+.half-report .school-emblem{max-width:14mm;max-height:14mm}
+.half-report .bismillah{min-height:5mm}
+.half-report .header-title{font-size:8.3pt;line-height:1.2;margin-top:1mm;color:#193b41}
+.half-report .report-period{font-size:10pt;line-height:1.4;margin-bottom:2mm}
+.half-report .student-meta{font-size:8.6pt;margin-bottom:2.3mm;line-height:1.45}
+.half-report .student-meta b{margin-bottom:1mm}
+.half-report .report-table th,.half-report .report-table td{font-size:8.1pt;padding:1.05mm .75mm;line-height:1.25}
+.half-report .report-table th{background:#eaf4f1}
+.half-report .report-totals{font-size:8pt;line-height:1.5;margin-top:2.2mm}
+.half-report .report-totals span{padding:.8mm 1.6mm;margin-bottom:1.3mm;border-color:#a5bcbb;background:#f9fcfb}
+.half-report .completion-note{font-size:7pt;line-height:1.45;margin-top:1.2mm;color:#425e61}
+.half-report .signatures{margin-top:auto!important;padding-top:4mm!important;padding-bottom:2mm;min-height:15mm;align-items:end;gap:8mm;font-size:8pt}
+.half-report .signature{padding-top:2mm;min-height:10mm;border-top:.25mm solid #96a9aa}
+.logo-row .school-identity-mark{width:16mm;height:16mm;border:.4mm solid #157b73;border-radius:4mm;background:#f3faf7;color:#0d8174;display:grid;place-items:center}
+.logo-row .school-identity-mark svg{width:74%;height:74%;max-width:13mm;max-height:13mm}
+.density-compact .half-report .official-header,
+.density-tight .half-report .official-header,
+.density-ultra .half-report .official-header{font-size:inherit}
+.density-compact .half-report .report-table th,.density-compact .half-report .report-table td{font-size:7.1pt;padding:.65mm .5mm}
+.density-tight .half-report .report-table th,.density-tight .half-report .report-table td{font-size:6.5pt;padding:.4mm .4mm}
+.density-ultra .half-report .report-table th,.density-ultra .half-report .report-table td{font-size:5.7pt;padding:.25mm .25mm}
+.density-tight .half-report .student-meta,.density-ultra .half-report .student-meta{font-size:7pt}
+.density-tight .half-report .report-totals,.density-ultra .half-report .report-totals{font-size:6.5pt}
+.roster-paper{display:flex;flex-direction:column;overflow:visible}
+.roster-paper .official-header{font-size:9pt;line-height:1.35}
+.roster-paper h1{font-size:18pt;color:#173b46;margin:6mm 0}
+.roster-paper>p{font-size:10pt;color:#435b65}
+.roster-paper table:not(.official-header) th,.roster-paper table:not(.official-header) td{padding:2.8mm 3mm;font-size:10.3pt;line-height:1.35}
+.roster-paper table:not(.official-header) th{background:#edf5f3}
+.paper.single-report .half-report{height:281mm;padding:8mm;font-size:11pt;line-height:1.42}
+.paper.single-report .official-header{font-size:9.4pt;line-height:1.4;margin-bottom:5mm}
+.paper.single-report .logo-row{min-height:24mm}
+.paper.single-report .logo-row .school-identity-mark{width:22mm;height:22mm}
+.paper.single-report .official-header .emblems img{max-width:20mm;max-height:22mm}
+.paper.single-report .bismillah{font-size:9pt}
+.paper.single-report .header-title{font-size:12pt}
+.paper.single-report .report-period{font-size:14pt;margin:3mm 0 5mm}
+.paper.single-report .student-meta{font-size:11pt;margin-bottom:5mm}
+.paper.single-report .report-table th,.paper.single-report .report-table td{font-size:10pt;padding:2.3mm 1.8mm;line-height:1.45}
+.paper.single-report .report-totals{font-size:10pt;margin-top:5mm}
+.paper.single-report .report-totals span{padding:1.6mm 2.2mm;margin-bottom:2mm}
+.paper.single-report .completion-note{font-size:9.2pt;margin-top:4mm}
+.paper.single-report .signatures{font-size:10.2pt;min-height:25mm;padding-bottom:7mm}
+/* Density adapts when a class has many subjects; do not make a long report overflow. */
+.density-compact.single-report .half-report .report-table th,.density-compact.single-report .half-report .report-table td{font-size:9pt;padding:1.6mm 1mm}
+.density-tight.single-report .half-report .report-table th,.density-tight.single-report .half-report .report-table td{font-size:8pt;padding:1.1mm .7mm}
+.density-ultra.single-report .half-report .report-table th,.density-ultra.single-report .half-report .report-table td{font-size:7pt;padding:.75mm .5mm}
+@media print{
+  html,body{background:white!important}
+  #printContent{padding:0!important;overflow:visible!important;max-width:none!important}
+  #printContent .paper{zoom:1!important;box-shadow:none!important;width:194mm!important;margin:0!important}
+  .paper.single-report{height:281mm!important}
+}
