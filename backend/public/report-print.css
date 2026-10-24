@@ -202,3 +202,13 @@ bdi{unicode-bidi:isolate;direction:ltr}
   .print-tools{display:none!important}
   .roster-paper{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important}
 }
+
+/* Uploaded school letterheads are the entire school heading, not a miniature logo. */
+.uploaded-letterhead{width:100%;height:27mm;max-height:27mm;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:.25mm solid #62868a;margin:0 0 1.4mm}
+.uploaded-letterhead img{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+.uploaded-letterhead-title{text-align:center;font-size:9pt;font-weight:700;margin:0 0 1.5mm}
+.paper.single-report .uploaded-letterhead{height:38mm;max-height:38mm;margin-bottom:5mm}
+.paper.single-report .uploaded-letterhead-title{font-size:13pt;margin-bottom:4mm}
+.density-tight .uploaded-letterhead,.density-ultra .uploaded-letterhead{height:20mm;max-height:20mm}
+.roster-paper .uploaded-letterhead{height:36mm;max-height:36mm}
+.roster-paper .uploaded-letterhead-title{font-size:13pt}
