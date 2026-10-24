@@ -275,7 +275,14 @@
 
     <section id="page-security" class="page"><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">Audit</span><h3>سجل العمليات</h3></div></div><div id="auditList" class="cards-list empty">—</div></article><article class="panel"><div class="panel-head"><div><span class="kicker">Security</span><h3>مبادئ الحماية</h3></div></div><ul class="security-list"><li>عزل كل مدرسة على مستوى الخادم وقاعدة البيانات.</li><li>رموز دعوة مؤقتة ومخزنة كـ Hash.</li><li>جلسات HttpOnly وCSRF وفحص Origin.</li><li>سجل تغييرات للدرجات وتعارض النسخ.</li><li>العمليات الحساسة تحتاج إعادة تحقق.</li></ul></article></div></section>
 
-    <section id="page-settings" class="page"><div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">هوية المدرسة والحساب</span><h3>الإعدادات</h3></div></div><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><label>رفع رأسية المدرسة الخاصة (صورة PNG/JPG أو PDF)<input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"></label><p class="hint">ارفع الرأسية كاملة كما تظهر في وثائق مدرستك. يُستخدم أعلاها تلقائيًا عند رفع صفحة A4 كاملة، وتُعرض أعلى الكشوف بدل الرأسية الموحدة. PDF يحتاج إلى خدمة تحويل PDF متاحة على الخادم. الرفع لا يغيّر الوثائق المحفوظة أو درجات التلاميذ.</p><button id="uploadBrandingBtn" class="primary">رفع واعتماد رأسية المدرسة</button><button id="resetBrandingBtn" type="button" class="ghost">العودة إلى الرأسية الافتراضية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
+    <section id="page-settings" class="page"><div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">هوية المدرسة والحساب</span><h3>الإعدادات</h3></div></div><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><label>رفع رأسية المدرسة الخاصة (صورة PNG/JPG أو PDF)<input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"></label><p class="hint">ارفع الرأسية كاملة كما تظهر في وثائق مدرستك. يُستخدم أعلاها تلقائيًا عند رفع صفحة A4 كاملة، وتُعرض أعلى الكشوف بدل الرأسية الموحدة. PDF يحتاج إلى خدمة تحويل PDF متاحة على الخادم. الرفع لا يغيّر الوثائق المحفوظة أو درجات التلاميذ.</p><div id="brandingSelectedPreview" class="school-header-selected-preview" aria-live="polite"></div>
+<p id="brandingUploadStatus" class="school-header-upload-status" role="status" aria-live="polite">اختر صورة أو PDF ثم اضغط «رفع واعتماد رأسية المدرسة».</p>
+<button id="uploadBrandingBtn" class="primary">رفع واعتماد رأسية المدرسة</button>
+<div id="brandingStepUp" class="hidden school-header-stepup">
+  <p>حمايةً لرأسية المدرسة الرسمية، يرجى تأكيد كلمة مرور حساب المدير مرة واحدة.</p>
+  <label>كلمة مرور المدير <input id="brandingConfirmPassword" type="password" autocomplete="current-password" placeholder="أدخل كلمة مرورك"></label>
+  <button id="brandingConfirmUpload" type="button" class="primary">تأكيد كلمة المرور وإتمام الرفع</button>
+</div><button id="resetBrandingBtn" type="button" class="ghost">العودة إلى الرأسية الافتراضية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
 <section id="page-super-admin" class="page">
   <div class="panel">
     <div class="panel-head">
@@ -375,7 +382,7 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-close">×</button><div id="modalBody"></div></div></div>
 
   <div id="toast" class="toast hidden" role="status"></div>
-<script src="/app.js?v=20261024-1610" defer></script>
+<script src="/app.js?v=20261024-2355" defer></script>
 <script src="/structure.js?v=20261022-2319" defer></script>
 <script src="/platform-navigation.js?v=20261022-2319" defer></script>
 <script src="/academic-workflows.js?v=20261024-1325" defer></script>
