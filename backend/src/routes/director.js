@@ -91,6 +91,48 @@ export async function registerDirectorRoutes(app,{requireDirector}){
     });
   });
 
+
+  // Reviewed roster import: no OCR guesses, preserves all existing pupils/grades.
+  // Every row is isolated in a savepoint and duplicate names/IDs require manual review.
+  app.post("/api/director/students/import",async(request,reply)=>{
+    if(!(await requireDirector(request,reply)))return;
+    const b=request.body||{},classId=String(b.classId||""),rows=b.students;
+    if(!isUuid(classId)||!Array.isArray(rows)||!rows.length||rows.length>150)return reply.code(400).send({error:"INVALID_IMPORT"});
+    return withContext({userId:request.auth.userId,schoolId:request.auth.schoolId},async c=>{
+      const permitted=await c.query("SELECT id FROM classes WHERE id=$1 AND school_id=$2 AND active=true",[classId,request.auth.schoolId]);
+      if(!permitted.rowCount)return reply.code(404).send({error:"CLASS_NOT_FOUND"});
+      const result={created:0,skipped:0,issues:[],students:[]};
+      const seen=new Set();
+      for(let i=0;i<rows.length;i++){
+        const item=rows[i]||{},name=text(item.fullName,{min:2,max:180});
+        const uid=String(item.studentUid||"").trim();
+        const gender=item.gender?oneOf(String(item.gender),["M","F"]):null;
+        const phone=normalizeGuardianPhone(item.guardianPhone);
+        const consent=item.guardianConsent===true;
+        const problem=!name?"INVALID_NAME":uid.length>80?"INVALID_UID":item.gender&&!gender?"INVALID_GENDER":phone===undefined?"INVALID_PHONE":consent&&!phone?"CONSENT_WITHOUT_PHONE":null;
+        if(problem){result.skipped++;result.issues.push({line:i+1,error:problem});continue;}
+        const dupeKey=name.trim().replace(/\s+/g," ").toLowerCase();
+        if(seen.has(dupeKey)){result.skipped++;result.issues.push({line:i+1,error:"DUPLICATE_IN_FILE",name});continue;}
+        seen.add(dupeKey);
+        const existing=await c.query("SELECT 1 FROM students WHERE school_id=$1 AND class_id=$2 AND (lower(trim(full_name))=lower($3) OR ($4::text<>'' AND student_uid=$4)) LIMIT 1",[request.auth.schoolId,classId,name,uid]);
+        if(existing.rowCount){result.skipped++;result.issues.push({line:i+1,error:"ALREADY_EXISTS",name});continue;}
+        await c.query("SAVEPOINT import_student_row");
+        try{
+          const studentUid=uid||"ST-"+crypto.randomUUID().replace(/-/g,"").slice(0,12).toUpperCase();
+          const q=await c.query("INSERT INTO students(school_id,class_id,student_uid,full_name,gender,guardian_whatsapp_phone,guardian_whatsapp_consent) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,student_uid",[request.auth.schoolId,classId,studentUid,name,gender,phone,consent]);
+          result.created++;result.students.push(q.rows[0]);
+          await c.query("RELEASE SAVEPOINT import_student_row");
+        }catch(e){
+          await c.query("ROLLBACK TO SAVEPOINT import_student_row");
+          await c.query("RELEASE SAVEPOINT import_student_row");
+          result.skipped++;result.issues.push({line:i+1,error:e.code==="23505"?"ALREADY_EXISTS":"IMPORT_ROW_FAILED",name});
+        }
+      }
+      await audit(c,request.auth,"STUDENTS_ROSTER_IMPORTED","class",classId,{created:result.created,skipped:result.skipped,total:rows.length});
+      return {ok:true,...result};
+    });
+  });
+
   app.patch("/api/director/students/:id",async(request,reply)=>{
     if(!(await requireDirector(request,reply)))return;
     const id=String(request.params.id||""),b=request.body||{},version=num(b.version,{min:1,max:1e9});
