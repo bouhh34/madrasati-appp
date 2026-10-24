@@ -3274,7 +3274,7 @@ if(
 
             </div>
 
-            <table
+            <div class="final-report-table-frame"><table
               class="final-report-table">
 
               <thead>
@@ -3311,7 +3311,7 @@ if(
                 }
               </tbody>
 
-            </table>
+            </table></div>
 
             <div
               class="final-report-averages">
