@@ -173,6 +173,23 @@
    <p class="premium-soft-text">لا تحتاج إلى كتابة رقم التلميذ؛ يُنشأ تلقائيًا. وتبقى خانة القسم مختارة بعد الحفظ.</p>
  </div>
  <div class="premium-card">
+   <details id="premiumImportDetails" class="premium-import-details">
+     <summary>📂 استيراد قائمة تلاميذ جاهزة (ملف أو صورة)</summary>
+     <p class="premium-soft-text">يدعم CSV وTXT وTSV، أو نسخ الأسماء والأرقام من Excel ولصقها. يمكن قراءة صورة القائمة فقط إذا كان متصفحك يدعم التعرّف على النص. راجع المعاينة قبل أي حفظ.</p>
+     <label>ملف القائمة أو صورتها<input id="premiumImportFile" type="file" accept=".csv,.txt,.tsv,text/plain,text/csv,image/png,image/jpeg,image/webp" /></label>
+     <label>أو ألصق قائمة (الاسم، رقم الولي، الرقم المدرسي، الجنس)
+       <textarea id="premiumImportText" rows="4" placeholder="محمد ولد أحمد,34280062&#10;فاطمة بنت محمد,22345678"></textarea>
+     </label>
+     <label class="family-optin"><input id="premiumImportConsent" type="checkbox"> لدي موافقة أولياء الأمور على استخدام واتساب للأرقام الموجودة بهذه القائمة</label>
+     <div class="premium-btn-row">
+       <button type="button" class="premium-secondary" id="premiumImportPreview">معاينة القائمة قبل الاستيراد</button>
+       <button type="button" class="premium-primary" id="premiumImportSave" disabled>تأكيد حفظ القائمة</button>
+     </div>
+     <div id="premiumImportStatus" role="status" aria-live="polite" class="premium-soft-text"></div>
+     <div id="premiumImportTable" class="premium-import-table"></div>
+   </details>
+ </div>
+ <div class="premium-card">
    <div class="premium-section-line"><div><h3>التلاميذ المسجلون</h3><span id="premiumStudentCount" class="premium-soft-text">—</span></div><button class="premium-pale-btn" id="premiumStudentsRefresh" type="button">تحديث</button></div>
    <label>البحث عن تلميذ<input type="search" id="premiumStudentSearch" placeholder="الاسم أو رقم التلميذ" autocomplete="off"></label>
    <div id="premiumStudentList" class="premium-list" aria-live="polite">اختر قسمًا لعرض التلاميذ.</div>
@@ -242,7 +259,7 @@
 
     <section id="page-security" class="page"><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">Audit</span><h3>سجل العمليات</h3></div></div><div id="auditList" class="cards-list empty">—</div></article><article class="panel"><div class="panel-head"><div><span class="kicker">Security</span><h3>مبادئ الحماية</h3></div></div><ul class="security-list"><li>عزل كل مدرسة على مستوى الخادم وقاعدة البيانات.</li><li>رموز دعوة مؤقتة ومخزنة كـ Hash.</li><li>جلسات HttpOnly وCSRF وفحص Origin.</li><li>سجل تغييرات للدرجات وتعارض النسخ.</li><li>العمليات الحساسة تحتاج إعادة تحقق.</li></ul></article></div></section>
 
-    <section id="page-settings" class="page"><div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">هوية المدرسة والحساب</span><h3>الإعدادات</h3></div></div><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><p class="hint">للخصوصية: الصور تُعاد معالجتها قبل اعتمادها. PDF وWord يدخلان منطقة عزل ولا يُعرضان مباشرة.</p><button id="uploadBrandingBtn" class="primary">رفع ومعالجة الرأسية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
+    <section id="page-settings" class="page"><div class="premium-section-line director-only hidden"><div><span class="premium-eyebrow">هوية المدرسة والحساب</span><h3>الإعدادات</h3></div></div><div class="content-grid"><article class="panel"><div class="panel-head"><div><span class="kicker">الهوية</span><h3>رأسية المدرسة</h3></div></div><div id="brandingInfo" class="branding-preview"></div><div class="director-only hidden" id="brandingControls"><label>رفع رأسية المدرسة الخاصة (صورة PNG/JPG أو PDF)<input id="brandingFile" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf"></label><p class="hint">ارفع الرأسية كاملة كما تظهر في وثائق مدرستك. يُستخدم أعلاها تلقائيًا عند رفع صفحة A4 كاملة، وتُعرض أعلى الكشوف بدل الرأسية الموحدة. PDF يحتاج إلى خدمة تحويل PDF متاحة على الخادم. الرفع لا يغيّر الوثائق المحفوظة أو درجات التلاميذ.</p><button id="uploadBrandingBtn" class="primary">رفع واعتماد رأسية المدرسة</button><button id="resetBrandingBtn" type="button" class="ghost">العودة إلى الرأسية الافتراضية</button></div></article><article class="panel"><div class="panel-head"><h3>الحساب</h3></div><div class="profile-lines"><span>الاسم<b id="profileName">—</b></span><span>الدور<b id="profileRoles">—</b></span><span>المدرسة<b id="profileSchool">—</b></span></div></article></div></section>
 <section id="page-super-admin" class="page">
   <div class="panel">
     <div class="panel-head">
