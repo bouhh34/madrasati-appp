@@ -212,3 +212,12 @@ bdi{unicode-bidi:isolate;direction:ltr}
 .density-tight .uploaded-letterhead,.density-ultra .uploaded-letterhead{height:20mm;max-height:20mm}
 .roster-paper .uploaded-letterhead{height:36mm;max-height:36mm}
 .roster-paper .uploaded-letterhead-title{font-size:13pt}
+
+
+/* Entire per-school letterhead, not a tiny emblem inside the generic crest. */
+.custom-school-letterhead{width:100%;height:29mm;box-sizing:border-box;display:flex;align-items:flex-start;justify-content:center;margin:0 0 1mm;overflow:hidden}
+.custom-school-letterhead img{display:block;width:100%;max-width:100%;height:100%;object-fit:contain;object-position:center top}
+.custom-report-heading{text-align:center;font-size:10pt;font-weight:800;border-top:.25mm solid #247c71;padding:1mm 0;margin:0 0 1mm}
+.density-ultra .custom-school-letterhead,.density-tight .custom-school-letterhead{height:24mm}
+.paper.single-report .custom-school-letterhead{height:37mm}
+@media print{.custom-school-letterhead,.custom-report-heading{break-inside:avoid!important}}
