@@ -241,3 +241,31 @@
   .premium-pupil-actions .premium-student-edit{flex-basis:100%}
   .premium-import-details .premium-btn-row button{flex-basis:100%}
 }
+
+
+/* School pupil record editing & reviewed roster import, mobile-first. */
+.premium-roster-tools{margin-top:16px;padding:15px;border:1px solid #dae8e6;border-radius:18px;background:linear-gradient(160deg,#f7fcfb,#fff)}
+.premium-roster-tools h3{color:#134e4c;margin:0 0 9px;font-size:1.07rem}
+.premium-roster-tools input[type=file]{display:block;width:100%;max-width:100%;box-sizing:border-box;padding:12px;border:1px dashed #7fbcb5;border-radius:13px;background:#fff}
+.premium-roster-tools .premium-primary{width:100%;margin-top:12px;min-height:50px}
+.premium-roster-tools .premium-primary:disabled{opacity:.5}
+.school-roster-preview{margin:10px 0;max-width:100%;overflow:hidden}
+.school-roster-table-scroll{width:100%;max-height:340px;overflow:auto;border:1px solid #dfe9e8;border-radius:13px}
+.school-roster-table-scroll table{width:100%;border-collapse:collapse;min-width:525px;font-size:.83rem}
+.school-roster-table-scroll th,.school-roster-table-scroll td{border-bottom:1px solid #e2eeeb;padding:10px 9px;text-align:right;white-space:normal}
+.school-roster-table-scroll th{position:sticky;top:0;background:#eef9f6}
+.school-editor-dialog{width:min(540px,calc(100vw - 24px));max-height:90dvh;overflow:auto;border:1px solid #cbded9;border-radius:22px;padding:18px;box-sizing:border-box;box-shadow:0 20px 70px #022b3044;color:#1a4548;background:#fff}
+.school-editor-dialog::backdrop{background:#08272dbb}
+.school-editor-form{display:flex;flex-direction:column;gap:12px}
+.school-editor-form label:not(.family-optin){display:flex;flex-direction:column;gap:6px;font-size:.93rem;font-weight:700}
+.school-editor-form input,.school-editor-form select{width:100%;box-sizing:border-box;min-height:48px;border:1px solid #c9dad7;border-radius:12px;padding:10px;font:inherit;background:#fff;color:#133e43}
+.school-editor-form .family-optin{display:flex;align-items:center;gap:8px;font-size:.82rem;line-height:1.55}
+.school-editor-form .family-optin input{width:20px;min-width:20px;height:20px;min-height:20px}
+.school-editor-form .premium-primary{width:100%;min-height:48px;margin:6px 0}
+#page-students .premium-pupil-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px!important}
+#page-students .premium-pupil-actions button{min-width:0!important;white-space:normal!important;padding:9px 4px!important;font-size:.84rem}
+#brandingInfo img{display:block;max-width:100%;width:100%;height:auto;max-height:180px;object-fit:contain;border:1px solid #dce9e6;border-radius:9px}
+#brandingControls{display:flex;flex-direction:column;gap:10px}
+#brandingControls.hidden{display:none}
+#brandingControls input[type=file]{max-width:100%;font:inherit}
+@media(max-width:390px){#page-students .premium-pupil-actions button{font-size:.75rem;padding:10px 2px!important}.school-editor-dialog{padding:13px}}
