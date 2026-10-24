@@ -94,7 +94,7 @@ function fitPrintPreview(root){
     root?.style.removeProperty('--print-preview-scale');return;
   }
   const available=Math.max(200,root.clientWidth-36);
-  const a4PrintableWidth=194*96/25.4;
+  const a4PrintableWidth=190*96/25.4;
   const scale=Math.max(.28,Math.min(1,available/a4PrintableWidth));
   root.style.setProperty('--print-preview-scale',scale.toFixed(4));
 }
