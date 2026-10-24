@@ -216,3 +216,28 @@
  #page-academic .grade-row .score-wrap{gap:2px!important}
  #page-academic .grade-row .score-wrap .score-maximum{font-size:.68rem!important;min-width:27px}
 }
+
+
+/* Per-pupil editing + supervised roster imports, mobile first. */
+.premium-pupil-actions{display:flex;flex-wrap:wrap;gap:8px}
+.premium-pupil-actions .premium-student-edit{background:#e1f5ee;border:1px solid #90d5bd;color:#086c62;font-weight:800}
+.premium-guardian-note{font-size:.82rem;margin:9px 0 2px;color:#456972;line-height:1.5;overflow-wrap:anywhere}
+.premium-import-details{border:0;display:block}
+.premium-import-details summary{cursor:pointer;font-size:1.02rem;color:#0d6d66;font-weight:900;list-style-position:inside;padding:8px 0}
+.premium-import-details label,.premium-editor label{display:flex;flex-direction:column;gap:7px;padding-block:8px;font-size:.89rem;font-weight:750}
+.premium-import-details .family-optin,.premium-editor .family-optin{display:flex;flex-direction:row;align-items:center;gap:10px}
+.premium-import-details .family-optin input,.premium-editor .family-optin input{width:20px;height:20px;flex:0 0 20px;min-height:20px}
+.premium-import-details textarea,.premium-import-details input[type=file],.premium-editor input,.premium-editor select{box-sizing:border-box;width:100%;max-width:100%;font-size:1rem;min-height:44px;padding:10px;border:1px solid #d1e2e0;border-radius:12px;background:#fff;color:#1a393b}
+.premium-import-details .premium-btn-row,.premium-editor .premium-btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-block:12px}
+.premium-import-details button,.premium-editor button{min-height:44px;flex:1 1 140px}
+.premium-import-details button:disabled{opacity:.52;cursor:not-allowed}
+.premium-import-scroll{max-width:100%;overflow-x:auto;border:1px solid #dbe9e6;border-radius:12px;margin-top:12px}
+.premium-import-scroll table{border-collapse:collapse;min-width:460px;width:100%;font-size:.82rem}
+.premium-import-scroll td,.premium-import-scroll th{padding:8px 9px;border-bottom:1px solid #dce9e7;text-align:start;overflow-wrap:anywhere}
+.premium-import-scroll th{background:#eff9f5;color:#0d6f66}
+.premium-editor{max-height:85dvh;overflow-y:auto;text-align:right}
+@media(max-width:520px){
+  .premium-pupil-actions button{min-height:40px!important;flex:1 1 calc(50% - 5px)}
+  .premium-pupil-actions .premium-student-edit{flex-basis:100%}
+  .premium-import-details .premium-btn-row button{flex-basis:100%}
+}
