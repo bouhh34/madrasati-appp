@@ -123,9 +123,9 @@ function renderFamilyPanel(){
       kind==="progress"?hasPartial:
       kind==="notice"?!!familyEl("familyNote").value.trim():true
     );
-    const contact=optIn?familyAr("رقم الولي مرتبط","Contact autorisé"):familyAr("لم يُفعّل رقم واتساب الولي","Contact non autorisé");
+    const contact=s.guardian_phone?familyAr("رقم ولي الأمر: ","Contact tuteur : ")+s.guardian_phone+(s.consent?" ✓":" · لم تُفعّل الموافقة"):familyAr("لم يسجل رقم ولي الأمر بعد","Numéro du tuteur manquant");
     return `<article class="family-student" data-family-id="${familyEsc(s.id)}">
-      <div class="family-student-head"><div><strong>${familyEsc(s.full_name)}</strong><small>${familyEsc(s.student_uid)} · ${contact}</small></div><div class="family-results-chips">${avg}${rank}</div></div>
+      <div class="family-student-head"><div><strong>${familyEsc(s.full_name)}</strong><small>${familyEsc(s.student_uid)} · ${familyEsc(contact)}</small></div><div class="family-results-chips">${avg}${rank}</div></div>
       <div class="family-actions">
         <button class="family-whatsapp" type="button" data-family-open="${familyEsc(s.id)}" ${canSend?"":"disabled"}>◉ ${familyAr("فتح واتساب الولي","Ouvrir WhatsApp")}</button>
         ${kind==="award"?`<button class="family-secondary" type="button" data-family-certificate="${familyEsc(s.id)}">🎓 ${familyAr("معاينة الشهادة","Certificat")}</button>`:""}
