@@ -67,7 +67,7 @@ function studentCard(entry,school,{lang='ar',custom=false,period='T1',scope='CLA
     <table class="report-table"><thead><tr><th>${label(lang,'المادة','Matière')}</th><th>${label(lang,'المعامل','Coef.')}</th><th>T1</th><th>T2</th><th>T3</th><th>${label(lang,'السنوي','Annuel')}</th></tr></thead><tbody>
     ${report.subjects.map(s=>`<tr><td>${esc(subjectName(s,lang))}</td><td>${esc(s.coefficient)}</td><td>${value(s.terms.T1)}</td><td>${value(s.terms.T2)}</td><td>${value(s.terms.T3)}</td><td>${value(['T1','T2','T3'].every(t=>s.terms?.[t]!=null)?s.annual:null)}</td></tr>`).join('')||`<tr><td colspan="6">${label(lang,'لا توجد مواد مرتبطة أو نتائج مسجلة','Aucune matière ou note enregistrée')}</td></tr>`}</tbody></table>
     <div class="report-totals"><span>T1: ${value(report.termAverages.T1)} /20</span><span>T2: ${value(report.termAverages.T2)} /20</span><span>T3: ${value(report.termAverages.T3)} /20</span><span>${label(lang,'السنوي','Annuel')}: <bdi>${value(annualComplete?report.annualAverage:null)} /20</bdi></span><span>${label(lang,'الترتيب','Rang')}: <bdi>${rank??'—'} / ${totalStudents??'—'}</bdi></span></div>
-    <p class="completion-note">${complete?label(lang,'نتائج الفترة مكتملة.','Résultats complets pour la période.'):label(lang,'نتائج الفترة غير مكتملة؛ المعدلات المعروضة مؤقتة ولا يُعتمد ترتيب لها.','Résultats incomplets : moyennes provisoires, sans classement.')}${report.completeness?.ANNUAL?.complete?'':label(lang,' المعدل السنوي مؤقت حتى اكتمال الفصول الثلاثة.',' Moyenne annuelle provisoire jusqu’à la saisie des trois trimestres.')}</p>
+    <p class="completion-note">${report.duplicateSubjectsConflicts?label(lang,'تنبيه: توجد مادتان بالاسم نفسه ودرجات متعارضة؛ يجب مراجعة الإدارة. ','Alerte : doublons de matières avec des notes contradictoires ; vérification nécessaire. '):''}${complete?label(lang,'نتائج الفترة مكتملة.','Résultats complets pour la période.'):label(lang,'نتائج الفترة غير مكتملة؛ المعدلات المعروضة مؤقتة ولا يُعتمد ترتيب لها.','Résultats incomplets : moyennes provisoires, sans classement.')}${report.completeness?.ANNUAL?.complete?'':label(lang,' المعدل السنوي مؤقت حتى اكتمال الفصول الثلاثة.',' Moyenne annuelle provisoire jusqu’à la saisie des trois trimestres.')}</p>
     <footer class="signatures"><div class="signature">${label(lang,'توقيع المدير','Signature du directeur')}</div><div class="signature">${label(lang,'ختم المدرسة','Cachet de l’école')}</div></footer></section>`;
 }
 export function renderReportPages(entries,school,options={}){
@@ -78,7 +78,8 @@ export function renderReportPages(entries,school,options={}){
     // Only an explicitly requested individual bulletin occupies a whole A4.
     const singleReport=options.fullPage===true;
     const density=count>13?' density-ultra':count>10?' density-tight':count>7?' density-compact':'';
-    pages.push(`<article class="paper${density}${singleReport?' single-report':''}" data-page="${Math.floor(i/2)+1}">${studentCard(pair[0],school,options)}${pair[1]?`<div class="cut-line"><span>${label(options.lang,'خط القص','Ligne de coupe')}</span></div>${studentCard(pair[1],school,options)}`:''}</article>`);
+    const spacing=count<=3?' short-report':count<=6?' medium-report':'';
+    pages.push(`<article class="paper${density}${spacing}${singleReport?' single-report':''}" data-page="${Math.floor(i/2)+1}">${studentCard(pair[0],school,options)}${pair[1]?`<div class="cut-line"><span>${label(options.lang,'خط القص','Ligne de coupe')}</span></div>${studentCard(pair[1],school,options)}`:''}</article>`);
   }
   return pages.join('');
 }
