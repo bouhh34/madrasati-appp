@@ -74,7 +74,9 @@ export function renderReportPages(entries,school,options={}){
   const pages=[];
   for(let i=0;i<entries.length;i+=2){
     const pair=entries.slice(i,i+2),count=Math.max(...pair.map(e=>e.report.subjects.length));
-    const singleReport=options.fullPage===true||pair.length===1;
+    // The last pupil in a class printout retains the same half-A4 size.
+    // Only an explicitly requested individual bulletin occupies a whole A4.
+    const singleReport=options.fullPage===true;
     const density=count>13?' density-ultra':count>10?' density-tight':count>7?' density-compact':'';
     pages.push(`<article class="paper${density}${singleReport?' single-report':''}" data-page="${Math.floor(i/2)+1}">${studentCard(pair[0],school,options)}${pair[1]?`<div class="cut-line"><span>${label(options.lang,'خط القص','Ligne de coupe')}</span></div>${studentCard(pair[1],school,options)}`:''}</article>`);
   }
@@ -127,14 +129,29 @@ async function initialisePrint(){
     }else throw new Error('INVALID_REPORT');
     await document.fonts.ready;
     await Promise.all([...root.querySelectorAll('img')].map(img=>img.decode?.().catch(()=>{})||Promise.resolve()));
-    for(const el of root.querySelectorAll('.half-report')){
-      if(el.scrollHeight>el.clientHeight+1)el.closest('.paper')?.classList.add('density-tight');
+    // Detect genuinely displaced content rather than 1px rounding differences
+    // in flex footer heights, which used to shrink even 2-subject bulletins.
+    const overflows=el=>{
+      const box=el.getBoundingClientRect();
+      const pad=parseFloat(getComputedStyle(el).paddingBottom)||0;
+      const children=[...el.children];
+      const bottomOverflow=children.some(child=>child.getBoundingClientRect().bottom>box.bottom-pad+3);
+      return (bottomOverflow&&el.scrollHeight>el.clientHeight+5)||el.scrollWidth>el.clientWidth+5;
+    };
+    for(const sheet of root.querySelectorAll('.paper:not(.roster-paper)')){
+      const subjects=[...sheet.querySelectorAll('.report-table tbody')].map(body=>body.rows.length);
+      const count=Math.max(0,...subjects);
+      if(count<=7)continue; // Protect readable A4 print for short school bulletins.
+      if([...sheet.querySelectorAll('.half-report')].some(overflows))sheet.classList.add('density-tight');
     }
     await new Promise(resolve=>requestAnimationFrame(resolve));
-    for(const el of root.querySelectorAll('.half-report')){
-      if(el.scrollHeight>el.clientHeight+1)el.closest('.paper')?.classList.add('density-ultra');
+    for(const sheet of root.querySelectorAll('.paper:not(.roster-paper)')){
+      const subjects=[...sheet.querySelectorAll('.report-table tbody')].map(body=>body.rows.length);
+      const count=Math.max(0,...subjects);
+      if(count<=7)continue;
+      if([...sheet.querySelectorAll('.half-report')].some(overflows))sheet.classList.add('density-ultra');
     }
-    const invalid=[...root.querySelectorAll('.half-report')].some(el=>el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2);
+    const invalid=[...root.querySelectorAll('.half-report')].some(overflows);
     if(invalid){document.body.classList.add('invalid-layout');throw new Error('REPORT_TOO_LONG');}
     document.body.classList.add('print-ready');button.disabled=false;
     fitPrintPreview(root);
