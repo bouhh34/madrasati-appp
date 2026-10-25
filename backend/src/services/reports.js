@@ -72,7 +72,7 @@ export function buildStudentReport({subjects,grades,weights={T1:1,T2:2,T3:3}}){
   const termAverages={};
   for(const term of ["T1","T2","T3"]){
     let total=0,coeff=0;
-    for(const s of reportSubjects){if(s.terms[term]!==null){total+=s.terms[term]*s.coefficient;coeff+=s.coefficient;}}
+    for(const s of reportSubjects){if(!s.duplicateConflict&&s.terms[term]!==null){total+=s.terms[term]*s.coefficient;coeff+=s.coefficient;}}
     termAverages[term]=coeff?Math.round((total/coeff)*100)/100:null;
   }
   const num=["T1","T2","T3"].reduce((a,t)=>termAverages[t]===null?a:a+termAverages[t]*Number(weights[t]||0),0);
@@ -94,7 +94,7 @@ export function buildClassResults({students,subjects,grades,weights,period='T1'}
     const report=buildStudentReport({subjects,grades:grouped.get(student.id)||[],weights});
     const annual=period==='ANNUAL',average=annual?report.annualAverage:report.termAverages[period];
     const complete=report.completeness[period].complete;
-    const available=report.subjects.filter(s=>(annual?s.annual:s.terms[period])!==null);
+    const available=report.subjects.filter(s=>!s.duplicateConflict&&(annual?s.annual:s.terms[period])!==null);
     const weightedTotal=available.length?Math.round(available.reduce((n,s)=>n+(annual?s.annual:s.terms[period])*s.coefficient,0)*100)/100:null;
     return {...student,average,weightedTotal,complete,rank:null,report};
   });
