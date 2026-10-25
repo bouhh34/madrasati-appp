@@ -1,5 +1,58 @@
 export function normalizeTo20(score,maxScore){if(score===null||score===undefined||score==='')return null;const s=Number(score),m=Number(maxScore);if(!Number.isFinite(s)||!Number.isFinite(m)||m<=0)return null;return Math.round((s/m*20)*100)/100;}
 export function mean(values){const xs=values.filter(x=>x!==null&&x!==undefined&&x!=='').map(Number).filter(Number.isFinite);if(!xs.length)return null;return Math.round((xs.reduce((a,b)=>a+b,0)/xs.length)*100)/100;}
+/** Compare visually identical names safely; never mutate subjects or grades in storage. */
+export function canonicalSubjectName(name){
+  return String(name??"").normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g,"").replace(/\s+/g," ").trim().toLocaleLowerCase();
+}
+function annualFromTerms(terms,weights){
+  let numerator=0,denominator=0;
+  for(const t of ["T1","T2","T3"]){
+    if(terms[t]===null)continue;
+    numerator+=terms[t]*Number(weights[t]||0);
+    denominator+=Number(weights[t]||0);
+  }
+  return denominator?Math.round((numerator/denominator)*100)/100:null;
+}
+/**
+ * If two class subjects have the same normalized name AND settings, fold their
+ * non-conflicting marks into one logical subject for display and averages.
+ * Preserve separate marked entries on conflicting terms or coefficients, and
+ * treat unresolved conflicts as incomplete. No writes or grade migrations.
+ */
+export function resolveDuplicateReportSubjects(rows,weights){
+  const groups=new Map();
+  for(const subject of rows){
+    const key=canonicalSubjectName(subject.name);
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(subject);
+  }
+  const resolved=[];let collapsedCount=0,conflictCount=0;
+  for(const items of groups.values()){
+    if(items.length===1){resolved.push(items[0]);continue;}
+    const [first]=items;
+    const sameSettings=items.every(s=>s.coefficient===first.coefficient&&s.maxScore===first.maxScore);
+    const termConflict=["T1","T2","T3"].some(t=>{
+      const values=items.map(s=>s.terms[t]).filter(n=>n!==null);
+      return new Set(values).size>1;
+    });
+    if(!sameSettings||termConflict){
+      // Ambiguous source: never discard either mark or quietly count it once.
+      // Keep source records visible and flag ranking/completeness as provisional.
+      conflictCount++;
+      items.forEach((item,index)=>resolved.push({...item,
+        name:item.name+" ("+(index+1)+")",duplicateConflict:true}));
+      continue;
+    }
+    const terms={};
+    for(const t of ["T1","T2","T3"]){
+      terms[t]=items.map(s=>s.terms[t]).find(v=>v!==null)??null;
+    }
+    resolved.push({...first,terms,annual:annualFromTerms(terms,weights),
+      duplicateMerged:true,sourceSubjectIds:items.map(s=>s.id)});
+    collapsedCount+=items.length-1;
+  }
+  return {subjects:resolved,collapsedCount,conflictCount};
+}
 export function buildStudentReport({subjects,grades,weights={T1:1,T2:2,T3:3}}){
   const bySubject=[];
   for(const subject of subjects){
@@ -14,21 +67,24 @@ export function buildStudentReport({subjects,grades,weights={T1:1,T2:2,T3:3}}){
     const annual=den?Math.round((num/den)*100)/100:null;
     bySubject.push({id:subject.id,name:subject.name,coefficient:Number(subject.coefficient),maxScore:Number(subject.max_score),terms,annual});
   }
+  const normalized=resolveDuplicateReportSubjects(bySubject,weights);
+  const reportSubjects=normalized.subjects;
   const termAverages={};
   for(const term of ["T1","T2","T3"]){
     let total=0,coeff=0;
-    for(const s of bySubject){if(s.terms[term]!==null){total+=s.terms[term]*s.coefficient;coeff+=s.coefficient;}}
+    for(const s of reportSubjects){if(s.terms[term]!==null){total+=s.terms[term]*s.coefficient;coeff+=s.coefficient;}}
     termAverages[term]=coeff?Math.round((total/coeff)*100)/100:null;
   }
   const num=["T1","T2","T3"].reduce((a,t)=>termAverages[t]===null?a:a+termAverages[t]*Number(weights[t]||0),0);
   const den=["T1","T2","T3"].reduce((a,t)=>termAverages[t]===null?a:a+Number(weights[t]||0),0);
   const completeness={};
   for(const term of ['T1','T2','T3']){
-    const missing=bySubject.filter(s=>s.terms[term]===null).map(s=>s.id);
-    completeness[term]={complete:bySubject.length>0&&!missing.length,missingSubjectIds:missing};
+    const missing=reportSubjects.filter(s=>s.terms[term]===null||s.duplicateConflict).map(s=>s.id);
+    completeness[term]={complete:reportSubjects.length>0&&!missing.length,missingSubjectIds:missing};
   }
   completeness.ANNUAL={complete:['T1','T2','T3'].every(t=>completeness[t].complete)};
-  return {subjects:bySubject,termAverages,annualAverage:den?Math.round((num/den)*100)/100:null,completeness};
+  return {subjects:reportSubjects,termAverages,annualAverage:den?Math.round((num/den)*100)/100:null,
+    completeness,duplicateSubjectsCollapsed:normalized.collapsedCount,duplicateSubjectsConflicts:normalized.conflictCount};
 }
 
 export function buildClassResults({students,subjects,grades,weights,period='T1'}){
