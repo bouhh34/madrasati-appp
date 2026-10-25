@@ -262,3 +262,55 @@ bdi{unicode-bidi:isolate;direction:ltr}
   .half-report .uploaded-letterhead,
   .half-report .uploaded-letterhead img{break-inside:avoid!important;page-break-inside:avoid!important}
 }
+
+
+/* October 25 – Proportionate school letterheads for two bulletins on one A4.
+   A short report uses unused white space for readable school branding.
+   Fitted (not stretched) images preserve text and logos in supplied artwork. */
+.paper.short-report:not(.single-report) .half-report .uploaded-letterhead{
+  height:61mm;
+  max-height:61mm;
+  margin-bottom:1.5mm;
+}
+.paper.medium-report:not(.single-report) .half-report .uploaded-letterhead{
+  height:53mm;
+  max-height:53mm;
+  margin-bottom:1.5mm;
+}
+.paper.short-report:not(.single-report) .half-report .uploaded-letterhead img,
+.paper.medium-report:not(.single-report) .half-report .uploaded-letterhead img{
+  object-fit:contain;
+  width:100%;
+  height:100%;
+}
+.paper.single-report .half-report .uploaded-letterhead{
+  height:76mm;
+  max-height:76mm;
+  margin-bottom:4mm;
+}
+.paper.short-report:not(.single-report) .half-report .uploaded-letterhead-title,
+.paper.medium-report:not(.single-report) .half-report .uploaded-letterhead-title{
+  font-size:9.5pt;
+  margin-bottom:1mm;
+}
+.paper.short-report:not(.single-report) .half-report .report-period,
+.paper.medium-report:not(.single-report) .half-report .report-period{
+  margin-bottom:1mm;
+}
+.paper.short-report:not(.single-report) .half-report .student-meta,
+.paper.medium-report:not(.single-report) .half-report .student-meta{
+  margin-bottom:1.3mm;
+}
+.paper.short-report:not(.single-report) .half-report .signatures,
+.paper.medium-report:not(.single-report) .half-report .signatures{
+  min-height:10mm;
+  padding-top:2mm!important;
+  padding-bottom:0!important;
+}
+@media print {
+  .paper.short-report:not(.single-report) .half-report,
+  .paper.medium-report:not(.single-report) .half-report{
+    height:134mm!important;max-height:134mm!important;
+    overflow:hidden!important;
+  }
+}
